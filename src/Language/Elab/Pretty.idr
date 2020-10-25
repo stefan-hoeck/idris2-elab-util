@@ -2,16 +2,32 @@
 |||
 ||| This has not been cleaned-up so, it actually might not
 ||| look very pretty.
+|||
+||| This module can be used in the repl to evaluate, how
+||| syntax is translated to TTImp and Decl representations.
+||| Use `putPretty` together with a quoted expression and
+||| inspect the underlying implementation.
+|||
+||| REPL Examples:
+|||
+|||   :exec putPretty `{{ Name.In.A.Namespace }}
+|||   :exec putPretty `(Just (7 * x))
+|||   :exec putPretty `((1 index : Fin n) -> Vect n t -> t)
 module Language.Elab.Pretty
 
 import public Data.HVect
 import Data.Strings
-import Language.Reflection
-import Text.PrettyPrint.Prettyprinter
+import public Language.Reflection
+import public Text.PrettyPrint.Prettyprinter
+import Text.PrettyPrint.Prettyprinter.Render.String
 
 --------------------------------------------------------------------------------
 --          Utils
 --------------------------------------------------------------------------------
+
+export
+putPretty : Pretty t => t -> IO ()
+putPretty t = putDoc (pretty {ann = ()} t) *> putStrLn ""
 
 public export
 AllPretty : Vect n Type -> Type
@@ -30,6 +46,14 @@ hsepH = hsep . prettyAll
 export
 vsepH : AllPretty ts => HVect ts -> Doc ann
 vsepH = vsep . prettyAll
+
+export
+hcatH : AllPretty ts => HVect ts -> Doc ann
+hcatH = hcat . prettyAll
+
+export
+vcatH : AllPretty ts => HVect ts -> Doc ann
+vcatH = vcat . prettyAll
 
 export
 sepH : AllPretty ts => HVect ts -> Doc ann
@@ -65,18 +89,31 @@ dotted : Pretty t => (args : List t) -> Doc ann
 dotted = hcat . punctuate "." . map pretty
 
 export
-fun : (args : List (Doc ann)) -> (type : Doc ann) -> Doc ann
-fun [] type       = ":" <++> type
-fun (h :: t) type = align 
-                  $ sep 
-                  $ [": " <++> h] ++ map ("->" <++>) t ++ ["->" <++> type]
+funType : (arrow : Doc ann)
+    -> (args : List (Doc ann))
+    -> (type : Doc ann)
+    -> Doc ann
+funType arrow [] type       = ":" <++> type
+funType arrow (h :: t) type = align 
+                            $ sep 
+                            $     [": " <++> h]
+                               ++ map (arrow <++>) t
+                               ++ [arrow <++> type]
 
 export
-prettyFun :  (Pretty arg, Pretty tpe)
-          => (args : List arg)
-          -> (type : tpe)
-          -> Doc ann
-prettyFun args type = fun (map pretty args) (pretty type)
+pi : (args : List (Doc ann)) -> (type : Doc ann) -> Doc ann
+pi = funType "->"
+
+export
+lambda : (args : List (Doc ann)) -> (type : Doc ann) -> Doc ann
+lambda = funType "=>"
+
+export
+prettyPi :  (Pretty arg, Pretty tpe)
+         => (args : List arg)
+         -> (type : tpe)
+         -> Doc ann
+prettyPi args type = pi (map pretty args) (pretty type)
   
 --------------------------------------------------------------------------------
 --          Pretty instances for TT Types
@@ -90,28 +127,28 @@ Pretty Count where
 
 export
 Pretty t => Pretty (PiInfo t) where
-  prettyPrec _ ImplicitArg     = "ImplicitArg"
-  prettyPrec _ ExplicitArg     = "ExplicitArg"
-  prettyPrec _ AutoImplicit    = "AutoImplicit"
-  prettyPrec p (DefImplicit x) = applyPrefix p "DefImplicit" [x]
+  pretty ImplicitArg     = "ImplicitArg"
+  pretty ExplicitArg     = "ExplicitArg"
+  pretty AutoImplicit    = "AutoImplicit"
+  pretty (DefImplicit x) = "DefImplicit" <++> pretty x
 
 export
 Pretty LazyReason where
-  pretty LInf     = "LInf"
-  pretty LLazy    = "LLazy"
-  pretty LUnknown = "LUnknown"
+  pretty LInf     = "Inf"
+  pretty LLazy    = "Lazy"
+  pretty LUnknown = "Unknown"
 
 export
 Pretty TotalReq where
-  pretty Total        = "Total"
-  pretty CoveringOnly = "CoveringOnly"
-  pretty PartialOK    = "PartialOK"
+  pretty Total        = "%total"
+  pretty CoveringOnly = "%covering"
+  pretty PartialOK    = "%partial"
 
 export
 Pretty Visibility where
-  pretty Private = "Private"
-  pretty Export  = "Export"
-  pretty Public  = "Public"
+  pretty Private = "private"
+  pretty Export  = "export"
+  pretty Public  = "public"
 
 export
 Pretty Namespace where
@@ -119,11 +156,7 @@ Pretty Namespace where
 
 export
 Pretty Name where
-  prettyPrec p (UN n)    = pretty n
-  prettyPrec p (MN n i)  = hcat ["{",pretty n,":",pretty i,"}"]
-  prettyPrec p (NS ns n) = pretty n
-  prettyPrec p (DN s _)  = pretty s
-  prettyPrec p (RF s)    = pretty s
+  pretty = pretty . show
 
 export
 Pretty Constant where
@@ -176,11 +209,11 @@ Pretty DotReason where
 
 export
 Pretty DataOpt where
-  prettyPrec p (SearchBy xs) = applyPrefix p "SearchBy" xs
-  prettyPrec p NoHints       = "NoHints"
-  prettyPrec p UniqueSearch  = "UniqueSearch"
-  prettyPrec p External      = "External"
-  prettyPrec p NoNewtype     = "NoNewtype"
+  prettyPrec p (SearchBy xs) = "%searchBy" <++> parens (hsep $ map pretty xs)
+  prettyPrec p NoHints       = "%noHints"
+  prettyPrec p UniqueSearch  = "%uniqueSearch"
+  prettyPrec p External      = "%external"
+  prettyPrec p NoNewtype     = "%noNewtype"
 
 mutual
 
@@ -200,7 +233,7 @@ mutual
 
   export
   Pretty FnOpt where
-    prettyPrec p Inline         = "Inline"
+    prettyPrec p Inline         = "%inline"
     prettyPrec p TCInline       = "TCInline"
     prettyPrec p (Hint x)       = applyPrefix p "Hint" [x]
     prettyPrec p (GlobalHint x) = applyPrefix p "GlobalHint" [x]
@@ -208,7 +241,7 @@ mutual
     prettyPrec p (ForeignFn xs) = applyPrefix p "ForeignFn" xs
     prettyPrec p Invertible     = "Invertible"
     prettyPrec p (Totalty x)    = applyPrefix p "Totality" [x]
-    prettyPrec p Macro          = "Macro"
+    prettyPrec p Macro          = "%macro"
     prettyPrec p (SpecArgs xs)  = applyPrefix p "SpecArgs" xs
 
   export
@@ -280,7 +313,7 @@ mutual
   Pretty TTImp where
     prettyPrec p (IVar _ y) = "IVar" <++> prettyPrec p y
 
-    prettyPrec p pi@(IPi _ _ _ _ _ _) = "pi" <++> uncurry fun (args pi)
+    prettyPrec _ p@(IPi _ _ _ _ _ _) = "pi" <++> uncurry pi (args p)
        where args : TTImp -> (List (Doc ann), Doc ann)
              args (IPi _ c i n argTy retTy) =
                let (as,ty) = args retTy
@@ -289,7 +322,7 @@ mutual
 
              args retTy = ([], pretty retTy)
 
-    prettyPrec p la@(ILam _ _ _ _ _ _) = "lambda" <++> uncurry fun (args la)
+    prettyPrec p la@(ILam _ _ _ _ _ _) = "lambda" <++> uncurry lambda (args la)
        where args : TTImp -> (List (Doc ann), Doc ann)
              args (ILam _ c i n argTy retTy) =
                let (as,ty) = args retTy
@@ -299,11 +332,11 @@ mutual
              args retTy = ([], pretty retTy)
 
     prettyPrec p (ILet _ cnt name nTy nVal scope) =
-      hsepH ["let", cnt, name, ":", nTy, "=", nVal]
+      "let" <++> parens (hsepH [cnt, name, ":", nTy]) <++> "=" <++> pretty nVal
 
 
     prettyPrec p (ICase _ arg ty clauses) = 
-      vsep [ "case" <++> parens (pretty arg <++> ":" <++> pretty ty)
+      vsep [ "case" <++> parens (pretty arg <++> ":" <++> pretty ty) <++> "of"
            , indent 2 $ vsep (map pretty clauses) ]
 
     prettyPrec p (ILocal _ decls tt) = 
@@ -312,8 +345,9 @@ mutual
     prettyPrec p (IUpdate _ ups tt) =
       vsep ["update", indent 2 $ vsep (map pretty ups ++ [pretty tt])]
 
-    prettyPrec p (IApp _ f tt) = 
-      align $ sep [pretty f <++> "`app`", pretty tt]
+    prettyPrec p (IApp _ f tt) =
+       docParens (p >= App)
+       (align $ sep [prettyPrec p f <++> "`app`", prettyPrec App tt])
 
     prettyPrec p (IImplicitApp _ f name tt) =
       let dispName = maybe neutral pretty name
@@ -343,12 +377,14 @@ mutual
 
     prettyPrec p (IDelay _ y) = hsepH ["delay", y]
     prettyPrec p (IForce _ y) = hsepH ["force", y]
-    prettyPrec p (IQuote _ y) = hsepH ["quote", y]
-    prettyPrec p (IQuoteName _ y) = hsepH ["quoteName", y]
-    prettyPrec p (IQuoteDecl _ y) = hsepH ["quoteDecl", y]
-    prettyPrec p (IUnquote _ y) = hsepH ["unquote", y]
+    prettyPrec p (IQuote _ y)     = "`("  <++> pretty y <++> ")"
+    prettyPrec p (IQuoteName _ y) = "`{{" <++> pretty y <++> "}}"
+    prettyPrec p (IQuoteDecl _ y) = "`["  <++> pretty y <++> "]"
+    prettyPrec p (IUnquote _ y)   = "~("  <++> pretty y <++> ")"
     prettyPrec p (IPrimVal _ c) = pretty c
     prettyPrec p (IType _) = "Type"
     prettyPrec p (IHole _ y) = "?" <+> pretty y
-    prettyPrec p (Implicit _ bindIfUnsolved) = "implicit" <++> pretty bindIfUnsolved
+    prettyPrec p (Implicit _ bind) =   "{implicit:"
+                                   <+> (if bind then "do bind" else "dont bind")
+                                   <+> "}"
     prettyPrec p (IWithUnambigNames _ xs y) = "with names" <++> pretty xs <++> pretty y

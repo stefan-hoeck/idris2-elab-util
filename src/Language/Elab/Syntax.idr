@@ -1,61 +1,41 @@
+||| Some utilities for defining and manipulating TTImp values
+||| for writing elaborator scripts.
+|||
+||| Some notes: Use quotes whenever possible:
+|||
+||| Names can be quoted like so: `{{ AName }}, `{{ In.Namespace.AName }}.
+||| Both examples are of type Language.Reflection.TT.Name.
+|||
+||| Expressions can be quoted like so: `(\x => x * x)
 module Language.Elab.Syntax
 
 import Language.Reflection
 import Language.Elab.Pretty
 import Text.PrettyPrint.Prettyprinter
 
-import Data.Strings -- strM
-
--- Some notes
---
--- IPi describes a type declaration
---  for instance : Bool -> Bool -> Bool
---    IPi _ MW ExplicitArg Nothing B (
---      IPi _ MW ExplicitArg Nothing B B
---    )
--- where B is a placeholder for "iVarStr Bool"
-
-private
-z : (Int,Int)
-z = (0,0)
-
-export
-namedFC : String -> FC
-namedFC s = MkFC s z z
-
+||| Creates a variable from the given name
+|||
+||| Names are best created using name quotes: `{{ AName }},
+||| `{{ In.Namespacs.Name }}.
+|||
+||| Likewise, if the name is already known at the time of
+||| writing, use quotes for defining a variable directly: `(AName)
 export
 iVar : Name -> TTImp
 iVar = IVar EmptyFC
 
 export
-iVarStr : String -> TTImp
-iVarStr = iVar . UN
-
-export
-iVarNS : List String -> String -> TTImp
-iVarNS ns n = iVar (NS (MkNS ns) $ UN n)
-
-export
-iVar' : String -> Name -> TTImp
-iVar' s = IVar (namedFC s)
-
-export
 iBindVar : String -> TTImp
 iBindVar = IBindVar EmptyFC
 
-export
-iBindVar' : String -> String -> TTImp
-iBindVar' s = IBindVar (namedFC s)
-
--- export
 infixl 6 `iApp`
+
+||| Function application.
+|||
+||| Example: ```iVar (UN "Just") `iApp` iVar (UN "x")```
 export
 iApp : TTImp -> TTImp -> TTImp
 iApp = IApp EmptyFC
-
-export
-iApp' : String -> TTImp -> TTImp -> TTImp
-iApp' s = IApp (namedFC s)
 
 export
 appAll : Name -> List Name -> TTImp
@@ -69,46 +49,34 @@ iImplicitApp : TTImp -> Maybe Name -> TTImp -> TTImp
 iImplicitApp = IImplicitApp EmptyFC
 
 export
-implicit' : TTImp
-implicit' = Implicit EmptyFC True
+implicitTrue : TTImp
+implicitTrue = Implicit EmptyFC True
 
 export
-implicit'' : TTImp
-implicit'' = Implicit EmptyFC False
+implicitFalse : TTImp
+implicitFalse = Implicit EmptyFC False
 
 export
 patClause : (lhs : TTImp) -> (rhs : TTImp) -> Clause
 patClause = PatClause EmptyFC
 
 export
-patClause' : String -> (lhs : TTImp) -> (rhs : TTImp) -> Clause
-patClause' s = PatClause (namedFC s)
-
-export
 iClaim : Count -> Visibility -> List FnOpt -> ITy -> Decl
 iClaim = IClaim EmptyFC
-
-export
-iClaim' : String -> Count -> Visibility -> List FnOpt -> ITy -> Decl
-iClaim' s = IClaim (namedFC s)
 
 export
 mkTy : (n : Name) -> (ty : TTImp) -> ITy
 mkTy = MkTy EmptyFC
 
 export
-mkTy' : String -> (n : Name) -> (ty : TTImp) -> ITy
-mkTy' s = MkTy (namedFC s)
+listOf : List TTImp -> TTImp
+listOf [] = `( Nil )
+listOf (x :: xs) = `( ~(x) :: ~(listOf xs) )
 
 export
 iPi : Count -> PiInfo TTImp -> Maybe Name ->
       (argTy : TTImp) -> (retTy : TTImp) -> TTImp
 iPi = IPi EmptyFC
-
-export
-iPi' : String -> Count -> PiInfo TTImp -> Maybe Name ->
-      (argTy : TTImp) -> (retTy : TTImp) -> TTImp
-iPi' s = IPi (namedFC s)
 
 export
 iLam : Count -> PiInfo TTImp -> Maybe Name ->
@@ -140,10 +108,6 @@ iPrimVal = IPrimVal EmptyFC
 export
 iType :  TTImp
 iType = IType EmptyFC
-
-export
-iPrimVal' : String -> (c : Constant) -> TTImp
-iPrimVal' s = IPrimVal (namedFC s)
 
 private errMsg : Name -> List (Name,TTImp) -> String
 errMsg n [] = show n ++ " is not in scope."
