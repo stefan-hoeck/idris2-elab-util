@@ -44,7 +44,7 @@ being in scope and expressions are neither type-checked nor
 evaluated.
 
 ### Expressions
-Probably the most important quoting facility in the beginning
+Probably the most important quoting facility
 is the ability to quote expressions.
 
 ```
@@ -86,7 +86,18 @@ lambda :  (MW ExplicitArg x : {Implicit:False})
        => IVar ++ `app` IVar x `app` (IVar reverse `app` IVar y)
 ```
 
-Special syntax:
+Case expressions:
+
+```
+Language.Elab.Pretty> :exec putPretty `(case x of { EQ => "eq"; LT => "lt"; GT => "gt" })
+case (IVar x : {Implicit:False}) of
+  IVar EQ => IVar fromString `app` eq
+  IVar LT => IVar fromString `app` lt
+  IVar GT => IVar fromString `app` gt
+```
+
+Now follow some syntactic sugar exaples.
+If-then-else:
 
 ```
 Language.Elab.Pretty> :exec putPretty `(if x then y else z)
