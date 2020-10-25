@@ -1,0 +1,11 @@
+package idris2-elab-util
+
+executable = elab_util
+
+main = Main
+
+sourcedir = "src"
+
+modules = Language.Elab.Syntax
+        , Language.Elab.Pretty
+        , Language.Elab.Types
