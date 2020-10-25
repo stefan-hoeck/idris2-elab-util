@@ -53,7 +53,7 @@ Language.Elab.Pretty> :t `(2 * x)
 
 This will print an impressive amount of information about the structure
 of the underlying syntax tree together with its type: `TTImp`.
-Quite a bit of information is "wasted" on source location
+Quite a bit of space is "wasted" on source location
 information. In order to render this a bit more readable while still
 trying to make the underlying structure visible, a
 pretty printer is provided:
