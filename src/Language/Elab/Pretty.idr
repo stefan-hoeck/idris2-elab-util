@@ -273,7 +273,7 @@ mutual
 
   export
   Pretty Clause where
-    pretty (PatClause _ lh rh) = align $ sep [pretty lh <++> "=", pretty rh]
+    pretty (PatClause _ lh rh) = align $ sep [pretty lh <++> "=>", pretty rh]
       
     pretty (ImpossibleClause _ lh) = pretty lh <++> "impossible"
 
@@ -322,7 +322,8 @@ mutual
 
              args retTy = ([], pretty retTy)
 
-    prettyPrec p la@(ILam _ _ _ _ _ _) = "lambda" <++> uncurry lambda (args la)
+    prettyPrec p la@(ILam _ _ _ _ _ _) =
+       docParens (p >= App) ("lambda" <++> uncurry lambda (args la))
        where args : TTImp -> (List (Doc ann), Doc ann)
              args (ILam _ c i n argTy retTy) =
                let (as,ty) = args retTy
@@ -384,7 +385,5 @@ mutual
     prettyPrec p (IPrimVal _ c) = pretty c
     prettyPrec p (IType _) = "Type"
     prettyPrec p (IHole _ y) = "?" <+> pretty y
-    prettyPrec p (Implicit _ bind) =   "{implicit:"
-                                   <+> (if bind then "do bind" else "dont bind")
-                                   <+> "}"
+    prettyPrec p (Implicit _ bind) =   "{Implicit:" <+> pretty bind <+> "}"
     prettyPrec p (IWithUnambigNames _ xs y) = "with names" <++> pretty xs <++> pretty y
