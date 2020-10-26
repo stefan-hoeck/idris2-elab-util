@@ -25,68 +25,108 @@ import Text.PrettyPrint.Prettyprinter.Render.String
 --          Utils
 --------------------------------------------------------------------------------
 
+||| Pretty but uncolored output to the terminal
 export
 putPretty : Pretty t => t -> IO ()
 putPretty t = putDoc (pretty {ann = ()} t) *> putStrLn ""
 
+||| Constraint, witnessing that all types in the given
+||| `Vect` of types have a `Pretty` instance.
 public export
 AllPretty : Vect n Type -> Type
 AllPretty []        = ()
 AllPretty (x :: xs) = (Pretty x, AllPretty xs)
 
+||| Convert all values in a heterogeneous vector
+||| to `Doc`s using the corresponding `Pretty`
+||| instances.
+export
+prettyPrecAll : AllPretty ts => Prec -> HVect ts -> List (Doc ann)
+prettyPrecAll _ []       = []
+prettyPrecAll p (x :: y) = prettyPrec p x :: prettyPrecAll p y
+
+||| Alias for `prettyPrecAll Open`
 export
 prettyAll : AllPretty ts => HVect ts -> List (Doc ann)
-prettyAll []       = []
-prettyAll (x :: y) = pretty x :: prettyAll y
+prettyAll = prettyPrecAll Open
 
+||| Alias for `prettyPrecAll App`
+export
+prettyAppAll : AllPretty ts => HVect ts -> List (Doc ann)
+prettyAppAll = prettyPrecAll App
+
+||| Alias for `hsep . prettyAll`
 export
 hsepH : AllPretty ts => HVect ts -> Doc ann
 hsepH = hsep . prettyAll
 
+||| Alias for `vsep . prettyAll`
 export
 vsepH : AllPretty ts => HVect ts -> Doc ann
 vsepH = vsep . prettyAll
 
+||| Alias for `hcat . prettyAll`
 export
 hcatH : AllPretty ts => HVect ts -> Doc ann
 hcatH = hcat . prettyAll
 
+||| Alias for `vcat . prettyAll`
 export
 vcatH : AllPretty ts => HVect ts -> Doc ann
 vcatH = vcat . prettyAll
 
+||| Alias for `sep . prettyAll`
 export
 sepH : AllPretty ts => HVect ts -> Doc ann
 sepH = sep . prettyAll
 
+||| Prettifies a list of values and concatenates the
+||| results using dots as separators.
+|||
+||| Example: >> `dotted ["a","b","c"]
+|||          "a.b.c"
+export
+dotted : Pretty t => (args : List t) -> Doc ann
+dotted = hcat . punctuate "." . map pretty
+
+||| Alias for `prettyPrec App`
+export
+prettyApp : Pretty t => t -> Doc ann
+prettyApp = prettyPrec App
+
+||| Wraps a the given `Doc` in parenthesis if the
+||| boolean flag is `True`.
 export
 docParens : Bool -> Doc ann -> Doc ann
 docParens False doc = doc
 docParens True  doc = parens doc
 
+||| Wraps a the given `Doc` in parenthesis if `p >= App`.
 export
-applyArg : Pretty t => t -> Doc ann
-applyArg = prettyPrec App
+appParens : (p : Prec) -> Doc ann -> Doc ann
+appParens p = docParens (p >= App)
+
+||| Data constructor application: Applies the given constructor `con`
+||| to a list of arguments. Arguments will be wrapped in parentheses
+||| if necessary and aligned properly.
+export
+applyDoc :  (p    : Prec)
+         -> (con  : Doc ann)
+         -> (args : List (Doc ann))
+         -> Doc ann
+applyDoc p con args = appParens p $ con <++> align (sep args)
 
 export
-applyPrefixDoc :  (p : Prec)
-               -> (prefix_ : Doc ann)
-               -> (args : List (Doc ann))
-               -> Doc ann
-applyPrefixDoc p prefix_ args = docParens (p >= App) 
-                              $ align (sep $ prefix_ :: args)
+apply : Pretty t => (p : Prec) -> (con : Doc ann) -> (args : List t) -> Doc ann
+apply p con args = applyDoc p con (map prettyApp args)
 
 export
-applyPrefix :  Pretty t
-            => (p : Prec)
-            -> (prefix_ : Doc ann)
-            -> (args : List t)
-            -> Doc ann
-applyPrefix p prefix_ args = applyPrefixDoc p prefix_ (map applyArg args)
-
-export
-dotted : Pretty t => (args : List t) -> Doc ann
-dotted = hcat . punctuate "." . map pretty
+applyH :  AllPretty ts
+       => (p    : Prec)
+       -> (con  : Doc ann)
+       -> (args : HVect ts)
+       -> Doc ann
+applyH p con args = applyDoc p con (prettyAppAll args)
 
 export
 funType : (arrow : Doc ann)
@@ -127,10 +167,10 @@ Pretty Count where
 
 export
 Pretty t => Pretty (PiInfo t) where
-  pretty ImplicitArg     = "ImplicitArg"
-  pretty ExplicitArg     = "ExplicitArg"
-  pretty AutoImplicit    = "AutoImplicit"
-  pretty (DefImplicit x) = "DefImplicit" <++> pretty x
+  prettyPrec _ ImplicitArg     = "ImplicitArg"
+  prettyPrec _ ExplicitArg     = "ExplicitArg"
+  prettyPrec _ AutoImplicit    = "AutoImplicit"
+  prettyPrec p (DefImplicit x) = applyH p "DefImplicit" [x]
 
 export
 Pretty LazyReason where
@@ -140,15 +180,15 @@ Pretty LazyReason where
 
 export
 Pretty TotalReq where
-  pretty Total        = "%total"
-  pretty CoveringOnly = "%covering"
-  pretty PartialOK    = "%partial"
+  pretty Total        = "Total"
+  pretty CoveringOnly = "Covering"
+  pretty PartialOK    = "Partial"
 
 export
 Pretty Visibility where
-  pretty Private = "private"
-  pretty Export  = "export"
-  pretty Public  = "public"
+  pretty Private = "Private"
+  pretty Export  = "Export"
+  pretty Public  = "Public"
 
 export
 Pretty Namespace where
@@ -189,9 +229,9 @@ Pretty Constant where
 
 export
 Pretty BindMode where
-  prettyPrec p (PI x)  = applyPrefix p "PI" [x]
-  prettyPrec p PATTERN = "PATTERN"
-  prettyPrec p NONE    = "NONE"
+  prettyPrec p (PI x)  = apply p "PI" [x]
+  prettyPrec _ PATTERN = "PATTERN"
+  prettyPrec _ NONE    = "NONE"
 
 export
 Pretty UseSide where
@@ -209,72 +249,71 @@ Pretty DotReason where
 
 export
 Pretty DataOpt where
-  prettyPrec p (SearchBy xs) = "%searchBy" <++> parens (hsep $ map pretty xs)
-  prettyPrec p NoHints       = "%noHints"
-  prettyPrec p UniqueSearch  = "%uniqueSearch"
-  prettyPrec p External      = "%external"
-  prettyPrec p NoNewtype     = "%noNewtype"
+  prettyPrec p (SearchBy xs) = apply p "SearchBy" xs
+  prettyPrec _ NoHints       = "NoHints"
+  prettyPrec _ UniqueSearch  = "UniqueSearch"
+  prettyPrec _ External      = "External"
+  prettyPrec _ NoNewtype     = "NoNewtype"
 
 mutual
 
   export
   Pretty IFieldUpdate where
     prettyPrec p (ISetField path x) =
-      applyPrefixDoc p "ISetField" [dotted path, applyArg x]
+      applyDoc p "ISetField" [dotted path, prettyApp x]
 
     prettyPrec p (ISetFieldApp path x) =
-      applyPrefixDoc p "ISetFieldApp" [dotted path, applyArg x]
+      applyDoc p "ISetFieldApp" [dotted path, prettyApp x]
 
   export
   Pretty AltType where
-    prettyPrec p FirstSuccess      = "FirstSuccess"
-    prettyPrec p Unique            = "Unique"
-    prettyPrec p (UniqueDefault x) = applyPrefix p "UniqueDefault" [x]
+    prettyPrec _ FirstSuccess      = "FirstSuccess"
+    prettyPrec _ Unique            = "Unique"
+    prettyPrec p (UniqueDefault x) = apply p "UniqueDefault" [x]
 
   export
   Pretty FnOpt where
-    prettyPrec p Inline         = "%inline"
-    prettyPrec p TCInline       = "TCInline"
-    prettyPrec p (Hint x)       = applyPrefix p "Hint" [x]
-    prettyPrec p (GlobalHint x) = applyPrefix p "GlobalHint" [x]
-    prettyPrec p ExternFn       = "ExternFn"
-    prettyPrec p (ForeignFn xs) = applyPrefix p "ForeignFn" xs
-    prettyPrec p Invertible     = "Invertible"
-    prettyPrec p (Totalty x)    = applyPrefix p "Totality" [x]
-    prettyPrec p Macro          = "%macro"
-    prettyPrec p (SpecArgs xs)  = applyPrefix p "SpecArgs" xs
+    prettyPrec _ Inline         = "Inline"
+    prettyPrec _ TCInline       = "TCInline"
+    prettyPrec p (Hint x)       = apply p "Hint" [x]
+    prettyPrec p (GlobalHint x) = apply p "GlobalHint" [x]
+    prettyPrec _ ExternFn       = "ExternFn"
+    prettyPrec p (ForeignFn xs) = apply p "ForeignFn" xs
+    prettyPrec _ Invertible     = "Invertible"
+    prettyPrec p (Totalty x)    = apply p "Totality" [x]
+    prettyPrec _ Macro          = "Macro"
+    prettyPrec p (SpecArgs xs)  = apply p "SpecArgs" xs
 
   export
   Pretty ITy where
-    prettyPrec p (MkTy x n t) = applyPrefixDoc p "Ty" [applyArg n, applyArg t]
+    prettyPrec p (MkTy x n t) = applyH p "MkTy" [n, t]
 
   export
   Pretty Data where
     prettyPrec p (MkData _ n tycon opts datacons) =
-      let docs = applyArg tycon :: (map applyArg opts ++ map applyArg datacons)
-       in applyPrefixDoc p ("Data" <++> pretty n) docs
+      vsep [ applyH p "MkData" [n,tycon,opts]
+           , indent 2 $ vsep (map pretty datacons)
+           ]
 
-    prettyPrec p (MkLater _ n tycon) =
-       applyPrefix p ("Data" <++> pretty n) [tycon]
+    prettyPrec p (MkLater _ n tycon) = applyH p "MkLater" [n, tycon]
 
   export
   Pretty IField where
     prettyPrec p (MkIField _ cnt piInfo name ttImp) =
-      let pre = hsep ["Field", applyArg cnt, applyArg piInfo, applyArg name]
-       in applyPrefix p pre [ttImp]
+      applyH p "MkIField" [cnt,piInfo,name,ttImp]
 
   export
   Pretty Record where
     prettyPrec p (MkRecord _ name params conName fields) = 
-      let header = applyPrefix p (pretty "Record" <++> pretty name) [params]
-          con    = pretty "constructor" <++> pretty conName
-          lines  = indent 2 $ vsep (con :: map pretty fields)
-       in vsep [header,lines]
+      vsep [ applyH p "MkRecord" [name,params,conName]
+           , indent 2 $ vsep (map pretty fields)
+           ]
 
   export
   Pretty Clause where
     pretty (PatClause _ lh rh) = 
-      "pattern" <++> pretty lh <++> "=>" <++> pretty rh
+      "PatClause" <++> align ( sep [ "  " <++> pretty lh
+                                   , "=>" <++> pretty rh])
       
     pretty (ImpossibleClause _ lh) = pretty lh <++> "impossible"
 
@@ -349,7 +388,7 @@ mutual
 
     prettyPrec p (IApp _ f tt) =
        docParens (p >= App)
-       (align $ sep [prettyPrec p f <++> "`app`", prettyPrec App tt])
+       (align $ sep [prettyPrec p f <++> "`app`", prettyApp tt])
 
     prettyPrec p (IImplicitApp _ f name tt) =
       let dispName = maybe neutral pretty name
@@ -370,7 +409,7 @@ mutual
     prettyPrec p (IBindVar _ y) = "bindVar" <++> pretty y
 
     prettyPrec p (IAs _ use name w) =
-      hsep ["as", pretty use, pretty name <+> "@" <+> prettyPrec App w]
+      hsep ["as", pretty use, pretty name <+> "@" <+> prettyApp w]
 
     prettyPrec p (IMustUnify _ y z) = hsepH ["mustUnify", y, z]
     prettyPrec p (IDelayed _ y z)   = hsepH ["delayed", y, z]

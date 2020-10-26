@@ -4,7 +4,7 @@ Utilities and documentation for exploring idirs2's new elaborator reflection.
 ## Getting started
 In order to get started with the new elaborator reflection,
 [pretty printers](/src/Language/Elab/Pretty.idr)
-for types found in `Language.Elab.TTImp` and `Language.Elab.TT` are provided.
+for types found in `Language.Reflection.TTImp` and `Language.Reflection.TT` are provided.
 These allow us to inspect quoted syntax snippets and visualize
 how they are internally converted to `Name`s, `TTImp`s or `Decl`s.
 
@@ -129,4 +129,4 @@ IVar >>= `app` IVar run `app`
 The examples about special syntax show that we can use these
 constructs in regular code and in quoted expressions and declarations
 but not when building syntax trees manually using the constructors
-of `Language.Elab.TTImp`.
+of `Language.Reflection.TTImp`.
