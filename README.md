@@ -91,9 +91,9 @@ Case expressions:
 ```
 Language.Elab.Pretty> :exec putPretty `(case x of { EQ => "eq"; LT => "lt"; GT => "gt" })
 case (IVar x : {Implicit:False}) of
-  IVar EQ => IVar fromString `app` eq
-  IVar LT => IVar fromString `app` lt
-  IVar GT => IVar fromString `app` gt
+  pattern IVar EQ => IVar fromString `app` eq
+  pattern IVar LT => IVar fromString `app` lt
+  pattern IVar GT => IVar fromString `app` gt
 ```
 
 Now follow some syntactic sugar exaples.
@@ -102,8 +102,8 @@ If-then-else:
 ```
 Language.Elab.Pretty> :exec putPretty `(if x then y else z)
 case (IVar x : IVar Bool) of
-  IVar True = IVar y
-  IVar False = IVar z
+  pattern IVar True = IVar y
+  pattern IVar False = IVar z
 ```
 
 Idiom brackets:

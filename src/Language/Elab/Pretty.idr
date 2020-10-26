@@ -273,7 +273,8 @@ mutual
 
   export
   Pretty Clause where
-    pretty (PatClause _ lh rh) = align $ sep [pretty lh <++> "=>", pretty rh]
+    pretty (PatClause _ lh rh) = 
+      "pattern" <++> pretty lh <++> "=>" <++> pretty rh
       
     pretty (ImpossibleClause _ lh) = pretty lh <++> "impossible"
 
@@ -295,7 +296,7 @@ mutual
 
     pretty (IData _ vis dat) = vsepH [vis, dat]
 
-    pretty (IDef _ name clauses) = vsep (pretty name :: map pretty clauses)
+    pretty (IDef _ name clauses) = vsep $ map (\c => hsepH [name,":",c]) clauses
 
     pretty (IParameters _ ps decs) = vsep (prettyParams ps :: map pretty decs)
 
@@ -362,8 +363,7 @@ mutual
     prettyPrec p (IAlternative _ alt xs) =
       vsep ["alternative" <++> pretty alt, indent 2 $ vsep (map pretty xs)]
 
-    prettyPrec p (IRewrite _ y z) =
-      align $ sepH ["rewrite", y, z]
+    prettyPrec p (IRewrite _ y z) = align $ sepH ["rewrite", y, z]
 
     prettyPrec p (IBindHere _ y z) = hsepH ["bind here", y, z]
 
@@ -373,17 +373,15 @@ mutual
       hsep ["as", pretty use, pretty name <+> "@" <+> prettyPrec App w]
 
     prettyPrec p (IMustUnify _ y z) = hsepH ["mustUnify", y, z]
-
-    prettyPrec p (IDelayed _ y z) = hsepH ["delayed", y, z]
-
-    prettyPrec p (IDelay _ y) = hsepH ["delay", y]
-    prettyPrec p (IForce _ y) = hsepH ["force", y]
-    prettyPrec p (IQuote _ y)     = "`("  <++> pretty y <++> ")"
-    prettyPrec p (IQuoteName _ y) = "`{{" <++> pretty y <++> "}}"
-    prettyPrec p (IQuoteDecl _ y) = "`["  <++> pretty y <++> "]"
-    prettyPrec p (IUnquote _ y)   = "~("  <++> pretty y <++> ")"
-    prettyPrec p (IPrimVal _ c) = pretty c
-    prettyPrec p (IType _) = "Type"
-    prettyPrec p (IHole _ y) = "?" <+> pretty y
-    prettyPrec p (Implicit _ bind) =   "{Implicit:" <+> pretty bind <+> "}"
+    prettyPrec p (IDelayed _ y z)   = hsepH ["delayed", y, z]
+    prettyPrec p (IDelay _ y)       = hsepH ["delay", y]
+    prettyPrec p (IForce _ y)       = hsepH ["force", y]
+    prettyPrec p (IQuote _ y)       = "`("  <++> pretty y <++> ")"
+    prettyPrec p (IQuoteName _ y)   = "`{{" <++> pretty y <++> "}}"
+    prettyPrec p (IQuoteDecl _ y)   = "`["  <++> pretty y <++> "]"
+    prettyPrec p (IUnquote _ y)     = "~("  <++> pretty y <++> ")"
+    prettyPrec p (IPrimVal _ c)     = pretty c
+    prettyPrec p (IType _)          = "Type"
+    prettyPrec p (IHole _ y)        = "?" <+> prettyPrec p y
+    prettyPrec p (Implicit _ bind)  =   "{Implicit:" <+> pretty bind <+> "}"
     prettyPrec p (IWithUnambigNames _ xs y) = "with names" <++> pretty xs <++> pretty y
