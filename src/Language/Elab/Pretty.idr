@@ -94,6 +94,11 @@ export
 prettyApp : Pretty t => t -> Doc ann
 prettyApp = prettyPrec App
 
+||| Alias for `prettyPrec Backtick`
+export
+prettyBacktick : Pretty t => t -> Doc ann
+prettyBacktick = prettyPrec Backtick
+
 ||| Wraps a the given `Doc` in parenthesis if the
 ||| boolean flag is `True`.
 export
@@ -105,6 +110,11 @@ docParens True  doc = parens doc
 export
 appParens : (p : Prec) -> Doc ann -> Doc ann
 appParens p = docParens (p >= App)
+
+||| Wraps a the given `Doc` in parenthesis if `p >= App`.
+export
+backtickParens : (p : Prec) -> Doc ann -> Doc ann
+backtickParens p = docParens (p >= Backtick)
 
 ||| Data constructor application: Applies the given constructor `con`
 ||| to a list of arguments. Arguments will be wrapped in parentheses
@@ -129,32 +139,13 @@ applyH :  AllPretty ts
 applyH p con args = applyDoc p con (prettyAppAll args)
 
 export
-funType : (arrow : Doc ann)
-    -> (args : List (Doc ann))
-    -> (type : Doc ann)
-    -> Doc ann
-funType arrow [] type       = ":" <++> type
-funType arrow (h :: t) type = align 
-                            $ sep 
-                            $     [": " <++> h]
-                               ++ map (arrow <++>) t
-                               ++ [arrow <++> type]
+alignInfix : (fun : String) -> (args : List (Doc ann)) -> Doc ann
+alignInfix fun []       = pretty fun
+alignInfix fun [type]   = pretty fun <++> type
+alignInfix fun (h :: t) = let fun' = pretty ("`" ++ fun ++ "`")
+                              h'   = flatAlt (spaces (cast $ length fun + 3) <+> h) h
+                           in align $ sep (h' :: map (fun' <++>) t)
 
-export
-pi : (args : List (Doc ann)) -> (type : Doc ann) -> Doc ann
-pi = funType "->"
-
-export
-lambda : (args : List (Doc ann)) -> (type : Doc ann) -> Doc ann
-lambda = funType "=>"
-
-export
-prettyPi :  (Pretty arg, Pretty tpe)
-         => (args : List arg)
-         -> (type : tpe)
-         -> Doc ann
-prettyPi args type = pi (map pretty args) (pretty type)
-  
 --------------------------------------------------------------------------------
 --          Pretty instances for TT Types
 --------------------------------------------------------------------------------
@@ -170,7 +161,7 @@ Pretty t => Pretty (PiInfo t) where
   prettyPrec _ ImplicitArg     = "ImplicitArg"
   prettyPrec _ ExplicitArg     = "ExplicitArg"
   prettyPrec _ AutoImplicit    = "AutoImplicit"
-  prettyPrec p (DefImplicit x) = applyH p "DefImplicit" [x]
+  prettyPrec p (DefImplicit x) = apply p "DefImplicit" [x]
 
 export
 Pretty LazyReason where
@@ -329,98 +320,95 @@ mutual
 
   export
   Pretty Decl where
-    pretty (IClaim _ cnt vis opts ty) =
+    prettyPrec _ (IClaim _ cnt vis opts ty) =
       let prettyOpts = hcat $ punctuate ";" (map pretty opts)
        in vsep [pretty cnt, pretty vis, prettyOpts, pretty ty]
 
-    pretty (IData _ vis dat) = vsepH [vis, dat]
+    prettyPrec p (IData _ vis dat) = vsepH [vis, dat]
 
-    pretty (IDef _ name clauses) = vsep $ map (\c => hsepH [name,":",c]) clauses
+    prettyPrec p (IDef _ n cls) = vsep [ apply p "IDef" [n]
+                                       , indent 2 $ vsep (map pretty cls)]
 
-    pretty (IParameters _ ps decs) = vsep (prettyParams ps :: map pretty decs)
+    prettyPrec _ (IParameters _ ps decs) = vsep (prettyParams ps :: map pretty decs)
 
-    pretty (IRecord _ v r) = vsepH [v, r]
+    prettyPrec _ (IRecord _ v r) = vsepH [v, r]
 
-    pretty (INamespace _ names decls) =
+    prettyPrec _ (INamespace _ names decls) =
       let head = pretty "namespace" <++> dotted names
        in vsep (head :: map pretty decls)
 
-    pretty (ITransform _ name a b) = vsepH [name, a, b]
-
-    pretty (ILog k) = "log" <++> pretty k
+    prettyPrec p (ITransform _ name a b) = applyH p "ITransform" [name,a,b]
+    prettyPrec p (ILog k) = apply p "ILog" [k]
 
   export
   Pretty TTImp where
-    prettyPrec p (IVar _ y) = "IVar" <++> prettyPrec p y
+    prettyPrec _ (IVar _ y) = "IVar" <++> pretty y
 
-    prettyPrec _ p@(IPi _ _ _ _ _ _) = "pi" <++> uncurry pi (args p)
-       where args : TTImp -> (List (Doc ann), Doc ann)
-             args (IPi _ c i n argTy retTy) =
-               let (as,ty) = args retTy
-                   a       = parens $ hsepH [c,i,maybe "" show n,":",argTy]
-                in (a::as,ty)
+    prettyPrec p x@(IPi _ _ _ _ _ _) =
+      backtickParens p (alignInfix "IPi"  $ args x)
+      where args : TTImp -> List (Doc ann)
+            args (IPi _ c i n at rt) =
+              parens (hsepH [c,i,maybe ":" ((++ " :") . show) n,at]) :: args rt
 
-             args retTy = ([], pretty retTy)
+            args rt = [prettyBacktick rt]
 
-    prettyPrec p la@(ILam _ _ _ _ _ _) =
-       docParens (p >= App) ("lambda" <++> uncurry lambda (args la))
-       where args : TTImp -> (List (Doc ann), Doc ann)
-             args (ILam _ c i n argTy retTy) =
-               let (as,ty) = args retTy
-                   a       = parens $ hsepH [c,i,maybe "" show n,":",argTy]
-                in (a::as,ty)
+    prettyPrec p x@(ILam _ _ _ _ _ _) =
+      backtickParens p (alignInfix "ILam" $ args x)
+      where args : TTImp -> List (Doc ann)
+            args (ILam _ c i n at rt) =
+              parens (hsepH [c,i,maybe ":" ((++ " :") . show) n,at]) :: args rt
 
-             args retTy = ([], pretty retTy)
+            args rt = [prettyBacktick rt]
 
     prettyPrec p (ILet _ cnt name nTy nVal scope) =
-      "let" <++> parens (hsepH [cnt, name, ":", nTy]) <++> "=" <++> pretty nVal
-
+      applyH p "ILet" [cnt,name,nTy,nVal,scope]
 
     prettyPrec p (ICase _ arg ty clauses) = 
-      vsep [ "case" <++> parens (pretty arg <++> ":" <++> pretty ty) <++> "of"
-           , indent 2 $ vsep (map pretty clauses) ]
+      vsep [applyH p "ICase" [arg,ty], indent 2 $ vsep (map pretty clauses)]
 
     prettyPrec p (ILocal _ decls tt) = 
-      vsep ["local", indent 2 $ vsep (map pretty decls ++ [pretty tt])]
+      vsep [apply p "ILocal" [tt] , indent 2 $ vsep (map pretty decls)]
 
     prettyPrec p (IUpdate _ ups tt) =
-      vsep ["update", indent 2 $ vsep (map pretty ups ++ [pretty tt])]
+      vsep [apply p"IUpdate" [tt], indent 2 $ vsep (map pretty ups)]
 
-    prettyPrec p (IApp _ f tt) =
-       docParens (p >= App)
-       (align $ sep [prettyPrec p f <++> "`app`", prettyApp tt])
+    prettyPrec p x@(IApp _ _ _) =
+      backtickParens p (alignInfix "IApp" $ reverse (args x))
+      where args : TTImp -> List (Doc ann)
+            args (IApp _ f t) = prettyBacktick t :: args f
+            args t            = [prettyBacktick t]
 
-    prettyPrec p (IImplicitApp _ f name tt) =
-      let dispName = maybe neutral pretty name
-       in align $ sep [pretty f <++> "`impApp`" <++> dispName, pretty tt]
+    prettyPrec p x@(IImplicitApp _ _ _ _) =
+      backtickParens p (alignInfix "IImplicitApp" $ reverse (args x))
+      where args : TTImp -> List (Doc ann)
+            args (IImplicitApp _ f n t) = parens (hsepH[n,":",t]) :: args f
+            args t                      = [prettyBacktick t]
 
-    prettyPrec p (IWithApp _ f tt) =
-      align $ sep ["withApp" <++> pretty f, pretty tt]
+    prettyPrec p x@(IWithApp _ _ _) =
+      backtickParens p (alignInfix "IWithApp" $ reverse (args x))
+      where args : TTImp -> List (Doc ann)
+            args (IWithApp _ f t) = prettyBacktick t :: args f
+            args t                = [prettyBacktick t]
 
-    prettyPrec p (ISearch _ depth) = "search" <++> pretty depth
+    prettyPrec p (ISearch _ depth) = applyH p "ISearch" [depth]
 
     prettyPrec p (IAlternative _ alt xs) =
-      vsep ["alternative" <++> pretty alt, indent 2 $ vsep (map pretty xs)]
+      vsep [apply p "IAlternative" [alt], indent 2 $ vsep (map pretty xs)]
 
-    prettyPrec p (IRewrite _ y z) = align $ sepH ["rewrite", y, z]
-
-    prettyPrec p (IBindHere _ y z) = hsepH ["bind here", y, z]
-
-    prettyPrec p (IBindVar _ y) = "bindVar" <++> pretty y
-
-    prettyPrec p (IAs _ use name w) =
-      hsep ["as", pretty use, pretty name <+> "@" <+> prettyApp w]
-
-    prettyPrec p (IMustUnify _ y z) = hsepH ["mustUnify", y, z]
-    prettyPrec p (IDelayed _ y z)   = hsepH ["delayed", y, z]
-    prettyPrec p (IDelay _ y)       = hsepH ["delay", y]
-    prettyPrec p (IForce _ y)       = hsepH ["force", y]
-    prettyPrec p (IQuote _ y)       = "`("  <++> pretty y <++> ")"
-    prettyPrec p (IQuoteName _ y)   = "`{{" <++> pretty y <++> "}}"
-    prettyPrec p (IQuoteDecl _ y)   = "`["  <++> pretty y <++> "]"
-    prettyPrec p (IUnquote _ y)     = "~("  <++> pretty y <++> ")"
-    prettyPrec p (IPrimVal _ c)     = pretty c
-    prettyPrec p (IType _)          = "Type"
-    prettyPrec p (IHole _ y)        = "?" <+> prettyPrec p y
-    prettyPrec p (Implicit _ bind)  =   "{Implicit:" <+> pretty bind <+> "}"
-    prettyPrec p (IWithUnambigNames _ xs y) = "with names" <++> pretty xs <++> pretty y
+    prettyPrec p (IRewrite _ y z)   = applyH p "IRewrite" [y, z]
+    prettyPrec p (IBindHere _ y z)  = applyH p "IBindHere" [y, z]
+    prettyPrec p (IBindVar _ y)     = apply p "IBindVar" [y]
+    prettyPrec p (IAs _ use n w)    = applyH p "IAs" [use,n,w]
+    prettyPrec p (IMustUnify _ y z) = applyH p "IMustUnify" [y,z]
+    prettyPrec p (IDelayed _ y z)   = applyH p "IDelayed" [y,z]
+    prettyPrec p (IDelay _ y)       = apply p "IDelay" [y]
+    prettyPrec p (IForce _ y)       = apply p "IForce" [y]
+    prettyPrec p (IQuote _ y)       = apply p "IQuote" [y]
+    prettyPrec p (IQuoteName _ y)   = apply p "IQuoteName" [y]
+    prettyPrec p (IQuoteDecl _ y)   = apply p "IQuoteDecl" [y]
+    prettyPrec p (IUnquote _ y)     = apply p "IUnquote" [y]
+    prettyPrec p (IPrimVal _ y)     = apply p "IPrimVal" [y]
+    prettyPrec _ (IType _)          = "IType"
+    prettyPrec p (IHole _ y)        = apply p "IHole" [y]
+    prettyPrec p (Implicit _ y)     = apply p "IImplicit" [y]
+    prettyPrec p (IWithUnambigNames _ xs y) = applyH p "IWithUnabigNames" [xs,y]

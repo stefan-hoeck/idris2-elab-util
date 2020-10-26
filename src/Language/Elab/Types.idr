@@ -68,7 +68,7 @@ getCon n = do (n',tt)    <- lookupName n
 
 export
 Pretty Con where
-  pretty (MkCon n args tpe) = pretty n <++> prettyPi args tpe
+  prettyPrec p (MkCon n args tpe) = applyH p "MkCon" [n, args, tpe]
 
 public export
 record TypeInfo where
@@ -90,6 +90,6 @@ getInfo n =
 export
 Pretty TypeInfo where
   pretty (MkTypeInfo name args cons type) =
-    let head = pretty name <++> prettyPi args (IType EmptyFC)
+    let head = applyH Open "MkTypeInfo" [name, args, type]
         cons = indent 2 $ vsep (map pretty cons)
      in vsep [head,cons]
