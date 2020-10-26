@@ -38,8 +38,7 @@ AllPretty []        = ()
 AllPretty (x :: xs) = (Pretty x, AllPretty xs)
 
 ||| Convert all values in a heterogeneous vector
-||| to `Doc`s using the corresponding `Pretty`
-||| instances.
+||| to `Doc`s using their `Pretty` instances.
 export
 prettyPrecAll : AllPretty ts => Prec -> HVect ts -> List (Doc ann)
 prettyPrecAll _ []       = []
@@ -95,6 +94,9 @@ prettyApp : Pretty t => t -> Doc ann
 prettyApp = prettyPrec App
 
 ||| Alias for `prettyPrec Backtick`
+|||
+||| This is used to prettify infixed functions (`IApp`) and
+||| set parentheses correctly.
 export
 prettyBacktick : Pretty t => t -> Doc ann
 prettyBacktick = prettyPrec Backtick
@@ -111,7 +113,7 @@ export
 appParens : (p : Prec) -> Doc ann -> Doc ann
 appParens p = docParens (p >= App)
 
-||| Wraps a the given `Doc` in parenthesis if `p >= App`.
+||| Wraps a the given `Doc` in parenthesis if `p >= Backtick`.
 export
 backtickParens : (p : Prec) -> Doc ann -> Doc ann
 backtickParens p = docParens (p >= Backtick)
@@ -120,10 +122,7 @@ backtickParens p = docParens (p >= Backtick)
 ||| to a list of arguments. Arguments will be wrapped in parentheses
 ||| if necessary and aligned properly.
 export
-applyDoc :  (p    : Prec)
-         -> (con  : Doc ann)
-         -> (args : List (Doc ann))
-         -> Doc ann
+applyDoc : (p : Prec) -> (con : Doc ann) -> (args : List (Doc ann)) -> Doc ann
 applyDoc p con args = appParens p $ con <++> align (sep args)
 
 export
@@ -142,9 +141,14 @@ export
 alignInfix : (fun : String) -> (args : List (Doc ann)) -> Doc ann
 alignInfix fun []       = pretty fun
 alignInfix fun [type]   = pretty fun <++> type
-alignInfix fun (h :: t) = let fun' = pretty ("`" ++ fun ++ "`")
-                              h'   = flatAlt (spaces (cast $ length fun + 3) <+> h) h
-                           in align $ sep (h' :: map (fun' <++>) t)
+alignInfix fun (h :: t) =
+  let fun' = pretty ("`" ++ fun ++ "`")
+      h'   = flatAlt (spaces (cast $ length fun + 3) <+> h) h
+   in align $ sep (h' :: map (fun' <++>) t)
+
+export
+indentLines : (header : Doc ann) -> (lines : List (Doc ann)) -> Doc ann
+indentLines header lines = align $ vsep [header, indent 2 $ vsep lines]
 
 --------------------------------------------------------------------------------
 --          Pretty instances for TT Types
@@ -281,10 +285,8 @@ mutual
 
   export
   Pretty Data where
-    prettyPrec p (MkData _ n tycon opts datacons) =
-      vsep [ applyH p "MkData" [n,tycon,opts]
-           , indent 2 $ vsep (map pretty datacons)
-           ]
+    prettyPrec p (MkData _ n t o cons) =
+      indentLines (applyH p "MkData" [n,t,o]) (map pretty cons)
 
     prettyPrec p (MkLater _ n tycon) = applyH p "MkLater" [n, tycon]
 
@@ -295,22 +297,17 @@ mutual
 
   export
   Pretty Record where
-    prettyPrec p (MkRecord _ name params conName fields) = 
-      vsep [ applyH p "MkRecord" [name,params,conName]
-           , indent 2 $ vsep (map pretty fields)
-           ]
+    prettyPrec p (MkRecord _ n ps c fs) = 
+      indentLines (applyH p "MkRecord" [n,ps,c]) (map pretty fs)
 
   export
   Pretty Clause where
-    pretty (PatClause _ lh rh) = 
-      "PatClause" <++> align ( sep [ "  " <++> pretty lh
-                                   , "=>" <++> pretty rh])
+    prettyPrec p (PatClause _ l r) = applyH p "PatClause" [l, r]
       
-    pretty (ImpossibleClause _ lh) = pretty lh <++> "impossible"
+    prettyPrec p (ImpossibleClause _ l) = applyH p "Impossible" [l]
 
-    pretty (WithClause _ lh wval xs) =
-      let lines = indent 2 $ vsep (map pretty xs)
-       in vsep [pretty lh <++> pretty wval, lines]
+    prettyPrec p (WithClause _ l w cs) =
+      indentLines (applyH p "WithClause" [l,w]) (map pretty cs)
 
   private
   prettyParams : List (Name,TTImp) -> Doc ann
@@ -320,29 +317,26 @@ mutual
 
   export
   Pretty Decl where
-    prettyPrec _ (IClaim _ cnt vis opts ty) =
-      let prettyOpts = hcat $ punctuate ";" (map pretty opts)
-       in vsep [pretty cnt, pretty vis, prettyOpts, pretty ty]
+    prettyPrec p (IClaim _ c v o t) = applyH p "IClaim" [c,v,o,t]
+    prettyPrec p (IData _ v d) = applyH p "IData" [v,d]
 
-    prettyPrec p (IData _ vis dat) = vsepH [vis, dat]
+    prettyPrec p (IDef _ n cs) =
+      indentLines (apply p "IDef" [n]) (map pretty cs)
 
-    prettyPrec p (IDef _ n cls) = vsep [ apply p "IDef" [n]
-                                       , indent 2 $ vsep (map pretty cls)]
+    prettyPrec p (IParameters _ ps decs) =
+      indentLines (apply p "IParameters" [ps]) (map pretty decs)
 
-    prettyPrec _ (IParameters _ ps decs) = vsep (prettyParams ps :: map pretty decs)
+    prettyPrec p (IRecord _ v r) = applyH p "IRecord" [v, r]
 
-    prettyPrec _ (IRecord _ v r) = vsepH [v, r]
+    prettyPrec p (INamespace _ ns ds) =
+      indentLines (applyDoc p "INamespace" [dotted ns]) (map pretty ds)
 
-    prettyPrec _ (INamespace _ names decls) =
-      let head = pretty "namespace" <++> dotted names
-       in vsep (head :: map pretty decls)
-
-    prettyPrec p (ITransform _ name a b) = applyH p "ITransform" [name,a,b]
+    prettyPrec p (ITransform _ n a b) = applyH p "ITransform" [n,a,b]
     prettyPrec p (ILog k) = apply p "ILog" [k]
 
   export
   Pretty TTImp where
-    prettyPrec _ (IVar _ y) = "IVar" <++> pretty y
+    prettyPrec p (IVar _ y) = apply p "IVar" [y]
 
     prettyPrec p x@(IPi _ _ _ _ _ _) =
       backtickParens p (alignInfix "IPi"  $ args x)
@@ -364,13 +358,13 @@ mutual
       applyH p "ILet" [cnt,name,nTy,nVal,scope]
 
     prettyPrec p (ICase _ arg ty clauses) = 
-      vsep [applyH p "ICase" [arg,ty], indent 2 $ vsep (map pretty clauses)]
+      indentLines (applyH p "ICase" [arg,ty]) (map pretty clauses)
 
     prettyPrec p (ILocal _ decls tt) = 
-      vsep [apply p "ILocal" [tt] , indent 2 $ vsep (map pretty decls)]
+      indentLines (apply p "ILocal" [tt]) (map pretty decls)
 
     prettyPrec p (IUpdate _ ups tt) =
-      vsep [apply p"IUpdate" [tt], indent 2 $ vsep (map pretty ups)]
+      indentLines (apply p"IUpdate" [tt]) (map pretty ups)
 
     prettyPrec p x@(IApp _ _ _) =
       backtickParens p (alignInfix "IApp" $ reverse (args x))
@@ -393,7 +387,7 @@ mutual
     prettyPrec p (ISearch _ depth) = applyH p "ISearch" [depth]
 
     prettyPrec p (IAlternative _ alt xs) =
-      vsep [apply p "IAlternative" [alt], indent 2 $ vsep (map pretty xs)]
+      indentLines (apply p "IAlternative" [alt]) (map pretty xs)
 
     prettyPrec p (IRewrite _ y z)   = applyH p "IRewrite" [y, z]
     prettyPrec p (IBindHere _ y z)  = applyH p "IBindHere" [y, z]
