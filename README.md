@@ -60,40 +60,55 @@ pretty printer is provided:
 
 ```
 Language.Elab.Pretty> :exec putPretty `(2 * x)
-IVar * `app` (IVar fromInteger `app` 2) `app` IVar x
+
+  IApp. IVar * $ (IApp. IVar fromInteger $ IPrimVal 2) $ IVar x
+
 ```
 
-As can be seen, source locations have been removed, names
-are rendered without constructors, and
-function application is shown in infix notation to
-reduce the amount of parentheses.
+As can be seen, source locations have been removed and names
+are rendered without constructors. Function application is
+treated specially: The data constructor `IApp` is shown, to
+tell users which constructor to use, but nested calls to `IApp`
+are then replaced with an infix operater (`$`) to enhance readability
+and reduce the amount of parentheses. While this somewhat obfuscates
+how cascades of function application result in nested calls
+to `IApp`, it helps when verifying the correct structure of our own
+manually written `TTImp` values.
 
-We can also inspect type declarations:
+A similar layout is used for nested function declarations
+and lambdas:
 
 ```
 Language.Elab.Pretty> :exec putPretty `(Show a => (val : a) -> String)
-pi :  (MW AutoImplicit  : IVar Show `app` IVar a)
-   -> (MW ExplicitArg val : IVar a)
-   -> String
-```
 
-Lambdas:
+  IPi.  (MW AutoImplicit : IApp. IVar Show $ IVar a)
+     -> (MW ExplicitArg val : IVar a)
+     -> IPrimVal String
+
+```
 
 ```
 Language.Elab.Pretty> :exec putPretty `(\x,y => x ++ reverse y)
-lambda :  (MW ExplicitArg x : {Implicit:False})
-       => (MW ExplicitArg y : {Implicit:False})
-       => IVar ++ `app` IVar x `app` (IVar reverse `app` IVar y)
+
+  ILam.  (MW ExplicitArg x : IImplicit False)
+      => (MW ExplicitArg y : IImplicit False)
+      => (IApp. IVar ++ $ IVar x $ (IApp. IVar reverse $ IVar y))
+
 ```
+
+Again, this gives a pretty clear picture about the data constructors
+involved while trying to make things somewhat more readable.
 
 Case expressions:
 
 ```
 Language.Elab.Pretty> :exec putPretty `(case x of { EQ => "eq"; LT => "lt"; GT => "gt" })
-case (IVar x : {Implicit:False}) of
-  pattern IVar EQ => IVar fromString `app` eq
-  pattern IVar LT => IVar fromString `app` lt
-  pattern IVar GT => IVar fromString `app` gt
+
+  ICase (IVar x) (IImplicit False)
+    PatClause (IVar EQ) (IVar fromString `IApp` IPrimVal eq)
+    PatClause (IVar LT) (IVar fromString `IApp` IPrimVal lt)
+    PatClause (IVar GT) (IVar fromString `IApp` IPrimVal gt)
+
 ```
 
 Now follow some syntactic sugar exaples.
@@ -101,17 +116,22 @@ If-then-else:
 
 ```
 Language.Elab.Pretty> :exec putPretty `(if x then y else z)
-case (IVar x : IVar Bool) of
-  pattern IVar True = IVar y
-  pattern IVar False = IVar z
+
+  ICase (IVar x) (IVar Bool)
+    PatClause (IVar True) (IVar y)
+    PatClause (IVar False) (IVar z)
+
 ```
 
 Idiom brackets:
 
 ```
 Language.Elab.Pretty> :exec putPretty `([| fun x y |])
-IVar <*> `app` ((IVar <*> `app` (IVar pure `app` IVar fun)) `app` IVar x) `app`
-IVar y
+
+         IVar <*>
+  `IApp` (IVar <*> `IApp` (IVar pure `IApp` IVar fun) `IApp` IVar x)
+  `IApp` IVar y
+
 ```
 
 Do notation:

@@ -28,7 +28,7 @@ import Text.PrettyPrint.Prettyprinter.Render.String
 ||| Pretty but uncolored output to the terminal
 export
 putPretty : Pretty t => t -> IO ()
-putPretty t = putDoc (pretty {ann = ()} t) *> putStrLn ""
+putPretty t = putDoc (indent 2 $ vsep ["", pretty {ann = ()} t, "",""])
 
 ||| Constraint, witnessing that all types in the given
 ||| `Vect` of types have a `Pretty` instance.
@@ -138,13 +138,15 @@ applyH :  AllPretty ts
 applyH p con args = applyDoc p con (prettyAppAll args)
 
 export
-alignInfix : (fun : String) -> (args : List (Doc ann)) -> Doc ann
-alignInfix fun []       = pretty fun
-alignInfix fun [type]   = pretty fun <++> type
-alignInfix fun (h :: t) =
-  let fun' = pretty ("`" ++ fun ++ "`")
-      h'   = flatAlt (spaces (cast $ length fun + 3) <+> h) h
-   in align $ sep (h' :: map (fun' <++>) t)
+alignInfix :  (fun : String)
+           -> (symbol : String)
+           -> (args : List (Doc ann))
+           -> Doc ann
+alignInfix fun _ []       = pretty fun
+alignInfix fun _ [type]   = pretty fun <++> type
+alignInfix fun symbol (h :: t) =
+  let h' = "." <++> flatAlt (spaces (cast (length symbol) - 1) <+> h) h
+   in pretty fun <+> align (sep (h' :: map (pretty symbol <++>) t))
 
 export
 indentLines : (header : Doc ann) -> (lines : List (Doc ann)) -> Doc ann
@@ -339,7 +341,7 @@ mutual
     prettyPrec p (IVar _ y) = apply p "IVar" [y]
 
     prettyPrec p x@(IPi _ _ _ _ _ _) =
-      backtickParens p (alignInfix "IPi"  $ args x)
+      backtickParens p (alignInfix "IPi" "->" $ args x)
       where args : TTImp -> List (Doc ann)
             args (IPi _ c i n at rt) =
               parens (hsepH [c,i,maybe ":" ((++ " :") . show) n,at]) :: args rt
@@ -347,7 +349,7 @@ mutual
             args rt = [prettyBacktick rt]
 
     prettyPrec p x@(ILam _ _ _ _ _ _) =
-      backtickParens p (alignInfix "ILam" $ args x)
+      backtickParens p (alignInfix "ILam" "=>" $ args x)
       where args : TTImp -> List (Doc ann)
             args (ILam _ c i n at rt) =
               parens (hsepH [c,i,maybe ":" ((++ " :") . show) n,at]) :: args rt
@@ -367,19 +369,19 @@ mutual
       indentLines (apply p"IUpdate" [tt]) (map pretty ups)
 
     prettyPrec p x@(IApp _ _ _) =
-      backtickParens p (alignInfix "IApp" $ reverse (args x))
+      backtickParens p (alignInfix "IApp" "$" $ reverse (args x))
       where args : TTImp -> List (Doc ann)
             args (IApp _ f t) = prettyBacktick t :: args f
             args t            = [prettyBacktick t]
 
     prettyPrec p x@(IImplicitApp _ _ _ _) =
-      backtickParens p (alignInfix "IImplicitApp" $ reverse (args x))
+      backtickParens p (alignInfix "IImplicitApp" "$" $ reverse (args x))
       where args : TTImp -> List (Doc ann)
             args (IImplicitApp _ f n t) = parens (hsepH[n,":",t]) :: args f
             args t                      = [prettyBacktick t]
 
     prettyPrec p x@(IWithApp _ _ _) =
-      backtickParens p (alignInfix "IWithApp" $ reverse (args x))
+      backtickParens p (alignInfix "IWithApp" "$" $ reverse (args x))
       where args : TTImp -> List (Doc ann)
             args (IWithApp _ f t) = prettyBacktick t :: args f
             args t                = [prettyBacktick t]
