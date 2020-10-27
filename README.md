@@ -99,7 +99,10 @@ Language.Elab.Pretty> :exec putPretty `(\x,y => x ++ reverse y)
 Again, this gives a pretty clear picture about the data constructors
 involved while trying to make things somewhat more readable.
 
-Case expressions:
+Some constructs like case expressions take a list
+of clauses, declarations or constructors as an
+arguments. These lists are typically indented and one
+element per line.
 
 ```
 Language.Elab.Pretty> :exec putPretty `(case x of { EQ => "eq"; LT => "lt"; GT => "gt" })
@@ -128,9 +131,10 @@ Idiom brackets:
 ```
 Language.Elab.Pretty> :exec putPretty `([| fun x y |])
 
-         IVar <*>
-  `IApp` (IVar <*> `IApp` (IVar pure `IApp` IVar fun) `IApp` IVar x)
-  `IApp` IVar y
+  IApp. IVar <*>
+      $ (IApp. IVar <*> $ (IApp. IVar pure $ IVar fun) $ IVar x)
+      $ IVar y
+              
 
 ```
 
@@ -138,11 +142,14 @@ Do notation:
 
 ```
 Language.Elab.Pretty> :exec putPretty `(do x <- run; action x; pure x)
-IVar >>= `app` IVar run `app`
-(lambda :  (MW ExplicitArg x : {Implicit:False})
-        => IVar >>= `app` (IVar action `app` IVar x) `app`
-        (lambda :  (MW ExplicitArg  : {Implicit:False})
-                => IVar pure `app` IVar x))
+
+App. IVar >>=
+   $ IVar run
+   $ (ILam.  (MW ExplicitArg x : IImplicit False)
+          => (IApp. IVar >>=
+                  $ (IApp. IVar action $ IVar x)
+                  $ (ILam.  (MW ExplicitArg : IImplicit False)
+                         => (IApp. IVar pure $ IVar x))))
 
 ```
 
@@ -150,3 +157,44 @@ The examples about special syntax show that we can use these
 constructs in regular code and in quoted expressions and declarations
 but not when building syntax trees manually using the constructors
 of `Language.Reflection.TTImp`.
+
+### Declarations
+
+Finally, it is possible to quote whole multiline declarations
+by putting them in quoted bracktes. In syntax files, multiline
+quotes are supported:
+
+```idris
+  `[ export %inline
+     test : Int -> Int
+     test n = n + n ]
+```
+
+In the REPL, we have to separate lines by using semicolons:
+
+```
+...> :exec putPretty `[export %inline test : Int -> Int -> Int; test n = n + n]
+
+  [ IClaim MW
+           Export
+           [Inline]
+           (MkTy test (IPi. (MW ExplicitArg : IPrimVal Int) -> IPrimVal Int))
+  , IDef test
+      PatClause (IApp. IVar test $ IBindVar n)
+                (IApp. IVar + $ IVar n $ IVar n) ]
+
+```
+
+Inspecting quoted data declarations is also possible:
+
+```
+...> :exec putPretty `[ data Foo t = A t | B ]
+
+  Data Private
+       (MkData Foo (IPi. (M1 ExplicitArg : IType) -> IType) [])
+         MkTy A
+              (IPi.  (M1 ExplicitArg : IBindVar t)
+                  -> (IApp. IVar Foo $ IBindVar t))
+        MkTy B (IApp. IVar Foo $ IBindVar t) ]
+
+```

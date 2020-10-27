@@ -311,12 +311,6 @@ mutual
     prettyPrec p (WithClause _ l w cs) =
       indentLines (applyH p "WithClause" [l,w]) (map pretty cs)
 
-  private
-  prettyParams : List (Name,TTImp) -> Doc ann
-  prettyParams = align . sep . map prettyParam
-    where prettyParam : (Name,TTImp) -> Doc ann
-          prettyParam (n,ty) = hcat ["(",pretty n," : ", pretty ty,")"]
-
   export
   Pretty Decl where
     prettyPrec p (IClaim _ c v o t) = applyH p "IClaim" [c,v,o,t]
