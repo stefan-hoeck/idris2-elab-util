@@ -10,8 +10,6 @@
 module Language.Elab.Syntax
 
 import Language.Reflection
-import Language.Elab.Pretty
-import Text.PrettyPrint.Prettyprinter
 
 ||| Creates a variable from the given name
 |||
@@ -24,6 +22,7 @@ export
 iVar : Name -> TTImp
 iVar = IVar EmptyFC
 
+||| Binds a new variable, for instance in a pattern match.
 export
 iBindVar : String -> TTImp
 iBindVar = IBindVar EmptyFC
@@ -37,29 +36,50 @@ export
 iApp : TTImp -> TTImp -> TTImp
 iApp = IApp EmptyFC
 
-export
-appAll : Name -> List Name -> TTImp
-appAll n ns = run (iVar n) ns
-  where run : TTImp -> List Name -> TTImp
+appNames : (f : a -> TTImp) -> Name -> List a -> TTImp
+appNames f fun = run (iVar fun)
+  where run : TTImp -> List a -> TTImp
         run tti []        = tti
-        run tti (x :: xs) = run (tti `iApp` iVar x) xs
+        run tti (x :: xs) = run (tti `iApp` f x) xs
+
+||| Applies a list of variables to a function.
+|||
+||| Example: appAll `{{either}} [`{{f}}, `{{g}}, `{{val}}]
+|||          is the same as ~(either f g val)
+export
+appAll : (fun : Name) -> (args : List Name) -> TTImp
+appAll = appNames iVar
+
+||| Binds a list of parameters to a data constructor in
+||| a pattern match.
+|||
+||| Example: bindAll `{{MkPair}} [`{{a}}, `{{b}}]
+|||          is the same as ~(MkPair a b)
+export
+bindAll : (fun : Name) -> (args : List String) -> TTImp
+bindAll = appNames iBindVar
 
 export
 iImplicitApp : TTImp -> Maybe Name -> TTImp -> TTImp
 iImplicitApp = IImplicitApp EmptyFC
 
+||| Implicit value bound if unsolved
 export
 implicitTrue : TTImp
 implicitTrue = Implicit EmptyFC True
 
+||| Implicitly typed value unbound if unsolved
 export
 implicitFalse : TTImp
 implicitFalse = Implicit EmptyFC False
 
+||| A pattern clause consisting of the left-hand and
+||| right-hand side of the pattern arrow "=>".
 export
 patClause : (lhs : TTImp) -> (rhs : TTImp) -> Clause
 patClause = PatClause EmptyFC
 
+||| Type declaration.
 export
 iClaim : Count -> Visibility -> List FnOpt -> ITy -> Decl
 iClaim = IClaim EmptyFC
@@ -67,6 +87,7 @@ iClaim = IClaim EmptyFC
 export
 mkTy : (n : Name) -> (ty : TTImp) -> ITy
 mkTy = MkTy EmptyFC
+
 
 export
 listOf : List TTImp -> TTImp

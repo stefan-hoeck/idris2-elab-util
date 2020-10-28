@@ -400,5 +400,5 @@ mutual
     prettyPrec p (IPrimVal _ y)     = apply p "IPrimVal" [y]
     prettyPrec _ (IType _)          = "IType"
     prettyPrec p (IHole _ y)        = apply p "IHole" [y]
-    prettyPrec p (Implicit _ y)     = apply p "IImplicit" [y]
+    prettyPrec p (Implicit _ y)     = apply p "Implicit" [y]
     prettyPrec p (IWithUnambigNames _ xs y) = applyH p "IWithUnabigNames" [xs,y]

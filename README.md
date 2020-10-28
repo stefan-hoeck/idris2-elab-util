@@ -108,9 +108,9 @@ element per line.
 Language.Elab.Pretty> :exec putPretty `(case x of { EQ => "eq"; LT => "lt"; GT => "gt" })
 
   ICase (IVar x) (IImplicit False)
-    PatClause (IVar EQ) (IVar fromString `IApp` IPrimVal eq)
-    PatClause (IVar LT) (IVar fromString `IApp` IPrimVal lt)
-    PatClause (IVar GT) (IVar fromString `IApp` IPrimVal gt)
+    PatClause (IVar EQ) (IApp. IVar fromString $ IPrimVal eq)
+    PatClause (IVar LT) (IApp. IVar fromString $ IPrimVal lt)
+    PatClause (IVar GT) (IApp. IVar fromString $ IPrimVal gt)
 
 ```
 
