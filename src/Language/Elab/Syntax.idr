@@ -9,7 +9,7 @@
 ||| Expressions can be quoted like so: `(\x => x * x)
 module Language.Elab.Syntax
 
-import Language.Reflection
+import public Language.Reflection
 
 ||| Creates a variable from the given name
 |||
@@ -21,6 +21,10 @@ import Language.Reflection
 export
 iVar : Name -> TTImp
 iVar = IVar EmptyFC
+
+export
+iVarStr : String -> TTImp
+iVarStr = iVar . UN
 
 ||| Binds a new variable, for instance in a pattern match.
 export
@@ -98,6 +102,12 @@ export
 iPi : Count -> PiInfo TTImp -> Maybe Name ->
       (argTy : TTImp) -> (retTy : TTImp) -> TTImp
 iPi = IPi EmptyFC
+
+infixr 3 ==>
+
+export
+(==>) : TTImp -> TTImp -> TTImp
+(==>) = iPi MW ExplicitArg Nothing
 
 export
 iLam : Count -> PiInfo TTImp -> Maybe Name ->

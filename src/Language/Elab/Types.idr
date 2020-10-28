@@ -2,9 +2,9 @@ module Language.Elab.Types
 
 -- inspired by https://github.com/MarcelineVQ/idris2-elab-deriving/
 
-import Language.Elab.Pretty
-import Language.Elab.Syntax
-import Language.Reflection
+import public Language.Elab.Pretty
+import public Language.Elab.Syntax
+import public Language.Reflection
 import Text.PrettyPrint.Prettyprinter
 
 public export
@@ -78,7 +78,7 @@ record TypeInfo where
   cons : List Con
   type : TTImp
 
-export
+export %macro
 getInfo : Name -> Elab TypeInfo
 getInfo n = 
   do (n',tt)    <- lookupName n

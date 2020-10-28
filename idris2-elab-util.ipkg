@@ -9,3 +9,5 @@ sourcedir = "src"
 modules = Language.Elab.Syntax
         , Language.Elab.Pretty
         , Language.Elab.Types
+
+        , Example.Language.Elab.Enum
