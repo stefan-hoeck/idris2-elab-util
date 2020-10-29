@@ -7,6 +7,8 @@ import public Language.Reflection.Syntax
 import public Language.Reflection
 import Text.PrettyPrint.Prettyprinter
 
+%language ElabReflection
+
 public export
 record Arg where
   constructor MkArg
@@ -78,14 +80,18 @@ record TypeInfo where
   cons : List Con
   type : TTImp
 
-export %macro
-getInfo : Name -> Elab TypeInfo
-getInfo n = 
+export
+getInfo' : Name -> Elab TypeInfo
+getInfo' n = 
   do (n',tt)    <- lookupName n
      (args,tpe) <- calcArgs tt
      conNames   <- getCons n'
      cons       <- traverse getCon conNames
      pure (MkTypeInfo n' args cons tpe)
+
+export %macro
+getInfo : Name -> Elab TypeInfo
+getInfo = getInfo'
 
 export
 Pretty TypeInfo where
@@ -93,3 +99,9 @@ Pretty TypeInfo where
     let head = applyH Open "MkTypeInfo" [name, args, type]
         cons = indent 2 $ vsep (map pretty cons)
      in vsep [head,cons]
+
+export %macro
+singleCon : Name -> Elab Name
+singleCon n = do (MkTypeInfo _ _ cs _) <- getInfo' n
+                 (c::Nil) <- pure cs | _ => fail "not a single constructor"
+                 pure $ name c

@@ -84,7 +84,7 @@ the string passed whether the name is fully qualified or not.
 
 ```idris
 enumDecl : (name : String) -> (cons : List String) -> Decl
-enumDecl name = publicSimpleData (UN name) . map mkCon
+enumDecl name = simpleData Public (UN name) . map mkCon
   where mkCon : String -> ITy
         mkCon n = mkTy (UN n) (varStr name)
 ```

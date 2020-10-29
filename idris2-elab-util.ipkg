@@ -11,4 +11,5 @@ modules = Language.Reflection.Syntax
         , Language.Reflection.Types
 
         , Doc.Enum1
+        , Doc.Enum2
         , Doc.Inspect

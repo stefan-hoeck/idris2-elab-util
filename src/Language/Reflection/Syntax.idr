@@ -213,12 +213,34 @@ export
 claim : Count -> Visibility -> List FnOpt -> ITy -> Decl
 claim = IClaim EmptyFC
 
+||| `simpleClaim v` is an alias for `claim MW v []`
+export
+simpleClaim : Visibility -> ITy -> Decl
+simpleClaim v = claim MW v []
+
+||| `directHint v` is an alias for `claim MW v [Hint True]`
+export
+directHint : Visibility -> ITy -> Decl
+directHint v = claim MW v [Hint True]
+
+||| `interfaceHint v` is an alias for `claim MW v [Hint False]`
+export
+interfaceHint : Visibility -> ITy -> Decl
+interfaceHint v = claim MW v [Hint False]
+
 ||| Function definition (implementation)
 |||
 ||| This is an alias for `IDef EmptyFC`.
 export
 def : Name -> List Clause -> Decl
 def = IDef EmptyFC
+
+||| Local definitions
+|||
+||| This is an alias for `ILocal EmptyFC`.
+export
+local : List Decl -> TTImp -> TTImp
+local = ILocal EmptyFC
 
 --------------------------------------------------------------------------------
 --          Data Declarations
@@ -246,13 +268,13 @@ simpleData v n = iData v n type []
 
 ||| Alias for `simpleData Public`
 export
-publicSimpleData : Name -> (cons : List ITy) -> Decl
-publicSimpleData = simpleData Public
+simpleDataPublic : Name -> (cons : List ITy) -> Decl
+simpleDataPublic = simpleData Public
 
 ||| Alias for `simpleData Export`
 export
-exportSimpleData : Name -> (cons : List ITy) -> Decl
-exportSimpleData = simpleData Export
+simpleDataExport : Name -> (cons : List ITy) -> Decl
+simpleDataExport = simpleData Export
 
 --------------------------------------------------------------------------------
 --          Local Definitions
