@@ -75,10 +75,14 @@ eqTest : impl1EqGender Female Female = True
 eqTest = Refl
 ```
 
+Great, everything seems to work as expected.
+
+### Interface Implementation, Part 1
+
 Unfortunately, it seems not to be possible to emulate
 the definition of an interface directly. The following
-declaration quote results in an error message from Idris
-(**Can't reflect a pragma**).
+quote results in an error message from Idris
+(*Can't reflect a pragma*).
 
 ```
 eqInterfaceDecl : List Decl
@@ -88,7 +92,7 @@ eqInterfaceDecl = `[ Eq Gender ]
 From the [implementation notes](https://idris2.readthedocs.io/en/latest/implementation/overview.html#auto-implicits)
 we learn that interfaces are translated to records and
 implementations to search hints, so we might try to create
-such a record value manually. However, there comes a new hurle.
+such a record value manually. However, there comes a new hurdle.
 What's the name of `Eq`'s constructor? There are several ways
 to find out, but easiest is probably case expansion
 in interactive edting. The result comes as a surprise:
@@ -128,6 +132,14 @@ Doc.Enum2> :exec putPretty eqInfo
           (IApp. IVar Prelude.EqOrd.Eq $ IVar ty)
 
 ```
+
+### Interface Implementation, Part 2
+
+The above output shows the general structure we are heading towards.
+We somehow need to get access to that horribly named
+constructor of `Eq`, define two local implementations for
+`(==)` and `(/=)` and then apply those implementations
+to the constructor.
 
 ```idris
 export
