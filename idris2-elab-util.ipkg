@@ -10,4 +10,5 @@ modules = Language.Elab.Syntax
         , Language.Elab.Pretty
         , Language.Elab.Types
 
+        , Doc.Inspect
         , Example.Language.Elab.Enum

@@ -45,7 +45,7 @@ module provides functionality for looking up existing
 data definitions in scope as well as add new declarations
 to the list of declarations in a source file.
 
-### What's next?
+### What's next
 
 This was a rather superficial introduction to the core
 concepts of metaprogramming in Idris. It is now time

@@ -287,43 +287,30 @@ mutual
 
   export
   Pretty Data where
-    prettyPrec p (MkData _ n t o cons) =
-      indentLines (applyH p "MkData" [n,t,o]) (map pretty cons)
-
+    prettyPrec p (MkData _ n t o cs) = applyH p "MkData" [n,t,o,cs]
     prettyPrec p (MkLater _ n tycon) = applyH p "MkLater" [n, tycon]
 
   export
   Pretty IField where
-    prettyPrec p (MkIField _ cnt piInfo name ttImp) =
-      applyH p "MkIField" [cnt,piInfo,name,ttImp]
+    prettyPrec p (MkIField _ c pi n t) = applyH p "MkIField" [c,pi,n,t]
 
   export
   Pretty Record where
-    prettyPrec p (MkRecord _ n ps c fs) = 
-      indentLines (applyH p "MkRecord" [n,ps,c]) (map pretty fs)
+    prettyPrec p (MkRecord _ n ps c fs) = applyH p "MkRecord" [n,ps,c,fs]
 
   export
   Pretty Clause where
     prettyPrec p (PatClause _ l r) = applyH p "PatClause" [l, r]
-      
     prettyPrec p (ImpossibleClause _ l) = applyH p "Impossible" [l]
-
-    prettyPrec p (WithClause _ l w cs) =
-      indentLines (applyH p "WithClause" [l,w]) (map pretty cs)
+    prettyPrec p (WithClause _ l w cs) = applyH p "WithClause" [l,w,cs]
 
   export
   Pretty Decl where
     prettyPrec p (IClaim _ c v o t) = applyH p "IClaim" [c,v,o,t]
     prettyPrec p (IData _ v d) = applyH p "IData" [v,d]
-
-    prettyPrec p (IDef _ n cs) =
-      indentLines (apply p "IDef" [n]) (map pretty cs)
-
-    prettyPrec p (IParameters _ ps decs) =
-      indentLines (apply p "IParameters" [ps]) (map pretty decs)
-
+    prettyPrec p (IDef _ n cs) = applyH p "IDef" [n,cs]
+    prettyPrec p (IParameters _ ps decs) = applyH p "IParameters" [ps,decs]
     prettyPrec p (IRecord _ v r) = applyH p "IRecord" [v, r]
-
     prettyPrec p (INamespace _ ns ds) =
       indentLines (applyDoc p "INamespace" [dotted ns]) (map pretty ds)
 
@@ -353,14 +340,12 @@ mutual
     prettyPrec p (ILet _ cnt name nTy nVal scope) =
       applyH p "ILet" [cnt,name,nTy,nVal,scope]
 
-    prettyPrec p (ICase _ arg ty clauses) = 
-      indentLines (applyH p "ICase" [arg,ty]) (map pretty clauses)
+    prettyPrec p (ICase _ arg ty cs) = applyH p "ICase" [arg,ty,cs]
 
     prettyPrec p (ILocal _ decls tt) = 
       indentLines (apply p "ILocal" [tt]) (map pretty decls)
 
-    prettyPrec p (IUpdate _ ups tt) =
-      indentLines (apply p"IUpdate" [tt]) (map pretty ups)
+    prettyPrec p (IUpdate _ ups tt) = applyH p"IUpdate" [ups,tt]
 
     prettyPrec p x@(IApp _ _ _) =
       backtickParens p (alignInfix "IApp" "$" $ reverse (args x))
@@ -382,8 +367,7 @@ mutual
 
     prettyPrec p (ISearch _ depth) = applyH p "ISearch" [depth]
 
-    prettyPrec p (IAlternative _ alt xs) =
-      indentLines (apply p "IAlternative" [alt]) (map pretty xs)
+    prettyPrec p (IAlternative _ alt xs) = applyH p "IAlternative" [alt,xs]
 
     prettyPrec p (IRewrite _ y z)   = applyH p "IRewrite" [y, z]
     prettyPrec p (IBindHere _ y z)  = applyH p "IBindHere" [y, z]
