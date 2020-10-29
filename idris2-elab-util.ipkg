@@ -6,11 +6,9 @@ main = Main
 
 sourcedir = "src"
 
-modules = Language.Elab.Syntax
-        , Language.Elab.Pretty
-        , Language.Elab.Types
+modules = Language.Reflection.Syntax
+        , Language.Reflection.Pretty
+        , Language.Reflection.Types
 
         , Doc.Enum1
         , Doc.Inspect
-
-        , Example.Language.Elab.Enum

@@ -13,7 +13,7 @@
 |||   :exec putPretty `{{ Name.In.A.Namespace }}
 |||   :exec putPretty `(Just (7 * x))
 |||   :exec putPretty `((1 index : Fin n) -> Vect n t -> t)
-module Language.Elab.Pretty
+module Language.Reflection.Pretty
 
 import public Data.HVect
 import Data.Strings

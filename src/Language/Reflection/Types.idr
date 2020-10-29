@@ -1,9 +1,9 @@
-module Language.Elab.Types
+module Language.Reflection.Types
 
 -- inspired by https://github.com/MarcelineVQ/idris2-elab-deriving/
 
-import public Language.Elab.Pretty
-import public Language.Elab.Syntax
+import public Language.Reflection.Pretty
+import public Language.Reflection.Syntax
 import public Language.Reflection
 import Text.PrettyPrint.Prettyprinter
 

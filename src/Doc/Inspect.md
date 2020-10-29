@@ -5,7 +5,7 @@ to look at the underlying structure of Idris expressions.
 Most of the examples can be run from the REPL.
 
 To better visualize the sometimes deeply nested
-syntax trees, [pretty printers](../Language/Elab/Pretty.idr)
+syntax trees, [pretty printers](../Language/Reflection/Pretty.idr)
 are provided for all public
 data types in modules `Language.Reflection.TT` and
 `Language.Reflection.TTImp`.
@@ -17,7 +17,7 @@ to provide this functionality. The following
 command sets up our REPL for the experiments in this section:
 
 ```
-$ rlwrap idris2 --source-dir src src/Language/Elab/Pretty.idr
+$ rlwrap idris2 --source-dir src src/Language/Reflection/Pretty.idr
 ```
 
 ### Quotes
@@ -34,7 +34,7 @@ They can be quoted by putting an identifier in double
 curly braces:
 
 ```
-Language.Elab.Pretty> :t `{{ Just }}
+Language.Reflection.Pretty> :t `{{ Just }}
 UN "Just" : Name
 ```
 
@@ -43,7 +43,7 @@ data stucture of the interpreted value. We can also
 prefix names with a namespace:
 
 ```
-Language.Elab.Pretty> `{{ Prelude.Types.Either }}
+Language.Reflection.Pretty> `{{ Prelude.Types.Either }}
 NS (MkNS ["Types", "Prelude"]) (UN "Either")
 ```
 
@@ -64,7 +64,7 @@ Probably the most important quoting facility
 is the ability to quote expressions.
 
 ```
-Language.Elab.Pretty> :t `(2 * x)
+Language.Reflection.Pretty> :t `(2 * x)
 ```
 
 This will print an impressive amount of information about the structure
@@ -75,7 +75,7 @@ trying to make the underlying tree structure visible, a
 pretty printer is provided:
 
 ```
-Language.Elab.Pretty> :exec putPretty `(2 * x)
+Language.Reflection.Pretty> :exec putPretty `(2 * x)
 
   IApp. IVar * $ (IApp. IVar fromInteger $ IPrimVal 2) $ IVar x
 
@@ -97,7 +97,7 @@ and lambdas (data constructor `ILam` and nesting
 operator `=>`):
 
 ```
-Language.Elab.Pretty> :exec putPretty `(Show a => (val : a) -> String)
+Language.Reflection.Pretty> :exec putPretty `(Show a => (val : a) -> String)
 
   IPi.  (MW AutoImplicit : IApp. IVar Show $ IVar a)
      -> (MW ExplicitArg val : IVar a)
@@ -106,7 +106,7 @@ Language.Elab.Pretty> :exec putPretty `(Show a => (val : a) -> String)
 ```
 
 ```
-Language.Elab.Pretty> :exec putPretty `(\x,y => x ++ reverse y)
+Language.Reflection.Pretty> :exec putPretty `(\x,y => x ++ reverse y)
 
   ILam.  (MW ExplicitArg x : IImplicit False)
       => (MW ExplicitArg y : IImplicit False)
@@ -123,7 +123,7 @@ syntactic sugar dissections.
 Case expressions:
 
 ```
-Language.Elab.Pretty> :exec putPretty `(case x of { EQ => "eq"; LT => "lt"; GT => "gt" })
+Language.Reflection.Pretty> :exec putPretty `(case x of { EQ => "eq"; LT => "lt"; GT => "gt" })
 
   ICase (IVar x)
         (IImplicit False)
@@ -136,7 +136,7 @@ Language.Elab.Pretty> :exec putPretty `(case x of { EQ => "eq"; LT => "lt"; GT =
 Let expressions:
 
 ```
-Language.Elab.Pretty> :exec putPretty `(let val = show x in val == reverse val)
+Language.Reflection.Pretty> :exec putPretty `(let val = show x in val == reverse val)
 
   ILet MW
        val
@@ -149,7 +149,7 @@ Language.Elab.Pretty> :exec putPretty `(let val = show x in val == reverse val)
 If-then-else:
 
 ```
-Language.Elab.Pretty> :exec putPretty `(if x then y else z)
+Language.Reflection.Pretty> :exec putPretty `(if x then y else z)
 
   ICase (IVar x)
         (IVar Bool)
@@ -160,7 +160,7 @@ Language.Elab.Pretty> :exec putPretty `(if x then y else z)
 Idiom brackets:
 
 ```
-Language.Elab.Pretty> :exec putPretty `([| fun x y |])
+Language.Reflection.Pretty> :exec putPretty `([| fun x y |])
 
   IApp. IVar <*>
       $ (IApp. IVar <*> $ (IApp. IVar pure $ IVar fun) $ IVar x)
@@ -172,7 +172,7 @@ Language.Elab.Pretty> :exec putPretty `([| fun x y |])
 Do notation:
 
 ```
-Language.Elab.Pretty> :exec putPretty `(do x <- run; action x; pure x)
+Language.Reflection.Pretty> :exec putPretty `(do x <- run; action x; pure x)
 
 App. IVar >>=
    $ IVar run
@@ -187,7 +187,7 @@ App. IVar >>=
 Monad comprehensions:
 
 ```
-Language.Elab.Pretty> :exec putPretty `([x * x | x <- xs, even x])
+Language.Reflection.Pretty> :exec putPretty `([x * x | x <- xs, even x])
 
   IApp. IVar >>=
       $ IVar xs
