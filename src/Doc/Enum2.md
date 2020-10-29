@@ -54,16 +54,14 @@ functions (and infix operators) provided by
 export
 eqDecl1 : String -> List String -> List Decl
 eqDecl1 n cons =
-  let funN      = UN $ "impl1Eq" ++ n
+  let funN      = UN $ "impl1Eq" ++ n -- implementation's name
       funV      = var funN
-      tpeV      = varStr n
+      enumName  = varStr n
       defClause = patClause (funV .$ implicitTrue .$ implicitTrue) `(False)
+      mkClause  = \con => patClause (funV .$ con .$ con) `(True)
 
-   in [ simpleClaim Public $ mkTy funN (tpeV .-> tpeV .-> `(Bool))
-      , def funN $ map (mkClause funV . varStr) cons ++ [defClause] ]
-
-  where mkClause : TTImp -> TTImp -> Clause
-        mkClause funV con = patClause (funV .$ con .$ con) `(True)
+   in [ simpleClaim Public $ mkTy funN (enumName .-> enumName .-> `(Bool))
+      , def funN $ map (mkClause . varStr) cons ++ [defClause] ]
 
 export
 mkEq1 : String -> List String -> Elab ()
@@ -141,6 +139,11 @@ constructor of `Eq`, define two local implementations for
 `(==)` and `(/=)` and then apply those implementations
 to the constructor.
 
+Luckily, module `Language.Reflection.Types` provides a macro `singleCon`
+for extracting the name of the sole constructor of a data type,
+if it exists. Otherwise the elaborator fails, throwing a compile-time
+exception.
+
 ```idris
 export
 eqImpl : String -> List String -> List Decl
@@ -161,10 +164,10 @@ eqImpl enumName cons =
       eqTpe = enumV .-> enumV .-> `(Bool)
 
       -- Catch all case: eq _ _ = False
-      defEq = patClause (eqV .$ implicitTrue .$ implicitTrue) `(False)
+      defEq = eqV .$ implicitTrue .$ implicitTrue .= `(False)
 
       -- single pattern clause: `eq X X = True`
-      mkC   = \x => patClause (varStr "eq" .$ x .$ x) `(True)
+      mkC   = \x => eqV .$ x .$ x .= `(True)
 
       -- local where block:
       -- ... = EqConstructor eq neq
@@ -179,7 +182,7 @@ eqImpl enumName cons =
                     , def eq $ map (mkC . varStr) cons ++ [defEq] 
 
                     , simpleClaim Private $ mkTy neq eqTpe
-                    , def neq [patClause `(neq a b) `(not (eq a b))]
+                    , def neq [`(neq a b) .= `(not (eq a b))]
                     ] (var eqCon .$ eqV .$ neqV)
 
    in [ interfaceHint Public $ mkTy fun (var "Eq" .$ enumV)

@@ -162,7 +162,7 @@ pi : Count -> PiInfo TTImp -> Maybe Name ->
      (argTy : TTImp) -> (retTy : TTImp) -> TTImp
 pi = IPi EmptyFC
 
-infixr 3 .->
+infixr 5 .->
 
 ||| Infix alias for `pi MW ExplicitArg Nothing`.
 export
@@ -180,6 +180,13 @@ export
 export
 patClause : (lhs : TTImp) -> (rhs : TTImp) -> Clause
 patClause = PatClause EmptyFC
+
+infixr 3 .=
+
+||| Infix alias for `patClause`
+export
+(.=) : TTImp -> TTImp -> Clause
+(.=) = patClause
 
 ||| A case expression.
 |||
