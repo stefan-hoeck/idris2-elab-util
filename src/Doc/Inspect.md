@@ -143,7 +143,7 @@ Language.Elab.Pretty> :exec putPretty `(let val = show x in val == reverse val)
        (Implicit True)
        (IApp. IVar show $ IVar x)
        (IApp. IVar == $ IVar val $ (IApp. IVar reverse $ IVar val))
-                              
+
 ```
 
 If-then-else:
@@ -165,7 +165,7 @@ Language.Elab.Pretty> :exec putPretty `([| fun x y |])
   IApp. IVar <*>
       $ (IApp. IVar <*> $ (IApp. IVar pure $ IVar fun) $ IVar x)
       $ IVar y
-              
+
 
 ```
 
@@ -197,7 +197,7 @@ Language.Elab.Pretty> :exec putPretty `([x * x | x <- xs, even x])
                      $ (ILam.  (MW ExplicitArg : Implicit False)
                             => (IApp. IVar pure
                                     $ (IApp. IVar * $ IVar x $ IVar x)))))
-                                                                                                                                     
+
 ```
 
 The syntactic sugar examples show that we can use these
