@@ -14,8 +14,8 @@ import Language.Reflection.Syntax
 
 ### Enums
 
-We often define sum types like `Weekday` below to define
-a well-typed choice of concrete values.
+We often use sum types like `Weekday` below to define
+well-typed choices of constant values.
 
 ```idris
 public export
@@ -78,7 +78,7 @@ that allow us to drop the reduntant passing of `EmptyFC`
 constants. In addition, it comes with infix operators
 similar to the ones shown in the pretty printer for
 defining function application, type declarations and
-anonymous functions. Finally, a hand `FromString`
+anonymous functions. Finally, a handy `FromString`
 instance for `Name` is provided, which determins from
 the string passed whether the name is fully qualified or not.
 
