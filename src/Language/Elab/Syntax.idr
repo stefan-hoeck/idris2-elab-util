@@ -9,7 +9,25 @@
 ||| Expressions can be quoted like so: `(\x => x * x)
 module Language.Elab.Syntax
 
+import public Data.Strings
+import public Data.List1
 import public Language.Reflection
+
+--------------------------------------------------------------------------------
+--          Names
+--------------------------------------------------------------------------------
+
+public export
+FromString Name where
+  fromString s = run (split ('.' ==) s) []
+    where run : List1 String -> List String -> Name
+          run (h ::: []) []        = UN h
+          run (h ::: []) ns        = NS (MkNS ns) (UN h)
+          run (h ::: (y :: ys)) xs = run (y ::: ys) (h :: xs)
+
+--------------------------------------------------------------------------------
+--          Vars
+--------------------------------------------------------------------------------
 
 ||| Creates a variable from the given name
 |||
@@ -24,7 +42,7 @@ iVar = IVar EmptyFC
 
 export
 iVarStr : String -> TTImp
-iVarStr = iVar . UN
+iVarStr = iVar . fromString
 
 ||| Binds a new variable, for instance in a pattern match.
 export
