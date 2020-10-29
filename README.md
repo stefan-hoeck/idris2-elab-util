@@ -6,7 +6,7 @@ In order to get started with the new elaborator reflection,
 [pretty printers](/src/Language/Elab/Pretty.idr)
 for types found in `Language.Reflection.TTImp` and `Language.Reflection.TT` are provided.
 These allow us to inspect quoted syntax snippets and visualize
-how they are internally converted to `Name`s, `TTImp`s or `Decl`s.
+how they are internally converted to Names, TTImps or Decls.
 
 Since the idris2 REPL does not yet support using the arrow keys
 to scroll through its command history, `rlwrap` can be used as a substitute.
@@ -67,8 +67,8 @@ Language.Elab.Pretty> :exec putPretty `(2 * x)
 
 As can be seen, source locations have been removed and names
 are rendered without constructors. Function application is
-treated specially: The data constructor `IApp` is shown, to
-tell users which constructor to use, but nested calls to `IApp`
+treated specially: The data constructor `IApp` is shown to
+tell users which constructor was used, but nested calls to `IApp`
 are then replaced with an infix operater (`$`) to enhance readability
 and reduce the amount of parentheses. While this somewhat obfuscates
 how cascades of function application result in nested calls
@@ -101,7 +101,7 @@ involved while trying to make things somewhat more readable.
 
 Some constructs like case expressions take a list
 of clauses, declarations or constructors as an
-arguments. These lists are typically indented and one
+argument. These lists are typically indented and displayed one
 element per line.
 
 ```
