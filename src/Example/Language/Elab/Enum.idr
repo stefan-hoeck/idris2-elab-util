@@ -21,7 +21,7 @@ eqImpl n vals =   [ claim, iDef eq (map clause vals ++ [catch]) ]
         eq = UN "eq"
 
         claim : Decl
-        claim = iClaim MW Private [] (mkTy eq (n ==> n ==> `(Bool)))
+        claim = iClaim MW Private [] (mkTy eq (n .-> n .-> `(Bool)))
 
         clause : Name -> Clause
         clause n = patClause (iVar eq `iApp` iVar n `iApp` iVar n) `(True)

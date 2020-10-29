@@ -49,6 +49,20 @@ export
 iBindVar : String -> TTImp
 iBindVar = IBindVar EmptyFC
 
+||| Implicit value bound if unsolved
+export
+implicitTrue : TTImp
+implicitTrue = Implicit EmptyFC True
+
+||| Implicitly typed value unbound if unsolved
+export
+implicitFalse : TTImp
+implicitFalse = Implicit EmptyFC False
+
+--------------------------------------------------------------------------------
+--          Application
+--------------------------------------------------------------------------------
+
 infixl 6 `iApp`
 
 ||| Function application.
@@ -85,15 +99,29 @@ export
 iImplicitApp : TTImp -> Maybe Name -> TTImp -> TTImp
 iImplicitApp = IImplicitApp EmptyFC
 
-||| Implicit value bound if unsolved
-export
-implicitTrue : TTImp
-implicitTrue = Implicit EmptyFC True
+--------------------------------------------------------------------------------
+--          Function Types
+--------------------------------------------------------------------------------
 
-||| Implicitly typed value unbound if unsolved
 export
-implicitFalse : TTImp
-implicitFalse = Implicit EmptyFC False
+iLam : Count -> PiInfo TTImp -> Maybe Name ->
+      (argTy : TTImp) -> (lamTy : TTImp) -> TTImp
+iLam = ILam EmptyFC
+
+--------------------------------------------------------------------------------
+--          Function Types
+--------------------------------------------------------------------------------
+
+export
+iPi : Count -> PiInfo TTImp -> Maybe Name ->
+      (argTy : TTImp) -> (retTy : TTImp) -> TTImp
+iPi = IPi EmptyFC
+
+infixr 3 .->
+
+export
+(.->) : TTImp -> TTImp -> TTImp
+(.->) = iPi MW ExplicitArg Nothing
 
 ||| A pattern clause consisting of the left-hand and
 ||| right-hand side of the pattern arrow "=>".
@@ -115,22 +143,6 @@ export
 listOf : List TTImp -> TTImp
 listOf [] = `( Nil )
 listOf (x :: xs) = `( ~(x) :: ~(listOf xs) )
-
-export
-iPi : Count -> PiInfo TTImp -> Maybe Name ->
-      (argTy : TTImp) -> (retTy : TTImp) -> TTImp
-iPi = IPi EmptyFC
-
-infixr 3 ==>
-
-export
-(==>) : TTImp -> TTImp -> TTImp
-(==>) = iPi MW ExplicitArg Nothing
-
-export
-iLam : Count -> PiInfo TTImp -> Maybe Name ->
-      (argTy : TTImp) -> (lamTy : TTImp) -> TTImp
-iLam = ILam EmptyFC
 
 export
 iLet : Count -> Name -> (nTy : TTImp) -> (nVal : TTImp)
