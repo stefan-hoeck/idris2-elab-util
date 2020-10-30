@@ -44,7 +44,7 @@ prefix names with a namespace:
 
 ```
 Language.Reflection.Pretty> `{{ Prelude.Types.Either }}
-NS (MkNS ["Types", "Prelude"]) (UN "Either")
+NS (MkNS ["Types", "Prelude"]) (UN "Either") : Name
 ```
 
 Note, that quoted names as well as other quoted expressions
@@ -56,12 +56,15 @@ If we need to define our own names, it is typically safest
 to use quotes as shown above. In case of possible ambiguities,
 prefer fully qualified names.
 If however we need to generate a name programmatically, we
-will use the `UN` constructor most of the time.
+will use the `UN` constructor most of the time. In addition,
+module `Language.Reflection.Syntax` provides a `FromString`
+instance for `Name`.
 
 #### Expressions
 
 Probably the most important quoting facility
-is the ability to quote expressions.
+is the ability to quote expressions. This
+results in values of type `Language.Reflection.TTImp.TTImp`
 
 ```
 Language.Reflection.Pretty> :t `(2 * x)
@@ -89,12 +92,15 @@ are then replaced with an infix operater (`$`) to enhance readability
 and reduce the amount of parentheses. While this somewhat obfuscates
 how cascades of function application result in nested calls
 to `IApp`, it helps when verifying the correct structure of our own
-manually written `TTImp` values.
+manually written `TTImp` values. In addition, `Language.Reflection.Syntax`
+provides infix operator `(.$)`, which can be used to
+conveniently define nested function applications.
 
 A similar layout is used for nested function declarations
-(data constructor `IPi` and nesting operator `->`)
+(data constructor `IPi` and nesting operator `->` with
+available infix operator `(.->)`)
 and lambdas (data constructor `ILam` and nesting
-operator `=>`):
+operator `=>`; infix operator `(.=>)`):
 
 ```
 Language.Reflection.Pretty> :exec putPretty `(Show a => (val : a) -> String)
