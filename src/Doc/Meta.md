@@ -1,6 +1,6 @@
 ## Introduction: Metaprogramming
 
-Metaprogramming is about writing programs that write programs
+Metaprogramming is about writing programs that write other programs
 typically by using existing programs as their input.
 It is useful for instance to automate otherwise tedious tasks
 by inspecting the structure of existing data or function definitions
@@ -30,7 +30,7 @@ dissecting them.
 
 ### Quotes: Generating TTImp values from expressions
 
-Writing `TTImp` trees manually can be verbouse, tedious and error-prone.
+Writing `TTImp` trees manually can be verbose and error-prone.
 Idris provides several types of quotes to convert valid
 expressions directly to the corresponding tree structures.
 This is useful both to define the static parts of a metaprogram
@@ -41,7 +41,7 @@ to define or dissect programmatically.
 
 Module `Language.Reflection` defines `Elab`, an abstract monadic
 data type used to manipulate programs at compile time. The
-module provides functionality for looking up existing
+module provides functionality to look up existing
 data definitions in scope as well as add new declarations
 to the list of declarations in a source file.
 
