@@ -31,11 +31,11 @@ FromString Name where
 
 ||| Creates a variable from the given name
 |||
-||| Names are best created using name quotes: `{{ AName }},
+||| Names are best created using quotes: `{{ AName }},
 ||| `{{ In.Namespacs.Name }}.
 |||
 ||| Likewise, if the name is already known at the time of
-||| writing, use quotes for defining a variable directly: `(AName)
+||| writing, use quotes for defining variables directly: `(AName)
 export
 var : Name -> TTImp
 var = IVar EmptyFC
@@ -215,24 +215,40 @@ mkTy = MkTy EmptyFC
 
 ||| Type declaration of a function.
 |||
-||| This is an alias for `IClaim EmptyFC`.
+||| `claim c v opts n tp` is an alias for
+||| `IClaim EmptyFC c v opts (MkTy EmptyFC n tp)`.
 export
-claim : Count -> Visibility -> List FnOpt -> ITy -> Decl
-claim = IClaim EmptyFC
+claim : Count -> Visibility -> List FnOpt -> Name -> TTImp -> Decl
+claim c v opts n tp = IClaim EmptyFC c v opts (mkTy n tp)
 
-||| `simpleClaim v` is an alias for `claim MW v []`
+||| `simpleClaim v n t` is an alias for `claim MW v [] (mkTy n t)`
 export
-simpleClaim : Visibility -> ITy -> Decl
+simpleClaim : Visibility -> Name -> TTImp -> Decl
 simpleClaim v = claim MW v []
+
+||| Alias for `simpleClaim Public`
+export
+public' : Name -> TTImp -> Decl
+public' = simpleClaim Public
+
+||| Alias for `simpleClaim Private``
+export
+private' : Name -> TTImp -> Decl
+private' = simpleClaim Private
+
+||| Alias for `simpleClaim Export`
+export
+export' : Name -> TTImp -> Decl
+export' = simpleClaim Export
 
 ||| `directHint v` is an alias for `claim MW v [Hint True]`
 export
-directHint : Visibility -> ITy -> Decl
+directHint : Visibility -> Name -> TTImp -> Decl
 directHint v = claim MW v [Hint True]
 
 ||| `interfaceHint v` is an alias for `claim MW v [Hint False]`
 export
-interfaceHint : Visibility -> ITy -> Decl
+interfaceHint : Visibility -> Name -> TTImp -> Decl
 interfaceHint v = claim MW v [Hint False]
 
 ||| Function definition (implementation)

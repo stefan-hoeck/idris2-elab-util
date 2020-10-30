@@ -89,6 +89,9 @@ enumDecl name = simpleData Public (UN name) . map mkCon
         mkCon n = mkTy (UN n) (varStr name)
 ```
 
+Here, we used functions `simpleData`, `mkTy`, and `varStr`
+from `Language.Reflection.Syntax`.
+
 ### Generating Enum Definitions
 
 In order to us `enumDecl` to define an actual enum type,
@@ -118,8 +121,8 @@ get access to `%runElab`.
 
 ### What's next
 
-We have not gained much in terms saved code from our
+We have not gained much in terms of saved code from our
 first metaprogram. However, the implementation of `Eq Gender`
 above quickly identifies the next opportunity: Implementing
-type class instances automatically. In the next section
+type class instances automatically. In the [next section](Enum2.md)
 we'll give this a try.

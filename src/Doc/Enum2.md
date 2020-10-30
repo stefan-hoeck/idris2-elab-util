@@ -53,16 +53,35 @@ functions (and infix operators) provided by
 ```idris
 export
 eqDecl1 : String -> List String -> List Decl
-eqDecl1 n cons =
-  let funN      = UN $ "impl1Eq" ++ n -- implementation's name
-      funV      = var funN
-      enumName  = varStr n
-      defClause = patClause (funV .$ implicitTrue .$ implicitTrue) `(False)
-      mkClause  = \con => patClause (funV .$ con .$ con) `(True)
+eqDecl1 enumName cons =
+  let functionName = UN $ "impl1Eq" ++ enumName
+      function     = var functionName
+      enum         = varStr enumName
 
-   in [ simpleClaim Public $ mkTy funN (enumName .-> enumName .-> `(Bool))
-      , def funN $ map (mkClause . varStr) cons ++ [defClause] ]
+      -- Default clause for non-matching constructors:
+      -- `function _ _ = False`
+      defClause    = function .$ implicitTrue .$ implicitTrue .= `(False)
 
+      -- Pattern clause for a single constructor:
+      -- `function A A = True`
+      conClause    = \c => function .$ varStr c .$ varStr c .= `(True)
+
+   in [ public' functionName $ enum .-> enum .-> `(Bool)
+      , def functionName $ map conClause cons ++ [defClause] ]
+```
+
+We make use of several new syntactic utilities from
+`Language.Reflection.Syntax`. `(.$)` is an infix operator for
+function application (`Language.Reflection.Syntax.app`),
+`.->` is used to declare function types. Both are chosen
+to look similar to the corresponding Idris keywords `$` and `->`.
+Underscores in pattern matches can be represented by `implicitTrue`
+(see also the prettified output of quoted declarations above),
+and `public'` is a convenient shortcut for type declarations
+of public toplevel functions.
+
+
+```idris
 export
 mkEq1 : String -> List String -> Elab ()
 mkEq1 n cons = declare $ eqDecl1 n cons
@@ -140,7 +159,7 @@ constructor of `Eq`, define two local implementations for
 to the constructor.
 
 Luckily, module `Language.Reflection.Types` provides a macro `singleCon`
-for extracting the name of the sole constructor of a data type,
+for extracting the name of the sole constructor of a data type
 if it exists. Otherwise the elaborator fails, throwing a compile-time
 exception.
 
@@ -178,14 +197,14 @@ eqImpl enumName cons =
       --
       --         neq : EnumName -> EnumName -> Bool
       --         neq a b = not (eq a b)
-      impl  = local [ simpleClaim Private $ mkTy eq eqTpe
+      impl  = local [ private' eq eqTpe
                     , def eq $ map (mkC . varStr) cons ++ [defEq] 
 
-                    , simpleClaim Private $ mkTy neq eqTpe
+                    , private' neq eqTpe
                     , def neq [`(neq a b) .= `(not (eq a b))]
                     ] (var eqCon .$ eqV .$ neqV)
 
-   in [ interfaceHint Public $ mkTy fun (var "Eq" .$ enumV)
+   in [ interfaceHint Public fun (var "Eq" .$ enumV)
       , def fun [ patClause funV impl ] ]
 ```
 
@@ -202,3 +221,5 @@ mkEqImpl enumName cons = declare (eqImpl enumName cons)
 eqTest2 : (Male == NonBinary) = False
 eqTest2 = Refl
 ```
+
+Neat.
