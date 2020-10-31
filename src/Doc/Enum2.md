@@ -117,7 +117,7 @@ in interactive edting. The result comes as a surprise:
 
 ```
 inspectEq : Eq Gender -> Eq Gender
-inspectEq ("Eq at Prelude/EqOrd.idr:13:1--22:7" = /=) = ?eqTest_rhs_1
+inspectEq (Eq at Prelude/EqOrd.idr:13:1--22:7 _ _) = ?eqTest_rhs_1
 ```
 
 This does not seem to be a constructor we can use
@@ -227,7 +227,7 @@ defined cleanly via a quoted lambda.
 
 ### Other Interfaces
 
-Of course, nothing stops us from implementing additional
+Nothing stops us from implementing additional
 interfaces. For completeness, we provide implementations
 of `Show` and `Ord` below.
 
@@ -339,3 +339,10 @@ weekdayTest4 = Refl
 weekdayTest5 : show Thursday = "Thursday"
 weekdayTest5 = Refl
 ```
+
+### What's next
+
+Now that we got a first taste of automatic interface derivation, wouldn't
+it be nice, if we could not only do this for enums but for
+any feasible data type? In the next section we look into a generic
+representations of algebraic data types.
