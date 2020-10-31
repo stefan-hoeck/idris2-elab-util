@@ -302,7 +302,7 @@ showImpl enumName cons =
 ```
 
 We can now define a macro for automatically creating
-enums plus corresponding typeclass implementations:
+enums plus corresponding interface implementations:
 
 ```idris
 mkEnumTc : String -> List String -> Elab ()
