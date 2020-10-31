@@ -78,7 +78,8 @@ to look similar to the corresponding Idris keywords `$` and `->`.
 Underscores in pattern matches can be represented by `implicitTrue`
 (see also the prettified output of quoted declarations above),
 and `public'` is a convenient shortcut for type declarations
-of public toplevel functions.
+of public toplevel functions. Finally, `(.=)` is an infix
+operator for defining pattern clauses.
 
 
 ```idris
@@ -97,7 +98,7 @@ Great, everything seems to work as expected.
 ### Interface Implementation, Part 1
 
 Unfortunately, it seems not to be possible to emulate
-the definition of an interface directly. The following
+the implementation of an interface directly. The following
 quote results in an error message from Idris
 (*Can't reflect a pragma*).
 
@@ -154,7 +155,7 @@ Doc.Enum2> :exec putPretty eqInfo
 
 The above output shows the general structure we are heading towards.
 We somehow need to get access to that horribly named
-constructor of `Eq`, define two local implementations for
+constructor of `Eq`, define local implementations for
 `(==)` and `(/=)` and then apply those implementations
 to the constructor.
 
@@ -168,44 +169,36 @@ export
 eqImpl : String -> List String -> List Decl
 eqImpl enumName cons =
   let -- names
-      eq    = UN "eq"
-      neq   = UN "neq"
-      fun   = UN $ "implEq" ++ enumName
-      eqCon = singleCon "Prelude.Eq"
+      mkEq         = singleCon "Prelude.Eq"
+      eqName       = UN "eq"
+      functionName = UN $ "implEq" ++ enumName
 
       -- vars
-      eqV   = var eq
-      neqV  = var neq
-      funV  = var fun
-      enumV = varStr enumName
-
-      -- Type of eq and neq : EnumName -> EnumName -> Bool
-      eqTpe = enumV .-> enumV .-> `(Bool)
+      eq           = var eqName
+      function     = var functionName
+      enum         = varStr enumName
 
       -- Catch all case: eq _ _ = False
-      defEq = eqV .$ implicitTrue .$ implicitTrue .= `(False)
+      defEq = eq .$ implicitTrue .$ implicitTrue .= `(False)
 
       -- single pattern clause: `eq X X = True`
-      mkC   = \x => eqV .$ x .$ x .= `(True)
+      mkC   = \x => eq .$ varStr x .$ varStr x .= `(True)
+
+      -- implementation of (/=)
+      neq = `(\a,b => not $ eq a b)
 
       -- local where block:
       -- ... = EqConstructor eq neq
-      --   where eq : EnumName -> EnumName -> Bool
+      --   where eq : Enum -> Enum -> Bool
       --         eq A A = True
-      --         eq B B = True
+      --         ...
       --         eq _ _ = False
-      --
-      --         neq : EnumName -> EnumName -> Bool
-      --         neq a b = not (eq a b)
-      impl  = local [ private' eq eqTpe
-                    , def eq $ map (mkC . varStr) cons ++ [defEq] 
+      impl  = local [ private' eqName $ enum .-> enum .-> `(Bool)
+                    , def eqName $ map mkC cons ++ [defEq] 
+                    ] (var mkEq .$ eq .$ neq)
 
-                    , private' neq eqTpe
-                    , def neq [`(neq a b) .= `(not (eq a b))]
-                    ] (var eqCon .$ eqV .$ neqV)
-
-   in [ interfaceHint Public fun (var "Eq" .$ enumV)
-      , def fun [ patClause funV impl ] ]
+   in [ interfaceHint Public functionName (var "Eq" .$ enum)
+      , def functionName [ function .= impl ] ]
 ```
 
 We will break this down in a moment. First, we check whether
@@ -220,6 +213,129 @@ mkEqImpl enumName cons = declare (eqImpl enumName cons)
 
 eqTest2 : (Male == NonBinary) = False
 eqTest2 = Refl
+
+eqTest3 : (Male /= NonBinary) = True
+eqTest3 = Refl
 ```
 
 Neat.
+
+In our implementation, we define a local function `eq`
+in a `where` block and pass it to `Eq`s constructor,
+together with its complement `neq`, which was
+defined cleanly via a quoted lambda.
+
+### Other Interfaces
+
+Of course, nothing stops us from implementing additional
+interfaces. For completeness, we provide implementations
+of `Show` and `Ord` below.
+
+```idris
+export
+ordImpl : String -> List String -> List Decl
+ordImpl enumName cons =
+  let -- names
+      mkOrd        = singleCon "Prelude.Ord"
+      compName     = UN "comp"
+      functionName = UN $ "implOrd" ++ enumName
+
+      -- vars
+      eq           = varStr $ "implEq" ++ enumName
+      comp         = var compName
+      function     = var functionName
+      enum         = varStr enumName
+
+      -- single pattern clauses: `comp X X = EQ`
+      --                         `comp X _ = LT`
+      --                         `comp _ X = GT`
+      mkC   = \x => [ comp .$ varStr x .$ varStr x     .= `(EQ)
+                    , comp .$ varStr x .$ implicitTrue .= `(LT) 
+                    , comp .$ implicitTrue .$ varStr x .= `(GT) 
+                    ]
+
+      -- implementations of (>),(>=),(<),(<=),min,max
+      lt  = `(\a,b => comp a b == LT)
+      gt  = `(\a,b => comp a b == GT)
+      leq = `(\a,b => comp a b /= GT)
+      geq = `(\a,b => comp a b /= LT)
+      max = `(\a,b => if comp a b == GT then a else b)
+      min = `(\a,b => if comp a b == LT then a else b)
+
+      impl = local [ private' compName $ enum .-> enum .-> `(Ordering)
+                   , def compName $ cons >>= mkC
+                   ] (var mkOrd .$ eq .$ comp .$ lt .$ gt .$ leq .$ geq .$ max .$ min)
+
+   in [ interfaceHint Public functionName (var "Ord" .$ enum)
+      , def functionName [ function .= impl ] ]
+```
+
+The only true hurdle when writing the code above was the realization
+that the `Eq` instance had to be passed explicitly as an argument
+to the `Ord` constructor.
+
+```idris
+export
+showImpl : String -> List String -> List Decl
+showImpl enumName cons =
+  let -- names
+      mkShow       = singleCon "Prelude.Show"
+      showName     = UN "show"
+      functionName = UN $ "implShow" ++ enumName
+
+      -- vars
+      show         = var showName
+      function     = var functionName
+      enum         = varStr enumName
+
+      -- single pattern clause: `show X = "X"`
+      mkC   = \x => show .$ varStr x .= primVal (Str x)
+
+      showPrec  = `(\_,v => show v)
+
+      impl = local [ private' showName $ enum .-> `(String)
+                   , def showName $ map mkC cons
+                   ] (var mkShow .$ show .$ showPrec)
+
+   in [ interfaceHint Public functionName (var "Show" .$ enum)
+      , def functionName [ function .= impl ] ]
+```
+
+We can now define a macro for automatically creating
+enums plus corresponding typeclass implementations:
+
+```idris
+mkEnumTc : String -> List String -> Elab ()
+mkEnumTc n cons = declare $  enumDecl n cons
+                          :: eqImpl   n cons
+                          ++ ordImpl  n cons
+                          ++ showImpl n cons
+```
+
+Let's use this to define `Weekday` and run some tests.
+
+```idris
+%runElab (mkEnumTc "Weekday" [ "Monday"
+                             , "Tuesday"
+                             , "Wednesday"
+                             , "Thursday"
+                             , "Friday"
+                             , "Saturday"
+                             , "Sunday"])
+
+
+weekdayTest1 : Monday == Monday = True
+weekdayTest1 = Refl
+
+weekdayTest2 : Sunday == Friday = False
+weekdayTest2 = Refl
+
+weekdayTest3 : Sunday > Friday = True
+weekdayTest3 = Refl
+
+weekdayTest4 : Monday >= Wednesday = False
+weekdayTest4 = Refl
+
+weekdayTest5 : show Thursday = "Thursday"
+weekdayTest5 = Refl
+```

@@ -18,7 +18,6 @@ We often use sum types like `Weekday` below to define
 well-typed choices of constant values.
 
 ```idris
-public export
 data Weekday = Monday
              | Tuesday
              | Wednesday
@@ -74,7 +73,7 @@ quite verbose, this library provides a selection of
 utility functions for making the code above a bit more
 concise. Module `Language.Reflection.Syntax` provides utility
 aliases for many data constructors from `Language.Reflection.TTImp`
-that allow us to drop the reduntant passing of `EmptyFC`
+that allow us to drop the redundant passing of `EmptyFC`
 constants. In addition, it comes with infix operators
 similar to the ones shown in the pretty printer for
 defining function application, type declarations and
@@ -83,6 +82,7 @@ instance for `Name` is provided, which determins from
 the string passed whether the name is fully qualified or not.
 
 ```idris
+export
 enumDecl : (name : String) -> (cons : List String) -> Decl
 enumDecl name = simpleData Public (UN name) . map mkCon
   where mkCon : String -> ITy
