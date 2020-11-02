@@ -19,6 +19,14 @@ indexed by a list of lists of types (a data types *code*).
 Below is a simplified version:
 
 ```idris
+module Doc.Generic1
+
+import public Language.Reflection.Pretty
+import public Language.Reflection.Syntax
+import public Language.Reflection.Types
+
+%language ElabReflection
+
 public export
 data NP : (ts : List Type) -> Type where
   Nil : NP []
@@ -188,3 +196,29 @@ As can be seen, writing an instance of `Generic t` is
 very easy but quite noisy. It should be possible to derive
 such instances automatically. For this, we need to
 have a look at the `TTImp` structure of data types.
+
+```idris
+export
+argNames : Con -> List String
+argNames = run 0 . args
+  where run : Int -> List a -> List String
+        run _ []       = []
+        run k (_ :: t) = ("x" ++ show k) :: run (k+1) t
+
+export
+mkCode : TypeInfo -> TTImp
+mkCode = listOf . map (listOf . map type . args) . cons
+
+export
+mkFrom : TypeInfo -> List Clause
+mkFrom = run 0 . cons
+  where res : Nat -> List TTImp -> TTImp
+
+        single : Nat -> Con -> Clause
+        single k c = let names = argNames c
+                      in bindAll (name c) names .= res k (map varStr names)
+
+        run : Nat -> List Con -> List Clause
+        run _ [] = []
+        run k (h :: t) = single k h :: run (S k) t
+```
