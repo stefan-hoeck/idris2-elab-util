@@ -2,7 +2,7 @@
 
 In Haskell, there are numerous libraries dealing with the
 concept of *Generics*: Canonical representations of algebraic
-data types. Different libraries differ in how the represent
+data types. Different libraries differ in how they represent
 data types generically and what kinds of data types
 can be represented by generics.
 
@@ -13,9 +13,9 @@ elaborator reflection.
 
 ### Generic Codes: A List of Lists of Types
 
-[generic-sop](https://hackage.haskell.org/package/generics-sop)
-represent regular algebraic data types as a sum of products,
-indexed by a list of lists of types (a data types *code*).
+In [generic-sop](https://hackage.haskell.org/package/generics-sop)
+regular algebraic data types are represented as sums of products,
+indexed by a list of lists of types (a data type's *code*).
 Below is a simplified version:
 
 ```idris
@@ -27,11 +27,16 @@ import public Language.Reflection.Types
 
 %language ElabReflection
 
+||| An n-ary product type. This is of course
+||| identical to `HVect`, unlike the version in
+||| generic-sop, which is kind-polymorphic and parameterized
+||| by an additional type constructor.
 public export
 data NP : (ts : List Type) -> Type where
   Nil : NP []
   (::) : (val : t) -> (vals : NP ts) -> NP (t :: ts)
 
+||| An n-ary sum of products.
 public export
 data SOP : (tss : List (List Type)) -> Type where
   Z : NP ts   -> SOP (ts :: tss)
@@ -44,14 +49,18 @@ to allow for many powerful higher-order manipulations.
 We might return to that more versatile representation later on.
 
 With two additional utility functions, we can start implementing
-different typeclasses for `SOP`:
+interfaces for `SOP`:
 
 ```idris
+||| Witness that all elements in a list of types have
+||| implementations of the given interface.
 public export
 All : (f : Type -> Type) -> (ts : List Type) -> Type
 All f [] = ()
 All f (t::ts) = (f t, All f ts)
 
+||| Witness that all elements in a list of lists of types have
+||| implementations of the given interface.
 public export
 All2 : (f : Type -> Type) -> (tss : List(List Type)) -> Type
 All2 f [] = ()
@@ -59,7 +68,7 @@ All2 f (ts::tss) = (All f ts, All2 f tss)
 
 public export
 All Eq ts => Eq (NP ts) where
-  Nil == Nil               = True
+  Nil        == Nil        = True
   (h1 :: t1) == (h2 :: t2) = h1 == h2 && t1 == t2
 
 public export
@@ -69,7 +78,7 @@ All2 Eq tss => Eq (SOP tss) where
   _    == _    = False
 
 public export
-(All Eq ts, All Ord ts) => Ord (NP ts) where
+All Eq ts => All Ord ts => Ord (NP ts) where
   compare Nil Nil               = EQ
   compare (h1 :: t1) (h2 :: t2) = compare h1 h2 <+> compare t1 t2
 
@@ -127,7 +136,7 @@ genCompare :  Generic t
            => All2 Eq (Code t)
            => All2 Ord (Code t)
            => t -> t -> Ordering
-genCompare a b = comparing from a b
+genCompare = comparing from
 ```
 
 We do not use an interface for this to make it more accessible
@@ -161,7 +170,7 @@ As can be seen, once we have an instance of `Generic t`,
 it is trivial to derive implementations of `Eq` and other
 typeclasses without the need of meta programming.
 
-Another example with a sum-type:
+Another example, this time with a sum-type:
 
 ```idris
 public export
@@ -192,33 +201,140 @@ export
 Ord ParseErr where compare = genCompare
 ```
 
-As can be seen, writing an instance of `Generic t` is
-very easy but quite noisy. It should be possible to derive
+As can be seen, writing instances of `Generic t` is
+very easy but quite verbose. It should be possible to derive
 such instances automatically. For this, we need to
 have a look at the `TTImp` structure of data types.
+Module `Language.Reflection.Types` provides `getInfo`,
+a utility to to collect type arguments and constructors
+of a data type as a `TypeInfo` value. We can use this
+information to manually build up the `TTImp`
+for an implementation of `Generic`.
+
+Creating the `Code` is straight forward. We use utility function
+`listOf` from `Language.Reflection.Syntax`, which recursively
+applies the passed list of arguments to `(::)` and ends it with `Nil`.
 
 ```idris
-export
-argNames : Con -> List String
-argNames = run 0 . args
-  where run : Int -> List a -> List String
-        run _ []       = []
-        run k (_ :: t) = ("x" ++ show k) :: run (k+1) t
-
+||| Creates the `List (List Type)` code for a data type.
 export
 mkCode : TypeInfo -> TTImp
 mkCode = listOf . map (listOf . map type . args) . cons
+```
 
+For the pattern clauses in the implementation of `from'`
+and `to'`, we need to keep track of the index of the
+actual constructor and create the `SOP` value according
+to this index.
+
+```idris 
+
+private fromImpl : Name
+fromImpl = "fromImpl"
+
+private toImpl : Name
+toImpl = "toImpl"
+
+||| Applies the proper n-ary sum constructor to a list
+||| of arguments. `k` is the index of the data type's
+||| constructor.
+export
+mkSOP : (n : Int) -> (args : List TTImp) -> TTImp
+mkSOP n args     = if n <= 0 then `(Z) .$ listOf args
+                             else `(S) .$ mkSOP (n-1) args
+
+||| Implements function `from'`.
 export
 mkFrom : TypeInfo -> List Clause
-mkFrom = run 0 . cons
-  where res : Nat -> List TTImp -> TTImp
+mkFrom = map cl . zipWithIndex . cons
+  where cl : (Int,Con) -> Clause
+        cl (n,c) = let names = argNames $ args c
+                    in var fromImpl .$ appAll (name c) (map UN names) .=
+                       mkSOP n (map varStr names)
 
-        single : Nat -> Con -> Clause
-        single k c = let names = argNames c
-                      in bindAll (name c) names .= res k (map varStr names)
-
-        run : Nat -> List Con -> List Clause
-        run _ [] = []
-        run k (h :: t) = single k h :: run (S k) t
+||| Implements function `from'`.
+export
+mkTo : TypeInfo -> List Clause
+mkTo = map cl . zipWithIndex . cons
+  where cl : (Int,Con) -> Clause
+        cl (n,c) = let names = argNames $ args c
+                    in var toImpl .$ mkSOP n (map varStr names) .=
+                       appAll (name c) (map UN names)
 ```
+
+```idris
+genericDecl1 : TypeInfo -> List Decl
+genericDecl1 ti =
+  let -- Names
+      cde      = UN "Cde"
+      function = UN $ "Generic" ++ camelCase (name ti)
+
+      -- Vars
+      myType   = arg $ var (name ti)
+
+      impl  = local [ private' cde `(List (List Type))
+                    , def cde [ var cde .= mkCode ti ]
+
+                    , private' fromImpl $ myType .-> `(SOP Cde)
+                    , def fromImpl (mkFrom ti)
+
+                    , private' toImpl $ arg `(SOP Cde) .-> type myType
+                    , def toImpl (mkTo ti)
+                    ] (appAll "MkGeneric" [cde, fromImpl, toImpl])
+
+   in [ directHint Public function (`(Generic) .$ type myType)
+      , def function [ var function .= impl ] ]
+
+mkGeneric1 : Name -> Elab ()
+mkGeneric1 name = getInfo' name >>= declare . genericDecl1
+```
+
+OK, let's give this a spin:
+
+```idris
+export
+record Employee where
+  constructor MkEmployee
+  name       : String
+  age        : Int
+  salary     : Double
+  supervisor : Maybe Employee
+
+%runElab (mkGeneric1 "Employee")
+
+export
+Eq Employee where (==) = genEq
+
+export
+Ord Employee where compare = genCompare
+```
+
+And with a sum type:
+
+```idris
+export
+data Request = Login String String
+             | Add Employee
+             | Delete Employee
+             | Logout
+
+%runElab (mkGeneric1 "Request")
+
+export
+Eq Request where (==) = genEq
+
+export
+Ord Request where compare = genCompare
+```
+
+### What's next
+
+The above implementation is very basic and error prone.
+We can not deal with parameterized or indexed types, nor
+with existentials and dependent types. There will be
+no coherent error messages if we derive a `Generic`
+instance for one of these classes of data types.
+Additionally, since we already have the necessary information
+available, it would be great to use constructor and
+argument names to derive instances for `Show` or JSON
+marshallers.

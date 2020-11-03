@@ -26,6 +26,14 @@ FromString Name where
           run (h ::: []) ns        = NS (MkNS ns) (UN h)
           run (h ::: (y :: ys)) xs = run (y ::: ys) (h :: xs)
 
+||| Takes a (probably fully qualified name) and generates a
+||| identifier from this without the dots.
+|||
+||| Example : camelCase "Data.List1.List1" = "DataList1List1"
+export
+camelCase : Name -> String
+camelCase = concat . split ('.' ==) . show
+
 --------------------------------------------------------------------------------
 --          Vars
 --------------------------------------------------------------------------------
@@ -171,6 +179,19 @@ unLambda : TTImp -> (List Arg, TTImp)
 unLambda (ILam _ c p n at rt) = let (args,rt') = unLambda rt
                                  in (MkArg c p n at :: args, rt')
 unLambda tpe                  = ([],tpe)
+
+export
+zipWithIndex : List a -> List (Int,a)
+zipWithIndex = run 0
+  where run : Int -> List a -> List (Int,a)
+        run _ []       = []
+        run n (h :: t) = (n,h) :: run (n + 1) t
+
+||| Creates argument names `["x0","x1",...]`
+||| for the arguments of a constructor.
+export
+argNames : List a -> List String
+argNames = map (\(n,_) => "x" ++ show n) . zipWithIndex
 
 --------------------------------------------------------------------------------
 --          Lambdas

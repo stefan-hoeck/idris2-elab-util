@@ -344,5 +344,5 @@ weekdayTest5 = Refl
 
 Now that we got a first taste of automatic interface derivation, wouldn't
 it be nice, if we could not only do this for enums but for
-any feasible data type? In the next section we look into a generic
-representations of algebraic data types.
+any feasible data type? In the [next section](Generic1.md) we look into a generic
+representations for algebraic data types.
