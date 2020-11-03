@@ -12,6 +12,7 @@ module Language.Reflection.Syntax
 import public Data.Strings
 import public Data.List1
 import public Language.Reflection
+import Language.Reflection.Pretty
 
 --------------------------------------------------------------------------------
 --          Names
@@ -132,23 +133,62 @@ implicitApp : TTImp -> Maybe Name -> TTImp -> TTImp
 implicitApp = IImplicitApp EmptyFC
 
 --------------------------------------------------------------------------------
+--          Function Arguments
+--------------------------------------------------------------------------------
+
+public export
+record Arg where
+  constructor MkArg
+  count   : Count
+  piInfo  : PiInfo TTImp
+  name    : Maybe Name
+  type    : TTImp
+
+export
+arg : TTImp -> Arg
+arg = MkArg MW ExplicitArg Nothing
+
+export
+isExplicit : Arg -> Bool
+isExplicit (MkArg _ ExplicitArg _ _) = True
+isExplicit (MkArg _ _           _ _) = False
+
+export
+Pretty Arg where
+  pretty (MkArg count piInfo name type) =
+    parens $ hsepH [count, piInfo, name, ":", type]
+
+||| Extracts the arguments from a function type.
+export
+unPi : TTImp -> (List Arg, TTImp)
+unPi (IPi _ c p n at rt) = let (args,rt') = unPi rt
+                            in (MkArg c p n at :: args, rt')
+unPi tpe                 = ([],tpe)
+
+||| Extracts the arguments from a function type.
+export
+unLambda : TTImp -> (List Arg, TTImp)
+unLambda (ILam _ c p n at rt) = let (args,rt') = unLambda rt
+                                 in (MkArg c p n at :: args, rt')
+unLambda tpe                  = ([],tpe)
+
+--------------------------------------------------------------------------------
 --          Lambdas
 --------------------------------------------------------------------------------
 
 ||| Defines an anonymous function (lambda).
 |||
-||| This is an alias for `ILam EmptyFC`.
+||| This passes the fields of `Arg` to `ILam EmptyFC`
 export
-lam : Count -> PiInfo TTImp -> Maybe Name ->
-      (argTy : TTImp) -> (lamTy : TTImp) -> TTImp
-lam = ILam EmptyFC
+lam : Arg -> (lamTy : TTImp) -> TTImp
+lam (MkArg c p n t) = ILam EmptyFC c p n t
 
 infixr 3 .=>
 
-||| Infix alias for `lam MW ExplicitArg Nothing`.
+||| Infix alias for `lam`.
 export
-(.=>) : TTImp -> TTImp -> TTImp
-(.=>) = lam MW ExplicitArg Nothing
+(.=>) : Arg -> TTImp -> TTImp
+(.=>) = lam
 
 --------------------------------------------------------------------------------
 --          Function Types
@@ -156,18 +196,17 @@ export
 
 ||| Defines a function type.
 |||
-||| This is an alias for `IPi EmptyFC`.
+||| This passes the fields of `Arg` to `IPi EmptyFC`
 export
-pi : Count -> PiInfo TTImp -> Maybe Name ->
-     (argTy : TTImp) -> (retTy : TTImp) -> TTImp
-pi = IPi EmptyFC
+pi : Arg -> (retTy : TTImp) -> TTImp
+pi (MkArg c p n t) = IPi EmptyFC c p n t
 
 infixr 5 .->
 
-||| Infix alias for `pi MW ExplicitArg Nothing`.
+||| Infix alias for `pi`.
 export
-(.->) : TTImp -> TTImp -> TTImp
-(.->) = pi MW ExplicitArg Nothing
+(.->) : Arg -> TTImp -> TTImp
+(.->) = pi
 
 --------------------------------------------------------------------------------
 --          Pattern Matching

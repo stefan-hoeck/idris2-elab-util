@@ -56,7 +56,7 @@ eqDecl1 : String -> List String -> List Decl
 eqDecl1 enumName cons =
   let functionName = UN $ "impl1Eq" ++ enumName
       function     = var functionName
-      enum         = varStr enumName
+      enum         = arg $ varStr enumName
 
       -- Default clause for non-matching constructors:
       -- `function _ _ = False`
@@ -176,7 +176,7 @@ eqImpl enumName cons =
       -- vars
       eq           = var eqName
       function     = var functionName
-      enum         = varStr enumName
+      enum         = arg $ varStr enumName
 
       -- Catch all case: eq _ _ = False
       defEq = eq .$ implicitTrue .$ implicitTrue .= `(False)
@@ -197,7 +197,7 @@ eqImpl enumName cons =
                     , def eqName $ map mkC cons ++ [defEq] 
                     ] (var mkEq .$ eq .$ neq)
 
-   in [ interfaceHint Public functionName (var "Eq" .$ enum)
+   in [ interfaceHint Public functionName (var "Eq" .$ type enum)
       , def functionName [ function .= impl ] ]
 ```
 
@@ -244,7 +244,7 @@ ordImpl enumName cons =
       eq           = varStr $ "implEq" ++ enumName
       comp         = var compName
       function     = var functionName
-      enum         = varStr enumName
+      enum         = arg $ varStr enumName
 
       -- single pattern clauses: `comp X X = EQ`
       --                         `comp X _ = LT`
@@ -266,7 +266,7 @@ ordImpl enumName cons =
                    , def compName $ cons >>= mkC
                    ] (var mkOrd .$ eq .$ comp .$ lt .$ gt .$ leq .$ geq .$ max .$ min)
 
-   in [ interfaceHint Public functionName (var "Ord" .$ enum)
+   in [ interfaceHint Public functionName (var "Ord" .$ type enum)
       , def functionName [ function .= impl ] ]
 ```
 
@@ -286,7 +286,7 @@ showImpl enumName cons =
       -- vars
       show         = var showName
       function     = var functionName
-      enum         = varStr enumName
+      enum         = arg $ varStr enumName
 
       -- single pattern clause: `show X = "X"`
       mkC   = \x => show .$ varStr x .= primVal (Str x)
@@ -297,7 +297,7 @@ showImpl enumName cons =
                    , def showName $ map mkC cons
                    ] (var mkShow .$ show .$ showPrec)
 
-   in [ interfaceHint Public functionName (var "Show" .$ enum)
+   in [ interfaceHint Public functionName (var "Show" .$ type enum)
       , def functionName [ function .= impl ] ]
 ```
 
