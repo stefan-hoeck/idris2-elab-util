@@ -113,6 +113,13 @@ export
 (.$) : TTImp -> TTImp -> TTImp
 (.$) = IApp EmptyFC
 
+export
+unApp : TTImp -> (TTImp,List TTImp)
+unApp = run []
+  where run : List TTImp -> TTImp -> (TTImp,List TTImp)
+        run xs (IApp _ y z) = run (z :: xs) y
+        run xs t            = (t,xs)
+
 appNames : (f : a -> TTImp) -> Name -> List a -> TTImp
 appNames f fun = run (var fun)
   where run : TTImp -> List a -> TTImp
