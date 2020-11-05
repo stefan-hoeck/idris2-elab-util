@@ -385,18 +385,14 @@ errMsg n [] = show n ++ " is not in scope."
 errMsg n xs = let rest = concat $ intersperse ", " $ map (show . fst) xs
                in show n ++ " is not unique: " ++ rest
 
-export
-adjustNS : Name -> Elab Name
-adjustNS n@(UN _) = inCurrentNS n
-adjustNS n        = pure n
-
 ||| Looks up a name in the current namespace.
 export
 lookupName : Name -> Elab (Name, TTImp)
-lookupName n' = do
-  n            <- adjustNS n'
-  [(name,imp)] <- getType n | xs => fail $ errMsg n' xs
-  pure (name,imp)
+lookupName n = do pairs <- getType n 
+                  case (pairs,n) of
+                       ([p],_)     => pure p
+                       (ps,UN str) => inCurrentNS (UN str) >>= lookupName
+                       (ps,_)      => fail $ errMsg n ps
 
 export
 getExplicitArgs : Name -> Elab (List Name)

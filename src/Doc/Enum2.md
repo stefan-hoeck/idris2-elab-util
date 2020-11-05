@@ -130,7 +130,7 @@ allows us to gather detailed information about data types.
 ```idris
 export
 eqInfo : TypeInfo
-eqInfo = getInfo "Prelude.Eq"
+eqInfo = getInfo "Eq"
 ```
 
 Pretty printing the above `TypeInfo` yields the following:
@@ -169,7 +169,7 @@ export
 eqImpl : String -> List String -> List Decl
 eqImpl enumName cons =
   let -- names
-      mkEq         = singleCon "Prelude.Eq"
+      mkEq         = singleCon "Eq"
       eqName       = UN "eq"
       functionName = UN $ "implEq" ++ enumName
 
@@ -236,7 +236,7 @@ export
 ordImpl : String -> List String -> List Decl
 ordImpl enumName cons =
   let -- names
-      mkOrd        = singleCon "Prelude.Ord"
+      mkOrd        = singleCon "Ord"
       compName     = UN "comp"
       functionName = UN $ "implOrd" ++ enumName
 
@@ -279,7 +279,7 @@ export
 showImpl : String -> List String -> List Decl
 showImpl enumName cons =
   let -- names
-      mkShow       = singleCon "Prelude.Show"
+      mkShow       = singleCon "Show"
       showName     = UN "show"
       functionName = UN $ "implShow" ++ enumName
 
