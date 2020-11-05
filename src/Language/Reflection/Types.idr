@@ -69,10 +69,22 @@ Res : Type -> Type
 Res = Either String
 
 public export
+record ExplicitArg where
+  constructor MkExplicitArg
+  name     : Name
+  tpe      : TTImp
+  hasParam : Bool
+
+export
+Pretty ExplicitArg where
+  prettyPrec p (MkExplicitArg n tpe hasParam) =
+    applyH p "MkExplicitArg" [n, tpe, hasParam]
+
+public export
 record ParamCon where
   constructor MkParamCon
   name         : Name
-  explicitArgs : List (Name,TTImp)
+  explicitArgs : List ExplicitArg
 
 export
 Pretty ParamCon where
@@ -103,14 +115,6 @@ Eq Name where
   (DN a b) == (DN x y) = a == x && b == y
   (RF a)   == (RF x)   = a == x
   _        == _        = False
-
--- Renames all Vars according to the given Vect of pairs
-private
-rename : Vect n (Name,Name) -> TTImp -> TTImp
-rename ns (IVar x n)        = IVar x $ fromMaybe n (lookup n ns)
-rename ns (IPi x y z w a r) = IPi x y z w (rename ns a) (rename ns r)
-rename ns (IApp x y z)      = IApp x (rename ns y) (rename ns z)
-rename _  t                 = t
 
 -- Given a Vect of type parameters (from the surrounding
 -- data type), tries to extract a list of type parameter names
@@ -145,7 +149,7 @@ private
 argPairs :  (con : Name)
          -> Vect n (Name,Name)
          -> List Arg
-         -> Res $ List (Name,TTImp)
+         -> Res $ List ExplicitArg
 argPairs con names = run names
   where notParamErr : Maybe Name -> String
         notParamErr n = show con
@@ -156,6 +160,21 @@ argPairs con names = run names
         indicesErr : Vect k (Name,a) -> String
         indicesErr v = show con ++ ": Type indices found: " ++ show (map fst v)
 
+        rename : TTImp -> (TTImp, Bool)
+        rename (IVar x n)        = case lookup n names of
+                                        Nothing => (IVar x n, False)
+                                        Just n' => (IVar x n', True)
+
+        rename (IPi x y z w a r) = let (a',ba) = rename a
+                                       (r',br) = rename r
+                                    in (IPi x y z w a' r', ba || br)
+
+        rename (IApp x y z)      = let (y',by) = rename y
+                                       (z',bz) = rename z
+                                    in (IApp x y' z', by || bz)
+
+        rename t                 = (t, False)
+
         delete : Maybe Name -> Vect (S k) (Name,a) -> Res $ Vect k (Name,a)
         delete m ((n,a) :: ns)  =
           if m == Just n then Right ns
@@ -163,14 +182,14 @@ argPairs con names = run names
                                    [] => Left $ notParamErr m
                                    ns@(_ :: _) => ((n,a) ::) <$> delete m ns
 
-        mkPairs : Int -> List Arg -> Res $ List (Name,TTImp)
-        mkPairs _ [] = Right []
-        mkPairs k ((MkArg _ ExplicitArg n t) :: as) =
-          ((defName k n, rename names t) ::) <$> mkPairs (k+1) as
-        mkPairs _ ((MkArg _ _ n _) :: _) = Left $ notParamErr n
+        mkArg : (Int,Arg) -> Res ExplicitArg
+        mkArg (k,MkArg _ ExplicitArg n t) = let (t',isP) = rename t
+                                                n'       = defName k n
+                                             in Right $ MkExplicitArg n' t' isP
+        mkArg (_,MkArg _ _ n _)           = Left $ notParamErr n
 
-        run : Vect k (Name,a) -> List Arg -> Res $ List (Name,TTImp)
-        run [] as = mkPairs 0 as
+        run : Vect k (Name,a) -> List Arg -> Res $ List ExplicitArg
+        run [] as = traverse mkArg $ zipWithIndex as
         run ps@(_ :: _) ((MkArg _ ImplicitArg n _) :: as) =
           delete n ps >>= (\ps' => run ps' as)
         run ps _ = Left $ indicesErr ps
