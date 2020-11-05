@@ -109,38 +109,21 @@ data types:
 
 ```idris
 public export
-record Generic t where
-  constructor MkGeneric
-  code' : List (List Type)
-  from' : t -> SOP code'
-  to'   : SOP code' -> t
+interface Generic (t : Type) (code : List (List Type)) | t where
+  from : t -> SOP code
+  to   : SOP code -> t
 
 public export
-Code : (t : Type) -> (prf : Generic t) => List (List Type)
-Code _ = code' prf
-
-public export
-from : (prf : Generic t) => t -> SOP (Code t)
-from = from' prf
-
-public export
-to : (prf : Generic t) => SOP (Code t) -> t
-to = to' prf
-
-public export
-genEq : Generic t => All2 Eq (Code t) => t -> t -> Bool
+genEq : Generic t code => All2 Eq code => t -> t -> Bool
 genEq a b = from a == from b
 
 public export
-genCompare :  Generic t
-           => All2 Eq (Code t)
-           => All2 Ord (Code t)
+genCompare :  Generic t code
+           => All2 Eq code
+           => All2 Ord code
            => t -> t -> Ordering
 genCompare = comparing from
 ```
-
-We do not use an interface for this to make it more accessible
-during elaborator reflection.
 
 I'll now give two examples, showing how we can encode regular
 data types generically.
@@ -153,11 +136,10 @@ record Person where
   age      : Int
   children : List Person
 
-public export %hint
-GenericPerson : Generic Person
-GenericPerson = MkGeneric [[String,Int,List Person]]
-                          (\(MkPerson n a cs) => Z [n,a,cs])
-                          (\(Z [n,a,cs]) => MkPerson n a cs)
+public export
+Generic Person [[String,Int,List Person]] where
+  from (MkPerson n a cs) = Z [n,a,cs]
+  to (Z [n,a,cs]) = MkPerson n a cs
 
 export
 Eq Person where (==) = genEq
@@ -178,21 +160,15 @@ data ParseErr = EOF
               | ReadErr Int Int String
               | UnmatchedParen Int Int
 
-public export %hint
-GenericParseErr : Generic ParseErr
-GenericParseErr = MkGeneric Cde f t
-  where Cde : List (List Type)
-        Cde = [[],[Int,Int,String],[Int,Int]]
+public export
+Generic ParseErr [[],[Int,Int,String],[Int,Int]] where
+  from EOF                  = Z []
+  from (ReadErr r c msg)    = S $ Z [r,c,msg]
+  from (UnmatchedParen r c) = S $ S $ Z [r,c]
 
-        f : ParseErr -> SOP Cde
-        f EOF                  = Z []
-        f (ReadErr r c msg)    = S $ Z [r,c,msg]
-        f (UnmatchedParen r c) = S $ S $ Z [r,c]
-
-        t : SOP Cde -> ParseErr
-        t (Z [])            = EOF
-        t (S (Z [r,c,msg])) = ReadErr r c msg
-        t (S (S (Z [r,c]))) = UnmatchedParen r c
+  to (Z [])            = EOF
+  to (S (Z [r,c,msg])) = ReadErr r c msg
+  to (S (S (Z [r,c]))) = UnmatchedParen r c
 
 export
 Eq ParseErr where (==) = genEq
@@ -266,23 +242,22 @@ mkTo = map cl . zipWithIndex . cons
 genericDecl1 : TypeInfo -> List Decl
 genericDecl1 ti =
   let -- Names
-      cde      = UN "Cde"
-      function = UN $ "Generic" ++ camelCase (name ti)
+      mkGeneric = singleCon "Generic"
+      function  = UN $ "implGeneric" ++ camelCase (name ti)
 
       -- Vars
       myType   = arg $ var (name ti)
 
-      impl  = local [ private' cde `(List (List Type))
-                    , def cde [ var cde .= mkCode ti ]
+      cde   = mkCode ti
 
-                    , private' fromImpl $ myType .-> `(SOP Cde)
+      impl  = local [ private' fromImpl $ myType .-> `(SOP) .$ cde
                     , def fromImpl (mkFrom ti)
 
-                    , private' toImpl $ arg `(SOP Cde) .-> type myType
+                    , private' toImpl $ arg (`(SOP) .$ cde) .-> type myType
                     , def toImpl (mkTo ti)
-                    ] (appAll "MkGeneric" [cde, fromImpl, toImpl])
+                    ] (appAll mkGeneric [fromImpl, toImpl])
 
-   in [ directHint Public function (`(Generic) .$ type myType)
+   in [ interfaceHint Public function (`(Generic) .$ type myType .$ mkCode ti)
       , def function [ var function .= impl ] ]
 
 mkGeneric1 : Name -> Elab ()
@@ -301,7 +276,7 @@ record Employee where
   supervisor : Maybe Employee
 
 %runElab (mkGeneric1 "Employee")
-
+ 
 export
 Eq Employee where (==) = genEq
 
