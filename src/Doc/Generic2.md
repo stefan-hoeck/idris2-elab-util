@@ -31,7 +31,7 @@ and as an implicit argument to every data constructor.
 ```
 ...> :exec putPretty maybeInfo
 
-  MkTypeInfo Prelude.Types.Maybe [(MW ExplicitArg ty : IType)] IType
+  MkTypeInfo Prelude.Types.Maybe [(MW ExplicitArg ty : IType)]
     MkCon Prelude.Types.Nothing
           [(M0 ImplicitArg ty : IType)]
           (IApp. IVar Prelude.Types.Maybe $ IVar ty)
@@ -57,7 +57,6 @@ data constructors.
 
   MkTypeInfo Prelude.Types.Either
              [(MW ExplicitArg a : IType), (MW ExplicitArg b : IType)]
-             IType
     MkCon Prelude.Types.Left
           [ (M0 ImplicitArg a : IType)
           , (M0 ImplicitArg b : IType)
@@ -86,7 +85,6 @@ vectInfo = getInfo "Vect"
   MkTypeInfo Data.Vect.Vect
              [ (MW ExplicitArg len : IVar Prelude.Types.Nat)
              , (MW ExplicitArg elem : IType) ]
-             IType
     MkCon Data.Vect.Nil
           [(M0 ImplicitArg elem : IType)]
           (IApp. IVar Data.Vect.Vect $ IVar Prelude.Types.Z $ IVar elem)
@@ -187,7 +185,6 @@ Idris faithfully uses the same parameter names:
 
   MkTypeInfo Doc.Generic2.ASum
              [(MW ExplicitArg a : IType), (MW ExplicitArg b : IType)]
-             IType
     MkCon Doc.Generic2.L
           [ (M0 ImplicitArg y : IType)
           , (M0 ImplicitArg x : IType)

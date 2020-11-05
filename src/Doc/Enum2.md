@@ -138,7 +138,7 @@ Pretty printing the above `TypeInfo` yields the following:
 ```
 Doc.Enum2> :exec putPretty eqInfo
 
-  MkTypeInfo Prelude.EqOrd.Eq [(MW ExplicitArg ty : IHole _)] IType
+  MkTypeInfo Prelude.EqOrd.Eq [(MW ExplicitArg ty : IHole _)]
     MkCon Prelude.EqOrd.Eq at Prelude/EqOrd.idr:13:1--22:7
           [ (M0 ImplicitArg ty : IType)
           , (MW ExplicitArg == : IPi.  (MW ExplicitArg {arg:2} : IVar ty)

@@ -9,6 +9,30 @@ import Text.PrettyPrint.Prettyprinter
 
 %language ElabReflection
 
+--------------------------------------------------------------------------------
+--          Utilities
+--------------------------------------------------------------------------------
+
+public export
+Res : Type -> Type
+Res = Either String
+
+Eq Namespace where
+  (MkNS xs) == (MkNS ys) = xs == ys
+
+Eq Name where
+  (UN a)   == (UN x)   = a == x
+  (MN a b) == (MN x y) = a == x && b == y
+  (NS a b) == (NS x y) = a == x && b == y
+  (DN a b) == (DN x y) = a == x && b == y
+  (RF a)   == (RF x)   = a == x
+  _        == _        = False
+
+--------------------------------------------------------------------------------
+--          General Types
+--------------------------------------------------------------------------------
+
+||| Constructor of a data type
 public export
 record Con where
   constructor MkCon
@@ -16,6 +40,7 @@ record Con where
   args : List Arg
   type : TTImp
 
+||| Tries to lookup a constructor by name.
 export
 getCon : Name -> Elab Con
 getCon n = do (n',tt)    <- lookupName n
@@ -26,37 +51,53 @@ export
 Pretty Con where
   prettyPrec p (MkCon n args tpe) = applyH p "MkCon" [n, args, tpe]
 
+
+||| Information about a data type
+|||
+||| @name : Name of the data type
+|||         Note: There is no guarantee that the name will be fully
+|||         qualified
+||| @args : Type arguments of the data type
+||| @cons : List of data constructors
 public export
 record TypeInfo where
   constructor MkTypeInfo
   name : Name
   args : List Arg
   cons : List Con
-  type : TTImp
 
+export
+Pretty TypeInfo where
+  pretty (MkTypeInfo name args cons) =
+    let head = applyH Open "MkTypeInfo" [name, args]
+        cons = indent 2 $ vsep (map pretty cons)
+     in vsep [head,cons]
+
+||| Tries to get information about the data type specified
+||| by name. The name need not be fully qualified, but
+||| needs to be unambiguous.
 export
 getInfo' : Name -> Elab TypeInfo
 getInfo' n = 
-  do (n',tt)    <- lookupName n
-     let (args,tpe) = unPi tt
-     conNames   <- getCons n'
-     cons       <- traverse getCon conNames
-     pure (MkTypeInfo n' args cons tpe)
+  do (n',tt)        <- lookupName n
+     (args,IType _) <- pure (unPi tt)
+                    | (_,_) => fail "Type declaration does not end in IType"
+     conNames       <- getCons n'
+     cons           <- traverse getCon conNames
+     pure (MkTypeInfo n' args cons)
 
+||| macro version of `getInfo'`
 export %macro
 getInfo : Name -> Elab TypeInfo
 getInfo = getInfo'
 
-export
-Pretty TypeInfo where
-  pretty (MkTypeInfo name args cons type) =
-    let head = applyH Open "MkTypeInfo" [name, args, type]
-        cons = indent 2 $ vsep (map pretty cons)
-     in vsep [head,cons]
-
+||| Tries to get the name of the sole constructor
+||| of data type specified by name. Fails, if
+||| the name is not unambiguous, or if the data type
+||| in question has not exactly one constructor.
 export %macro
 singleCon : Name -> Elab Name
-singleCon n = do (MkTypeInfo _ _ cs _) <- getInfo' n
+singleCon n = do (MkTypeInfo _ _ cs) <- getInfo' n
                  (c::Nil) <- pure cs | _ => fail "not a single constructor"
                  pure $ name c
 
@@ -64,10 +105,20 @@ singleCon n = do (MkTypeInfo _ _ cs _) <- getInfo' n
 --          Parameterized Types
 --------------------------------------------------------------------------------
 
-public export
-Res : Type -> Type
-Res = Either String
-
+||| Explicit arg of a data constructor 
+|||
+||| The `hasParam` flag indicates, whether one of the
+||| type parameters of the data type makes an appearance
+||| in the arguments type.
+|||
+||| For instance, in the following data type, arguments
+||| a1 and a3 would have `hasParam` set to `True`.
+|||
+||| ```
+|||   data MyData : (f : Type -> Type) -> (t : Type) -> Type where
+|||     A : (a1 : f Int) -> (a2 : String) -> MyData f a
+|||     B : (a3 : f a)   -> MyData f a
+||| ```
 public export
 record ExplicitArg where
   constructor MkExplicitArg
@@ -80,6 +131,15 @@ Pretty ExplicitArg where
   prettyPrec p (MkExplicitArg n tpe hasParam) =
     applyH p "MkExplicitArg" [n, tpe, hasParam]
 
+||| Constructor of a parameterized data type.
+|||
+||| We only accept two types of arguments for
+||| such a constructor: Implicit arguments
+||| corresponding to the parameters of the data types
+||| and explicit arguments.
+|||
+||| See `ParamTypeInfo` for examples about what is
+||| allowed and what not.
 public export
 record ParamCon where
   constructor MkParamCon
@@ -91,6 +151,51 @@ Pretty ParamCon where
   prettyPrec p (MkParamCon n explicitArgs) =
     applyH p "MkParamCon" [n, explicitArgs]
 
+||| Information about a parameterized data type.
+|||
+||| The constructors of such a data type are only
+||| allowed to have two kinds of arguments:
+||| Implicit arguments corresponding to the data
+||| type's parameters and explicit arguments.
+|||
+||| Auto implicits or existentials are not allowed.
+|||
+||| Below are some examples of valid parameterized data types
+|||
+||| ```
+||| data Foo a = Val a | Nope
+|||
+||| data Reader : (m : Type -> Type) -> (e : Type) -> (a : Type) -> Type where
+|||   MkReader : (run : e -> m a) -> Reader m e a
+|||
+||| data Wrapper : (n : Nat) -> (t : Type) -> Type
+|||   Wrap : Vect n t -> Wrapper n t
+||| ```
+|||
+||| Examples of valid parameterized data types
+|||
+||| Indexed types families:
+|||
+||| ```
+||| data GADT : (t : Type) -> Type where
+|||   A : GADT Int
+|||   B : GADT ()
+|||   Any : a -> GADT a
+||| ```
+|||
+||| Existentials:
+|||
+||| ```
+||| data Forget : Type where
+|||  DoForget : a -> Forget
+||| ```
+|||
+||| Constraint types:
+|||
+||| ```
+||| data ShowableForget : Type where
+|||  ShowForget : Show a => a -> Forget
+||| ```
 public export
 record ParamTypeInfo where
   constructor MkParamTypeInfo
@@ -104,17 +209,6 @@ Pretty ParamTypeInfo where
     let head = applyH Open "MkParamTypeInfo" [name, toList params]
         cons = indent 2 $ vsep (map pretty cons)
      in vsep [head,cons]
-
-Eq Namespace where
-  (MkNS xs) == (MkNS ys) = xs == ys
-
-Eq Name where
-  (UN a)   == (UN x)   = a == x
-  (MN a b) == (MN x y) = a == x && b == y
-  (NS a b) == (NS x y) = a == x && b == y
-  (DN a b) == (DN x y) = a == x && b == y
-  (RF a)   == (RF x)   = a == x
-  _        == _        = False
 
 -- Given a Vect of type parameters (from the surrounding
 -- data type), tries to extract a list of type parameter names
@@ -132,9 +226,42 @@ conParams con as t = run as (snd $ unApp t)
         run (_ :: as) ((IVar _ n) :: ts) = (n ::) <$> run as ts
         run _         _                  = Left err
 
+-- Creates a default name from an index if no
+-- explicit name is defined
 private
 defName : Int -> Maybe Name -> Name
 defName k = fromMaybe (UN $ "x" ++ show k)
+
+-- Renames all type parameter names in an argument's
+-- type according to the given Vect of pairs.
+-- Returns the renamed type and `True` if at least
+-- one parameter was found, `False` otherwise.
+private
+rename : Vect n (Name,Name) -> TTImp -> (TTImp, Bool)
+rename ns (IVar x n)        = case lookup n ns of
+                                Nothing => (IVar x n, False)
+                                Just n' => (IVar x n', True)
+
+rename ns (IPi x y z w a r) = let (a',ba) = rename ns a
+                                  (r',br) = rename ns r
+                               in (IPi x y z w a' r', ba || br)
+
+rename ns (IApp x y z)      = let (y',by) = rename ns y
+                                  (z',bz) = rename ns z
+                               in (IApp x y' z', by || bz)
+
+rename _ t                  = (t, False)
+
+private
+implicitErr : (con: Name) -> (n : Maybe Name) -> Res a
+implicitErr con n = Left $  show con
+                         ++ ": Non-explicit constructor argument \""
+                         ++ maybe "_" show n
+                         ++ "\" is not a type parameter."
+
+private
+indicesErr : (con : Name) -> (ns : Vect k Name) -> Res a
+indicesErr con ns = Left $ show con ++ ": Type indices found: " ++ show ns
 
 -- For a constructor, takes a list of type parameter
 -- names and tries to remove the corresponding implicit
@@ -151,48 +278,23 @@ argPairs :  (con : Name)
          -> List Arg
          -> Res $ List ExplicitArg
 argPairs con names = run names
-  where notParamErr : Maybe Name -> String
-        notParamErr n = show con
-                      ++ ": Non-explicit argument "
-                      ++ maybe "_" show n
-                      ++ " is not a type parameter."
-
-        indicesErr : Vect k (Name,a) -> String
-        indicesErr v = show con ++ ": Type indices found: " ++ show (map fst v)
-
-        rename : TTImp -> (TTImp, Bool)
-        rename (IVar x n)        = case lookup n names of
-                                        Nothing => (IVar x n, False)
-                                        Just n' => (IVar x n', True)
-
-        rename (IPi x y z w a r) = let (a',ba) = rename a
-                                       (r',br) = rename r
-                                    in (IPi x y z w a' r', ba || br)
-
-        rename (IApp x y z)      = let (y',by) = rename y
-                                       (z',bz) = rename z
-                                    in (IApp x y' z', by || bz)
-
-        rename t                 = (t, False)
-
-        delete : Maybe Name -> Vect (S k) (Name,a) -> Res $ Vect k (Name,a)
+  where delete : Maybe Name -> Vect (S k) (Name,a) -> Res $ Vect k (Name,a)
         delete m ((n,a) :: ns)  =
           if m == Just n then Right ns
                          else case ns of
-                                   [] => Left $ notParamErr m
-                                   ns@(_ :: _) => ((n,a) ::) <$> delete m ns
+                                   []        => implicitErr con m
+                                   ns@(_::_) => ((n,a) ::) <$> delete m ns
 
         mkArg : (Int,Arg) -> Res ExplicitArg
-        mkArg (k,MkArg _ ExplicitArg n t) = let (t',isP) = rename t
+        mkArg (k,MkArg _ ExplicitArg n t) = let (t',isP) = rename names t
                                                 n'       = defName k n
                                              in Right $ MkExplicitArg n' t' isP
-        mkArg (_,MkArg _ _ n _)           = Left $ notParamErr n
+        mkArg (_,MkArg _ _ n _)           = implicitErr con n
 
         run : Vect k (Name,a) -> List Arg -> Res $ List ExplicitArg
         run [] as = traverse mkArg $ zipWithIndex as
-        run ps@(_ :: _) ((MkArg _ ImplicitArg n _) :: as) =
-          delete n ps >>= (\ps' => run ps' as)
-        run ps _ = Left $ indicesErr ps
+        run ps@(_::_) ((MkArg _ ImplicitArg n _) :: t) = run !(delete n ps) t
+        run ps _ = indicesErr con (map fst ps)
 
 
 private
@@ -201,22 +303,24 @@ paramCon ns (MkCon n as t) = do params <- conParams n ns t
                                 args   <- argPairs n (zip params ns) as
                                 pure $ MkParamCon n args
 
-export
+private
 toParamTypeInfo : TypeInfo -> Res ParamTypeInfo
-toParamTypeInfo (MkTypeInfo n as cs t) =
-  do ps  <- expPairs 0 as
+toParamTypeInfo (MkTypeInfo n as cs) =
+  do ps  <- traverse expPair $ zipWithIndex as
      let ns = map fst $ fromList ps
      cs' <- traverse (paramCon ns) cs
      pure $ MkParamTypeInfo n ps cs'
-  where err : String
-        err = show n ++ ": Non-explicit type arguments are not supported"
+  where expPair : (Int,Arg) -> Res (Name,TTImp)
+        expPair  (k,MkArg _ ExplicitArg n t) = Right (defName k n,t)
+        expPair _ = Left $  show n
+                         ++ ": Non-explicit type arguments are not supported"
 
-        expPairs : Int -> List Arg -> Res $ List (Name,TTImp)
-        expPairs _ [] = Right []
-        expPairs k ((MkArg _ ExplicitArg n t) :: xs) =
-          ((defName k n,t) ::) <$> expPairs (k+1) xs
-        expPairs _ ((MkArg _ _ _ _) :: _) = Left err
-
+||| Returns information about a parameterized data type
+||| specified by the given (probably not fully qualified) name.
+|||
+||| The implementation makes sure, that all occurences of
+||| type parameters in the constructors have been given
+||| the same names as occurences in the type declaration.
 export
 getParamInfo' : Name -> Elab ParamTypeInfo
 getParamInfo' n = do ti         <- getInfo' n
@@ -224,6 +328,7 @@ getParamInfo' n = do ti         <- getInfo' n
                                 | (Left err) => fail err
                      pure pt
 
+||| macro version of `getParamInfo`.
 export %macro
 getParamInfo : Name -> Elab ParamTypeInfo
 getParamInfo = getParamInfo'
