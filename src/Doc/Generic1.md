@@ -257,7 +257,7 @@ genericDecl1 ti =
                     , def toImpl (mkTo ti)
                     ] (appAll mkGeneric [fromImpl, toImpl])
 
-   in [ interfaceHint Public function (`(Generic) .$ type myType .$ mkCode ti)
+   in [ interfaceHint Public function (`(Generic) .$ type myType .$ cde)
       , def function [ var function .= impl ] ]
 
 mkGeneric1 : Name -> Elab ()

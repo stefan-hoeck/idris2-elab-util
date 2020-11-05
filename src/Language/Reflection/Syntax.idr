@@ -393,17 +393,3 @@ lookupName n = do pairs <- getType n
                        ([p],_)     => pure p
                        (ps,UN str) => inCurrentNS (UN str) >>= lookupName
                        (ps,_)      => fail $ errMsg n ps
-
-export
-getExplicitArgs : Name -> Elab (List Name)
-getExplicitArgs n = lookupName n >>= (run . snd)
-  where
-    run : TTImp -> Elab (List Name)
-    run (IPi _ _ ExplicitArg _ _ retTy) = [| genSym "arg" :: run retTy |]
-    run (IPi _ _ _ _ _ retTy)           = run retTy -- skip implicit args
-    run _                               = pure []
-
-export
-printLocalVars : Elab ()
-printLocalVars = do vs <- localVars
-                    logMsg "Local vars: " 10 (show vs)
