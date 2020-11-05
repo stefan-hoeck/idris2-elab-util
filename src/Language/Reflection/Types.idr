@@ -65,28 +65,31 @@ singleCon n = do (MkTypeInfo _ _ cs _) <- getInfo' n
 --------------------------------------------------------------------------------
 
 public export
+Res : Type -> Type
+Res = Either String
+
+public export
 record ParamCon where
   constructor MkParamCon
   name         : Name
-  explicitArgs : List Arg
-  type         : TTImp
+  explicitArgs : List (Name,TTImp)
 
 export
 Pretty ParamCon where
-  prettyPrec p (MkParamCon n args tpe) = applyH p "MkParamCon" [n, args, tpe]
+  prettyPrec p (MkParamCon n explicitArgs) =
+    applyH p "MkParamCon" [n, explicitArgs]
 
 public export
 record ParamTypeInfo where
   constructor MkParamTypeInfo
-  name : Name
-  args : List (Name,TTImp)
-  cons : List ParamCon
-  type : TTImp
+  name   : Name
+  params : List (Name,TTImp)
+  cons   : List ParamCon
 
 export
 Pretty ParamTypeInfo where
-  pretty (MkParamTypeInfo name args cons type) =
-    let head = applyH Open "MkParamTypeInfo" [name, args, type]
+  pretty (MkParamTypeInfo name params cons) =
+    let head = applyH Open "MkParamTypeInfo" [name, toList params]
         cons = indent 2 $ vsep (map pretty cons)
      in vsep [head,cons]
 
@@ -101,51 +104,105 @@ Eq Name where
   (RF a)   == (RF x)   = a == x
   _        == _        = False
 
+-- Renames all Vars according to the given Vect of pairs
 private
-argPairs : List Arg -> List (Name,TTImp)
-argPairs = map toPair . zipWithIndex
-  where toPair : (Int,Arg) -> (Name,TTImp)
-        toPair (x, (MkArg _ _ Nothing  t)) = (UN $ "a" ++ show x,t)
-        toPair (_, (MkArg _ _ (Just n) t)) = (n,t)
-
-private
-rename : List (Name,Name)  -> TTImp -> TTImp
+rename : Vect n (Name,Name) -> TTImp -> TTImp
 rename ns (IVar x n)        = IVar x $ fromMaybe n (lookup n ns)
 rename ns (IPi x y z w a r) = IPi x y z w (rename ns a) (rename ns r)
 rename ns (IApp x y z)      = IApp x (rename ns y) (rename ns z)
 rename _  t                 = t
 
+-- Given a Vect of type parameters (from the surrounding
+-- data type), tries to extract a list of type parameter names
+-- from the type declaration of a constructor.
 private
-renameList : List Name -> TTImp -> Maybe (List (Name,Name))
-renameList ns t = run ns (snd $ unApp t)
-  where run : List Name -> List TTImp -> Maybe (List (Name,Name))
-        run [] []                         = Just []
-        run (n :: ns) ((IVar _ n') :: ts) = ((n',n) ::) <$> run ns ts
-        run _         _                   = Nothing
+conParams : (con : Name) -> Vect n a -> TTImp -> Res $ Vect n Name
+conParams con as t = run as (snd $ unApp t)
+  where err : String
+        err = show con
+            ++ ": Constructor type arguments do not match "
+            ++ "data type type arguments."
+
+        run : Vect k a -> List TTImp -> Res $ Vect k Name
+        run [] []                        = Right []
+        run (_ :: as) ((IVar _ n) :: ts) = (n ::) <$> run as ts
+        run _         _                  = Left err
 
 private
-paramCon : List Name -> Con -> Maybe (ParamCon)
-paramCon ns (MkCon n as t) =
-    map (\ps => MkParamCon n (args' ps as) (rename ps t)) (renameList ns t)
-  where args' : List (Name,Name) -> List Arg -> List Arg
-        args' _ [] = []
-        args' ps ((MkArg c ExplicitArg n t) :: as) =
-          MkArg c ExplicitArg n (rename ps t) :: args' ps as
+defName : Int -> Maybe Name -> Name
+defName k = fromMaybe (UN $ "x" ++ show k)
 
-        args' ps (_ :: as) = args' ps as
+-- For a constructor, takes a list of type parameter
+-- names and tries to remove the corresponding implicit
+-- arguments from the head of the given argument list.
+-- Extracts explicit argument names and types from the rest of
+-- the list.
+--
+-- Fails if : a) Not all values in `names` are present as implicit
+--               function arguments
+--            b) The function has additional non-implicit arguments
+private
+argPairs :  (con : Name)
+         -> Vect n (Name,Name)
+         -> List Arg
+         -> Res $ List (Name,TTImp)
+argPairs con names = run names
+  where notParamErr : Maybe Name -> String
+        notParamErr n = show con
+                      ++ ": Non-explicit argument "
+                      ++ maybe "_" show n
+                      ++ " is not a type parameter."
+
+        indicesErr : Vect k (Name,a) -> String
+        indicesErr v = show con ++ ": Type indices found: " ++ show (map fst v)
+
+        delete : Maybe Name -> Vect (S k) (Name,a) -> Res $ Vect k (Name,a)
+        delete m ((n,a) :: ns)  =
+          if m == Just n then Right ns
+                         else case ns of
+                                   [] => Left $ notParamErr m
+                                   ns@(_ :: _) => ((n,a) ::) <$> delete m ns
+
+        mkPairs : Int -> List Arg -> Res $ List (Name,TTImp)
+        mkPairs _ [] = Right []
+        mkPairs k ((MkArg _ ExplicitArg n t) :: as) =
+          ((defName k n, rename names t) ::) <$> mkPairs (k+1) as
+        mkPairs _ ((MkArg _ _ n _) :: _) = Left $ notParamErr n
+
+        run : Vect k (Name,a) -> List Arg -> Res $ List (Name,TTImp)
+        run [] as = mkPairs 0 as
+        run ps@(_ :: _) ((MkArg _ ImplicitArg n _) :: as) =
+          delete n ps >>= (\ps' => run ps' as)
+        run ps _ = Left $ indicesErr ps
+
+
+private
+paramCon : Vect n Name -> Con -> Res $ ParamCon
+paramCon ns (MkCon n as t) = do params <- conParams n ns t
+                                args   <- argPairs n (zip params ns) as
+                                pure $ MkParamCon n args
 
 export
-toParamTypeInfo : TypeInfo -> Maybe ParamTypeInfo
+toParamTypeInfo : TypeInfo -> Res ParamTypeInfo
 toParamTypeInfo (MkTypeInfo n as cs t) =
-  let ps = argPairs as
-      ns = map fst ps
-   in map (\cs' => MkParamTypeInfo n ps cs' t) $ traverse (paramCon ns) cs
+  do ps  <- expPairs 0 as
+     let ns = map fst $ fromList ps
+     cs' <- traverse (paramCon ns) cs
+     pure $ MkParamTypeInfo n ps cs'
+  where err : String
+        err = show n ++ ": Non-explicit type arguments are not supported"
+
+        expPairs : Int -> List Arg -> Res $ List (Name,TTImp)
+        expPairs _ [] = Right []
+        expPairs k ((MkArg _ ExplicitArg n t) :: xs) =
+          ((defName k n,t) ::) <$> expPairs (k+1) xs
+        expPairs _ ((MkArg _ _ _ _) :: _) = Left err
 
 export
 getParamInfo' : Name -> Elab ParamTypeInfo
-getParamInfo' n = do ti        <- getInfo' n
-                     (Just pt) <- pure (toParamTypeInfo ti)
-                               | Nothing => fail "not a parameterized type"
+getParamInfo' n = do ti         <- getInfo' n
+                     (Right pt) <- pure (toParamTypeInfo ti)
+                                | (Left err) => fail err
                      pure pt
 
 export %macro

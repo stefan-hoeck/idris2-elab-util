@@ -224,7 +224,7 @@ parameters.
 ### `ParamTypeInfo`
 
 Module `Language.Reflection.Types` provides a data type for
-properly normalized informations about parameterized types:
+properly normalized information about parameterized types:
 `ParamTypeInfo`:
 
 ```idris
@@ -235,14 +235,11 @@ sumParamInfo = getParamInfo "ASum"
 ```
 ..> :exec putPretty sumParamInfo
 
-MkParamTypeInfo Doc.Generic2.ASum [(a, IType), (b, IType)] IType
-  MkParamCon Doc.Generic2.L
-             [(MW ExplicitArg {arg:6452} : IVar a)]
-             (IApp. IVar Doc.Generic2.ASum $ IVar a $ IVar b)
-  MkParamCon Doc.Generic2.R
-             [ (MW ExplicitArg {arg:6453} : IApp. IVar Prelude.Types.Maybe
-                                                $ IVar b) ]
-             (IApp. IVar Doc.Generic2.ASum $ IVar a $ IVar b)
+  MkParamTypeInfo Doc.Generic2.ASum [(a, IType), (b, IType)]
+    MkParamCon Doc.Generic2.L [({arg:6784}, IVar a)]
+    MkParamCon Doc.Generic2.R
+               [({arg:6785}, IApp. IVar Prelude.Types.Maybe $ IVar b)]
+
 
 ```
 
