@@ -219,23 +219,30 @@ mkSOP : (n : Int) -> (args : List TTImp) -> TTImp
 mkSOP n args     = if n <= 0 then `(Z) .$ listOf args
                              else `(S) .$ mkSOP (n-1) args
 
+private
+zipWithIndex : List a -> List (Int,a)
+zipWithIndex as = run 0 as
+  where run : Int -> List a -> List (Int,a)
+        run _ []     = []
+        run k (h::t) = (k,h) :: run (k+1) t
+
 ||| Implements function `from'`.
 export
 mkFrom : TypeInfo -> List Clause
 mkFrom = map cl . zipWithIndex . cons
   where cl : (Int,Con) -> Clause
-        cl (n,c) = let names = argNames $ args c
-                    in var fromImpl .$ appAll (name c) (map UN names) .=
-                       mkSOP n (map varStr names)
+        cl (n,c) = let names = toUN . name <$> args c
+                    in var fromImpl .$ appAll (name c) names .=
+                       mkSOP n (map var names)
 
 ||| Implements function `from'`.
 export
 mkTo : TypeInfo -> List Clause
 mkTo = map cl . zipWithIndex . cons
   where cl : (Int,Con) -> Clause
-        cl (n,c) = let names = argNames $ args c
-                    in var toImpl .$ mkSOP n (map varStr names) .=
-                       appAll (name c) (map UN names)
+        cl (n,c) = let names = toUN . name <$> args c
+                    in var toImpl .$ mkSOP n (map var names) .=
+                       appAll (name c) names
 ```
 
 ```idris

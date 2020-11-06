@@ -34,6 +34,14 @@ export
 camelCase : Name -> String
 camelCase = concat . split ('.' ==) . show
 
+export
+toUN : Name -> Name
+toUN (UN x)   = UN x
+toUN (MN x y) = UN $ x ++ show y
+toUN (NS _ y) = toUN y
+toUN (DN x y) = toUN y
+toUN (RF x)   = UN x
+
 --------------------------------------------------------------------------------
 --          Vars
 --------------------------------------------------------------------------------
@@ -152,53 +160,61 @@ implicitApp = IImplicitApp EmptyFC
 --------------------------------------------------------------------------------
 
 public export
-record Arg where
+record Arg (nameMandatory : Bool) where
   constructor MkArg
   count   : Count
   piInfo  : PiInfo TTImp
-  name    : Maybe Name
+  name    : if nameMandatory then Name else Maybe Name
   type    : TTImp
 
+public export
+NamedArg : Type
+NamedArg = Arg True
+
 export
-arg : TTImp -> Arg
+namedArg : Arg False -> Elab NamedArg
+namedArg (MkArg c p m t) =
+  map (\n => MkArg c p n t) $ maybe (genSym "x") pure m
+
+export
+arg : TTImp -> Arg False
 arg = MkArg MW ExplicitArg Nothing
 
 export
-isExplicit : Arg -> Bool
+isExplicit : Arg b -> Bool
 isExplicit (MkArg _ ExplicitArg _ _) = True
 isExplicit (MkArg _ _           _ _) = False
 
 export
-Pretty Arg where
+Pretty NamedArg where
   pretty (MkArg count piInfo name type) =
     parens $ hsepH [count, piInfo, name, ":", type]
 
 ||| Extracts the arguments from a function type.
 export
-unPi : TTImp -> (List Arg, TTImp)
+unPi : TTImp -> (List $ Arg False, TTImp)
 unPi (IPi _ c p n at rt) = let (args,rt') = unPi rt
                             in (MkArg c p n at :: args, rt')
 unPi tpe                 = ([],tpe)
 
-||| Extracts the arguments from a function type.
+||| Extracts properly named arguments from a function type.
 export
-unLambda : TTImp -> (List Arg, TTImp)
+unPiNamed : TTImp -> Elab (List NamedArg, TTImp)
+unPiNamed v = let (args,rt') = unPi v
+               in map (`MkPair` rt') $ traverse namedArg args
+
+||| Extracts the arguments from a lambda.
+export
+unLambda : TTImp -> (List $ Arg False, TTImp)
 unLambda (ILam _ c p n at rt) = let (args,rt') = unLambda rt
                                  in (MkArg c p n at :: args, rt')
 unLambda tpe                  = ([],tpe)
 
+||| Extracts properly named arguments from a lambda.
 export
-zipWithIndex : List a -> List (Int,a)
-zipWithIndex = run 0
-  where run : Int -> List a -> List (Int,a)
-        run _ []       = []
-        run n (h :: t) = (n,h) :: run (n + 1) t
-
-||| Creates argument names `["x0","x1",...]`
-||| for the arguments of a constructor.
-export
-argNames : List a -> List String
-argNames = map (\(n,_) => "x" ++ show n) . zipWithIndex
+unLambdaNamed : TTImp -> Elab (List NamedArg, TTImp)
+unLambdaNamed v = let (args,rt') = unLambda v
+               in map (`MkPair` rt') $ traverse namedArg args
 
 --------------------------------------------------------------------------------
 --          Lambdas
@@ -208,14 +224,14 @@ argNames = map (\(n,_) => "x" ++ show n) . zipWithIndex
 |||
 ||| This passes the fields of `Arg` to `ILam EmptyFC`
 export
-lam : Arg -> (lamTy : TTImp) -> TTImp
+lam : Arg False -> (lamTy : TTImp) -> TTImp
 lam (MkArg c p n t) = ILam EmptyFC c p n t
 
 infixr 3 .=>
 
 ||| Infix alias for `lam`.
 export
-(.=>) : Arg -> TTImp -> TTImp
+(.=>) : Arg False -> TTImp -> TTImp
 (.=>) = lam
 
 --------------------------------------------------------------------------------
@@ -226,14 +242,14 @@ export
 |||
 ||| This passes the fields of `Arg` to `IPi EmptyFC`
 export
-pi : Arg -> (retTy : TTImp) -> TTImp
+pi : Arg False -> (retTy : TTImp) -> TTImp
 pi (MkArg c p n t) = IPi EmptyFC c p n t
 
 infixr 5 .->
 
 ||| Infix alias for `pi`.
 export
-(.->) : Arg -> TTImp -> TTImp
+(.->) : Arg False -> TTImp -> TTImp
 (.->) = pi
 
 --------------------------------------------------------------------------------
