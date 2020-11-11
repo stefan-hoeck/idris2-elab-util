@@ -35,20 +35,16 @@ camelCase : Name -> String
 camelCase = concat . split ('.' ==) . show
 
 export
-unnamespaced : Name -> String
-unnamespaced (UN x)   = x
-unnamespaced (NS _ x) = unnamespaced x
-unnamespaced (MN x y) = x ++ show y
-unnamespaced (DN x y) = x
-unnamespaced (RF x)   = x
+nameStr : Name -> String
+nameStr (UN x)   = x
+nameStr (NS _ x) = nameStr x
+nameStr (MN x y) = x ++ show y
+nameStr (DN _ x) = nameStr x
+nameStr (RF x)   = x
 
 export
 toUN : Name -> Name
-toUN (UN x)   = UN x
-toUN (MN x y) = UN $ x ++ show y
-toUN (NS _ y) = toUN y
-toUN (DN x y) = toUN y
-toUN (RF x)   = UN x
+toUN = UN . nameStr
 
 --------------------------------------------------------------------------------
 --          Vars
@@ -136,19 +132,20 @@ unApp = run []
         run xs (IApp _ y z) = run (z :: xs) y
         run xs t            = (t,xs)
 
-appNames : (f : a -> TTImp) -> Name -> List a -> TTImp
-appNames f fun = run (var fun)
-  where run : TTImp -> List a -> TTImp
-        run tti []        = tti
-        run tti (x :: xs) = run (tti .$ f x) xs
-
 ||| Applies a list of variables to a function.
 |||
-||| Example: appAll "either" ["f","g","val"]
+||| See `appNames` for an example
+export
+appAll : Name -> List TTImp -> TTImp
+appAll fun = foldl (.$) (var fun)
+
+||| Applies a list of variable names to a function.
+|||
+||| Example: appNames "either" ["f","g","val"]
 |||          is equivalent to ~(either f g val)
 export
-appAll : (fun : Name) -> (args : List Name) -> TTImp
-appAll = appNames var
+appNames : (fun : Name) -> (args : List Name) -> TTImp
+appNames fun = appAll fun . map var
 
 ||| Binds a list of parameters to a data constructor in
 ||| a pattern match.
@@ -157,7 +154,7 @@ appAll = appNames var
 |||          is the same as ~(MkPair a b)
 export
 bindAll : (fun : Name) -> (args : List String) -> TTImp
-bindAll = appNames bindVar
+bindAll fun = appAll fun . map bindVar
 
 export
 implicitApp : TTImp -> Maybe Name -> TTImp -> TTImp
@@ -187,6 +184,10 @@ namedArg (MkArg c p m t) =
 export
 arg : TTImp -> Arg False
 arg = MkArg MW ExplicitArg Nothing
+
+export
+lambdaArg : Name -> Arg False
+lambdaArg n = MkArg MW ExplicitArg (Just n) implicitFalse
 
 export
 isExplicit : Arg b -> Bool
@@ -271,6 +272,11 @@ piAllImplicit : TTImp -> List Name -> TTImp
 piAllImplicit res = piAll res . map toArg
   where toArg : Name -> Arg False
         toArg n = MkArg M0 ImplicitArg (Just n) implicitFalse
+
+||| Extracts the arguments from a function type.
+export
+piAllAuto : TTImp -> List TTImp -> TTImp
+piAllAuto res = piAll res . map (MkArg MW AutoImplicit Nothing)
 
 --------------------------------------------------------------------------------
 --          Pattern Matching

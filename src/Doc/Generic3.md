@@ -32,7 +32,7 @@ mkFrom : ParamTypeInfo -> List Clause
 mkFrom = map cl . zipWithIndex . cons
   where cl : (Int,ParamCon) -> Clause
         cl (n,c) = let names = toUN . name <$> explicitArgs c
-                    in var fromImpl .$ appAll (name c) names .=
+                    in var fromImpl .$ appNames (name c) names .=
                        mkSOP n (map var names)
 
 -- Implements function `from'`.
@@ -42,7 +42,7 @@ mkTo = map cl . zipWithIndex . cons
   where cl : (Int,ParamCon) -> Clause
         cl (n,c) = let names = toUN . name <$> explicitArgs c
                     in var toImpl .$ mkSOP n (map var names) .=
-                       appAll (name c) names
+                       appNames (name c) names
 ```
 
 The implementation of `genericDecl`, however, requires an
@@ -63,7 +63,7 @@ genericDecl ti =
       cde      = mkCode ti
 
       -- Applies parameters to type constructor, i.e. `Either a b`
-      myType   = appAll (name ti) paramNames
+      myType   = appNames (name ti) paramNames
 
       genType  = `(Generic) .$ myType .$ cde
       -- Prefixes function type with implicit arguments for
@@ -77,7 +77,7 @@ genericDecl ti =
 
                     , private' toImpl $ arg (`(SOP) .$ cde) .-> myType
                     , def toImpl (mkTo ti)
-                    ] (appAll mkGeneric [fromImpl, toImpl])
+                    ] (appNames mkGeneric [fromImpl, toImpl])
 
    in [ interfaceHint Public function funType
       , def function [ var function .= impl ] ]
@@ -148,6 +148,6 @@ crazyTest2 = Refl
 
 ### What's next
 
-This was pretty straight forward. In the next post I'll
+This was pretty straight forward. In the [next post](Generic4.md) I'll
 have a look at
 automating the writing of `Eq` and `Ord` instances.

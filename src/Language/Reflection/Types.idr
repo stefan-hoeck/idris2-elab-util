@@ -151,6 +151,13 @@ Pretty ParamCon where
   prettyPrec p (MkParamCon n explicitArgs) =
     applyH p "MkParamCon" [n, explicitArgs]
 
+export
+hasParamTypes : ParamCon -> List TTImp
+hasParamTypes = mapMaybe hasParamType . explicitArgs
+  where hasParamType : ExplicitArg -> Maybe TTImp
+        hasParamType (MkExplicitArg _ t True) = Just t
+        hasParamType _                        = Nothing
+
 ||| Information about a parameterized data type.
 |||
 ||| The constructors of such a data type are only

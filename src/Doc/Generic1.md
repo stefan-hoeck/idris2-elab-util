@@ -237,7 +237,7 @@ mkFrom : TypeInfo -> List Clause
 mkFrom = map cl . zipWithIndex . cons
   where cl : (Int,Con) -> Clause
         cl (n,c) = let names = toUN . name <$> args c
-                    in var fromImpl .$ appAll (name c) names .=
+                    in var fromImpl .$ appNames (name c) names .=
                        mkSOP n (map var names)
 
 -- Implements function `from'`.
@@ -247,7 +247,7 @@ mkTo = map cl . zipWithIndex . cons
   where cl : (Int,Con) -> Clause
         cl (n,c) = let names = toUN . name <$> args c
                     in var toImpl .$ mkSOP n (map var names) .=
-                       appAll (name c) names
+                       appNames (name c) names
 ```
 
 A quick note about function `toUN`: Idris does not accept
@@ -272,7 +272,7 @@ genericDecl ti =
 
                     , private' toImpl $ arg (`(SOP) .$ cde) .-> myType
                     , def toImpl (mkTo ti)
-                    ] (appAll mkGeneric [fromImpl, toImpl])
+                    ] (appNames mkGeneric [fromImpl, toImpl])
 
    in [ interfaceHint Public function (`(Generic) .$ myType .$ cde)
       , def function [ var function .= impl ] ]
