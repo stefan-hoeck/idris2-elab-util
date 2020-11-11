@@ -252,6 +252,18 @@ export
 (.->) : Arg False -> TTImp -> TTImp
 (.->) = pi
 
+||| Extracts the arguments from a function type.
+export
+piAll : TTImp -> List $ Arg False -> TTImp
+piAll res = foldr (.->) res
+
+||| Extracts the arguments from a function type.
+export
+piAllImplicit : TTImp -> List Name -> TTImp
+piAllImplicit res = piAll res . map toArg
+  where toArg : Name -> Arg False
+        toArg n = MkArg M0 ImplicitArg (Just n) implicitFalse
+
 --------------------------------------------------------------------------------
 --          Pattern Matching
 --------------------------------------------------------------------------------

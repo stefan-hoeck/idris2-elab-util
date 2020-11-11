@@ -122,7 +122,10 @@ genCompare :  Generic t code
            => All2 Eq code
            => All2 Ord code
            => t -> t -> Ordering
-genCompare = comparing from
+-- We don't use `comparing` here, since for the time being
+-- it is not publicly exported, which makes type-level
+-- testing more difficult
+genCompare t1 t2 = compare (from t1) (from t2)
 ```
 
 I'll now give two examples, showing how we can encode regular
@@ -182,7 +185,7 @@ very easy but quite verbose. It should be possible to derive
 such instances automatically. For this, we need to
 have a look at the `TTImp` structure of data types.
 Module `Language.Reflection.Types` provides `getInfo`,
-a utility to to collect type arguments and constructors
+a utility to collect type arguments and constructors
 of a data type as a `TypeInfo` value. We can use this
 information to manually build up the `TTImp`
 for an implementation of `Generic`.
@@ -192,8 +195,8 @@ Creating the `Code` is straight forward. We use utility function
 applies the passed list of arguments to `(::)` and ends it with `Nil`.
 
 ```idris
-||| Creates the `List (List Type)` code for a data type.
-export
+-- Creates the `List (List Type)` code for a data type.
+private
 mkCode : TypeInfo -> TTImp
 mkCode = listOf . map (listOf . map type . args) . cons
 ```
@@ -205,10 +208,12 @@ to this index.
 
 ```idris 
 
-private fromImpl : Name
+export
+fromImpl : Name
 fromImpl = "fromImpl"
 
-private toImpl : Name
+export
+toImpl : Name
 toImpl = "toImpl"
 
 ||| Applies the proper n-ary sum constructor to a list
@@ -219,15 +224,15 @@ mkSOP : (n : Int) -> (args : List TTImp) -> TTImp
 mkSOP n args     = if n <= 0 then `(Z) .$ listOf args
                              else `(S) .$ mkSOP (n-1) args
 
-private
+export
 zipWithIndex : List a -> List (Int,a)
 zipWithIndex as = run 0 as
   where run : Int -> List a -> List (Int,a)
         run _ []     = []
         run k (h::t) = (k,h) :: run (k+1) t
 
-||| Implements function `from'`.
-export
+-- Implements function `from'`.
+private
 mkFrom : TypeInfo -> List Clause
 mkFrom = map cl . zipWithIndex . cons
   where cl : (Int,Con) -> Clause
@@ -235,8 +240,8 @@ mkFrom = map cl . zipWithIndex . cons
                     in var fromImpl .$ appAll (name c) names .=
                        mkSOP n (map var names)
 
-||| Implements function `from'`.
-export
+-- Implements function `from'`.
+private
 mkTo : TypeInfo -> List Clause
 mkTo = map cl . zipWithIndex . cons
   where cl : (Int,Con) -> Clause
@@ -245,36 +250,59 @@ mkTo = map cl . zipWithIndex . cons
                        appAll (name c) names
 ```
 
+A quick note about function `toUN`: Idris does not accept
+the machine-generated names of unnamed arguments in pattern matches.
+Function `toUN` converts such names to similar user-defined names.
+
 ```idris
-genericDecl1 : TypeInfo -> List Decl
-genericDecl1 ti =
+private
+genericDecl : TypeInfo -> List Decl
+genericDecl ti =
   let -- Names
       mkGeneric = singleCon "Generic"
       function  = UN $ "implGeneric" ++ camelCase (name ti)
 
       -- Vars
-      myType   = arg $ var (name ti)
+      myType   = var (name ti)
 
       cde   = mkCode ti
 
-      impl  = local [ private' fromImpl $ myType .-> `(SOP) .$ cde
+      impl  = local [ private' fromImpl $ arg myType .-> `(SOP) .$ cde
                     , def fromImpl (mkFrom ti)
 
-                    , private' toImpl $ arg (`(SOP) .$ cde) .-> type myType
+                    , private' toImpl $ arg (`(SOP) .$ cde) .-> myType
                     , def toImpl (mkTo ti)
                     ] (appAll mkGeneric [fromImpl, toImpl])
 
-   in [ interfaceHint Public function (`(Generic) .$ type myType .$ cde)
+   in [ interfaceHint Public function (`(Generic) .$ myType .$ cde)
       , def function [ var function .= impl ] ]
+```
 
-mkGeneric1 : Name -> Elab ()
-mkGeneric1 name = getInfo' name >>= declare . genericDecl1
+Let's break this down a bit: We first get access
+to `Generic`'s constructor and calculate the name
+of our implementation function. `cde` is a `TTImp`
+representation of our data type's generic code,
+and `impl` holds the type and pattern declarations
+of a local `where` block, container implementations
+of functions `from` and `to`.
+Finally, we return the type declaration of
+our implementation function together with the acutal
+function definition.
+
+The only thing still missing is an `Elab` function
+to actually have the elaborator include our derived
+instances:
+
+```idris
+private
+mkGeneric : Name -> Elab ()
+mkGeneric name = getInfo' name >>= declare . genericDecl
 ```
 
 OK, let's give this a spin:
 
 ```idris
-export
+private
 record Employee where
   constructor MkEmployee
   name       : String
@@ -282,31 +310,48 @@ record Employee where
   salary     : Double
   supervisor : Maybe Employee
 
-%runElab (mkGeneric1 "Employee")
+%runElab (mkGeneric "Employee")
  
-export
+private
 Eq Employee where (==) = genEq
 
-export
+private
 Ord Employee where compare = genCompare
+
+private
+empTest1 : let emp = MkEmployee "" 20 1.2 Nothing in (emp == emp) = True
+empTest1 = Refl
+
+private
+empTest2 :  ( MkEmployee "" 20 1.2 Nothing
+            < MkEmployee "" 21 1.2 Nothing) = True
+empTest2 = Refl
 ```
 
 And with a sum type:
 
 ```idris
-export
+private
 data Request = Login String String
              | Add Employee
              | Delete Employee
              | Logout
 
-%runElab (mkGeneric1 "Request")
+%runElab (mkGeneric "Request")
 
-export
+private
 Eq Request where (==) = genEq
 
-export
+private
 Ord Request where compare = genCompare
+
+private
+reqTest1 : Login "" "" /= Logout = True
+reqTest1 = Refl
+
+private
+reqTest2 : Logout > Login "" "" = True
+reqTest2 = Refl
 ```
 
 ### What's next
@@ -319,4 +364,6 @@ instance for one of these classes of data types.
 Additionally, since we already have the necessary information
 available, it would be great to use constructor and
 argument names to derive instances for `Show` or JSON
-marshallers.
+marshallers. In the [next part](Generic2.md), we will
+first analzye the challenges coming with parameterized
+and indexed types.
