@@ -35,6 +35,14 @@ camelCase : Name -> String
 camelCase = concat . split ('.' ==) . show
 
 export
+unnamespaced : Name -> String
+unnamespaced (UN x)   = x
+unnamespaced (NS _ x) = unnamespaced x
+unnamespaced (MN x y) = x ++ show y
+unnamespaced (DN x y) = x
+unnamespaced (RF x)   = x
+
+export
 toUN : Name -> Name
 toUN (UN x)   = UN x
 toUN (MN x y) = UN $ x ++ show y

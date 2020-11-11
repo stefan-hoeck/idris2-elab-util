@@ -22,12 +22,12 @@ Most of the utility functions are almost the same as
 in module `Doc.Generic1`.
 
 ```idris
-private
+export
 mkCode : ParamTypeInfo -> TTImp
 mkCode = listOf . map (listOf . map tpe . explicitArgs) . cons
 
 -- Implements function `from'`.
-private
+export
 mkFrom : ParamTypeInfo -> List Clause
 mkFrom = map cl . zipWithIndex . cons
   where cl : (Int,ParamCon) -> Clause
@@ -36,7 +36,7 @@ mkFrom = map cl . zipWithIndex . cons
                        mkSOP n (map var names)
 
 -- Implements function `from'`.
-private
+export
 mkTo : ParamTypeInfo -> List Clause
 mkTo = map cl . zipWithIndex . cons
   where cl : (Int,ParamCon) -> Clause
@@ -82,7 +82,7 @@ genericDecl ti =
    in [ interfaceHint Public function funType
       , def function [ var function .= impl ] ]
 
-private
+export
 mkGeneric : Name -> Elab ()
 mkGeneric name = getParamInfo' name >>= declare . genericDecl
 ```
