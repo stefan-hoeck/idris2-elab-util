@@ -193,14 +193,6 @@ actual constructor and create the `SOP` value according
 to this index.
 
 ```idris 
-export
-fromImpl : Name
-fromImpl = "fromImpl"
-
-export
-toImpl : Name
-toImpl = "toImpl"
-
 ||| Applies the proper n-ary sum constructor to a list
 ||| of arguments. `k` is the index of the data type's
 ||| constructor.
