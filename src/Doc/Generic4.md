@@ -307,7 +307,7 @@ we exclude the generic instance of `TTImp`, a data type
 with 29 constructors, whose `Generic`
 instance alone takes about four seconds
 to be derived. Indeed, when we look at the implementation of
-`Generic`, we expect its runtime complexity to grow
+`Generic`, we expect its compiletime complexity to grow
 with the square of the number of constructors since
 the generic representation of every additional constructor
 results in additional layer of `S` constructors.
