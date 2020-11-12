@@ -1,10 +1,16 @@
 package idris2-elab-util
 
+authors    = "stefan-hoeck"
+version    = "0.1.0"
+readme     = "README.md"
+license    = "BSD-2 Clause"
+
 executable = elab_util
 
-main = Main
+main       = Main
 
-sourcedir = "src"
+sourcedir  = "src"
+depends    = base
 
 modules = Language.Reflection.Syntax
         , Language.Reflection.Pretty
