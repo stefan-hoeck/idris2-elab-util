@@ -300,14 +300,17 @@ mutual
 ### Compiler Performance
 
 On my machine, compiling this literate source file takes about
-eight seconds. This doesn't seem to bad, considering that
+eight seconds. This doesn't seem too bad, considering that
 we are generating instances of three type-classes
 for 24 data types. The situation looks even better when
 we exclude the generic instance of `TTImp`, a data type
-with 23 constructors, which alone takes about four seconds
-to derive `Generic`. Indeed, when we look at the implementation of
+with 23 constructors, whose `Generic`
+instance alone takes about four seconds
+to be derived. Indeed, when we look at the implementation of
 `Generic`, we expect its runtime complexity to grow
-with the square of the number of constructors.
+with the square of the number of constructors since
+the generic representation of every additional constructor
+results in additional layer of `S` constructors.
 Considering all of the above, I am pretty happy with the
 performance of the Idris compiler.
 
