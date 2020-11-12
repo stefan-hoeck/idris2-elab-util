@@ -59,7 +59,7 @@ implName g interfaceName =  UN $ "impl" ++ interfaceName
 
 We make function `implName` for generating the name of the
 implementation function available, to allow interface
-implementation depending on other implementations
+implementations depending on other implementations
 to access this name. Is is for instance required in
 the implemenation of `Ord'` (see below).
 
@@ -83,9 +83,15 @@ private
 implDecl : GenericUtil -> MkImplementation -> List Decl
 implDecl g f = let (MkInterfaceImpl iname impl type) = f g
                    function = implName g iname
-                  in [ interfaceHint Public function type
-                     , def function [var function .= impl] ]
+
+                in [ interfaceHint Public function type
+                   , def function [var function .= impl] ]
 ```
+
+We are now ready to define function `derive`, which,
+given the name of a data type and a list of
+interface specifications (`MkImplementation`),
+will derive implementations for these interfaces:
 
 ```idris
 private
@@ -102,55 +108,89 @@ derive name fs = do decls <- deriveDecls name fs
                     declare decls
 ```
 
+### Instances for `Generic`, `Eq`, and `Ord`
+
+We can now write `MkImplementation` values for `Generic`,
+cleaning up parts of our code while we're at it.
+
 ```idris
 private
 mkGeneric : Name
 mkGeneric = singleCon "Generic"
 
+-- Constructor name and names of arguments
+-- to be used in pattern match declarations
 private
-fromClause : (Int,ParamCon) -> Clause
-fromClause (n,MkParamCon nm args) =
-  let names = map (nameStr . name) args
-   in bindAll nm names .= mkSOP n (map varStr names)
+ConNames : Type
+ConNames = (Name, List String, List TTImp)
 
 private
-toClause : (Int,ParamCon) -> Clause
-toClause (n,MkParamCon nm args) =
-  let names = map (nameStr . name) args
-   in mkSOP n (map bindVar names) .= appAll nm (map varStr names)
+conNames : ParamCon -> ConNames
+conNames (MkParamCon con args) = let ns   = map (nameStr . name) args
+                                     vars = map varStr ns
+                                  in (con, ns, vars)
+
+private
+fromClause : (Int,ConNames) -> Clause
+fromClause (k,(con,ns,vars)) = bindAll con ns .= mkSOP k vars
+
+private
+toClause : (Int,ConNames) -> Clause
+toClause (k,(con,ns,vars)) = mkSOP k (map bindVar ns) .= appAll con vars
                                    
-
 export
 Generic' : MkImplementation
 Generic' g =
-  let cde     = mkCode g.typeInfo
-
-      iCons    = zipWithIndex (g.typeInfo.cons)
-      genType  = `(Generic) .$ g.appliedType .$ cde
+  let names    = zipWithIndex (map conNames g.typeInfo.cons)
+      genType  = `(Generic) .$ g.appliedType .$ mkCode g.typeInfo
       funType  = piAllImplicit  genType g.paramNames
       x        = lambdaArg "x"
+      varX     = var "x"
 
-      from    = x .=> iCase (var "x") implicitFalse (map fromClause iCons)
-      to      = x .=> iCase (var "x") implicitFalse (map toClause iCons)
+      from    = x .=> iCase varX implicitFalse (map fromClause names)
+      to      = x .=> iCase varX implicitFalse (map toClause names)
       impl    = appAll mkGeneric [from,to]
 
    in MkInterfaceImpl "Generic" impl funType
+```
 
+Before we can define `MkImplementation` functions for `Eq`
+and `Ord`, we have must be able to prefix instance
+declarations with the required auto implicits. For instance,
+the `Eq` instance of `Maybe` has the following type:
+
+```
+{0 a: _} -> Eq a => Eq (Maybe a)
+```
+
+We define function `implementationType` to set up this type
+for us:
+
+```idris
+export
+implementationType : (iface : TTImp) -> GenericUtil -> TTImp
+implementationType iface (MkGenericUtil _ appTp names argTypesWithParams) =
+  let appIface = iface .$ appTp
+      autoArgs = piAllAuto appIface $ map (iface .$) argTypesWithParams
+   in piAllImplicit autoArgs names
+```
+
+We can now derive `Eq` implementation for data types with
+a `Generic` implementation:
+
+```idris
 private
 mkEq : TTImp
 mkEq = var (singleCon "Eq") .$ `(genEq) .$ `(\a,b => not (a == b))
 
 export
-implementationType : TTImp -> GenericUtil -> TTImp
-implementationType iface (MkGenericUtil _ appTp names argTypesWithParams) =
-  let appIface = iface .$ appTp
-      autoArgs = piAllAuto appIface $ map (iface .$) argTypesWithParams
-   in piAllImplicit autoArgs names
-
-export
 Eq' : MkImplementation
 Eq' g = MkInterfaceImpl "Eq" mkEq (implementationType `(Eq) g)
+```
 
+Same for `Ord`:
+
+```idris
 private
 mkOrd : Name
 mkOrd = singleCon "Ord"
@@ -173,7 +213,9 @@ Ord' g = let eq   = var $ implName g "Eq"
           in MkInterfaceImpl "Ord" impl (implementationType `(Ord) g)
 ```
 
-Now, lets put our new utilities to work. Below, we derive
+### Interface Implementations for `TTImp` and Friends
+
+Finally, lets put our new utilities to work. Below, we derive
 `Generic`, `Eq` and `Ord` implementations for all types
 from `Language.Reflection.TT` and `Language.Reflection.TTImp`.
 
@@ -197,7 +239,7 @@ from `Language.Reflection.TT` and `Language.Reflection.TTImp`.
 It seems not yet to be possible, to use this method in a mutual
 block. Therefore, we have to write a tiny bit
 of boilerplate for `Eq` and `Ord` instances
-of `TTImp` and friends.
+for the data types from `Language.Reflection.TTImp`:
 
 ```idris
 %runElab (derive "TTImp"        [Generic'])
@@ -273,3 +315,22 @@ mutual
   Ord Decl where compare = genCompare
 ```
 
+### Compiler Performance
+
+On my machine, compiling this literate source file takes about
+eight seconds. This doesn't seem to bad, considering that
+we are generating instances of three type-classes
+for 24 data types. The situation looks even better when
+we exclude the generic instance of `TTImp`, a data type
+with 23 constructors, which alone takes about four seconds
+to derive `Generic`. Indeed, when we look at the implementation of
+`Generic`, we expect its runtime complexity to grow
+with the square of the number of constructors.
+Considering all of the above, I am pretty happy with the
+performance of the Idris compiler.
+
+### What's next
+
+Now that we have the means to derive some of the core interface
+implementations with pretty clean syntax, let us look into
+compile-time verification of these implementations.
