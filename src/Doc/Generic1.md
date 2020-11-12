@@ -211,7 +211,7 @@ zipWithIndex as = run 0 as
 
 For the implementations of functions `from` and `to`,
 we need to generate pattern clauses for every data
-constructor. We collect the require constructor
+constructor. We collect the required constructor
 name and list of arguments in a tuple:
 
 ```idris
@@ -238,7 +238,7 @@ toClause (k,(con,ns,vars)) = mkSOP k (map bindVar ns) .= appAll con vars
 
 A quick note about function `nameStr`: Idris does not accept
 the machine-generated names of unnamed arguments in pattern matches.
-Function `toUN` converts such names to similar user-defined names.
+Function `nameStr` converts such names to similar user-defined names.
 
 ```idris
 export
@@ -308,6 +308,8 @@ Eq Employee where (==) = genEq
 private
 Ord Employee where compare = genCompare
 
+-- Just being able to write the type of this function like this
+-- is amazing. :-)
 private
 empTest1 : let emp = MkEmployee "" 20 1.2 Nothing in (emp == emp) = True
 empTest1 = Refl

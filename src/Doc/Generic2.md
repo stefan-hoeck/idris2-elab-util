@@ -241,5 +241,4 @@ sumParamInfo = getParamInfo "ASum"
 ```
 
 Now we should be ready to derive `Generic` instances
-for arbitrary parameterized types. But this will have
-to wait for another day.
+for arbitrary parameterized types. [Let's go](Generic3.md).
