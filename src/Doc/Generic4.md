@@ -304,7 +304,7 @@ eight seconds. This doesn't seem too bad, considering that
 we are generating instances of three type-classes
 for 24 data types. The situation looks even better when
 we exclude the generic instance of `TTImp`, a data type
-with 23 constructors, whose `Generic`
+with 29 constructors, whose `Generic`
 instance alone takes about four seconds
 to be derived. Indeed, when we look at the implementation of
 `Generic`, we expect its runtime complexity to grow
