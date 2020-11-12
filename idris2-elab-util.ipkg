@@ -10,7 +10,7 @@ executable = elab_util
 main       = Main
 
 sourcedir  = "src"
-depends    = base
+depends    = base, contrib
 
 modules = Language.Reflection.Syntax
         , Language.Reflection.Pretty
