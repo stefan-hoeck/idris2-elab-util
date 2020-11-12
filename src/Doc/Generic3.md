@@ -23,26 +23,14 @@ in module `Doc.Generic1`.
 
 ```idris
 export
+paramConNames : ParamCon -> ConNames
+paramConNames (MkParamCon con args) = let ns   = map (nameStr . name) args
+                                          vars = map varStr ns
+                                       in (con, ns, vars)
+
+export
 mkCode : ParamTypeInfo -> TTImp
 mkCode = listOf . map (listOf . map tpe . explicitArgs) . cons
-
--- Implements function `from'`.
-export
-mkFrom : ParamTypeInfo -> List Clause
-mkFrom = map cl . zipWithIndex . cons
-  where cl : (Int,ParamCon) -> Clause
-        cl (n,c) = let names = toUN . name <$> explicitArgs c
-                    in var fromImpl .$ appNames (name c) names .=
-                       mkSOP n (map var names)
-
--- Implements function `from'`.
-export
-mkTo : ParamTypeInfo -> List Clause
-mkTo = map cl . zipWithIndex . cons
-  where cl : (Int,ParamCon) -> Clause
-        cl (n,c) = let names = toUN . name <$> explicitArgs c
-                    in var toImpl .$ mkSOP n (map var names) .=
-                       appNames (name c) names
 ```
 
 The implementation of `genericDecl`, however, requires an
@@ -54,37 +42,30 @@ Utility function `piAllImplicit` helps with this part.
 export
 genericDecl : ParamTypeInfo -> List Decl
 genericDecl ti =
-  let -- Names
-      mkGeneric  = singleCon "Generic"
+  let names    = zipWithIndex (map paramConNames ti.cons) 
       function   = UN $ "implGeneric" ++ camelCase (name ti)
       paramNames = map fst $ params ti
 
-      -- Vars
-      cde      = mkCode ti
-
       -- Applies parameters to type constructor, i.e. `Either a b`
-      myType   = appNames (name ti) paramNames
+      appType   = appNames (name ti) paramNames
+      genType  = `(Generic) .$ appType .$ mkCode ti
 
-      genType  = `(Generic) .$ myType .$ cde
       -- Prefixes function type with implicit arguments for
       -- type parameters:
       -- `{0 a : _} -> {0 b : _} -> Generic (Either a b) [[a],[b]]`
       funType  = piAllImplicit genType paramNames
 
-
-      impl  = local [ private' fromImpl $ arg myType .-> `(SOP) .$ cde
-                    , def fromImpl (mkFrom ti)
-
-                    , private' toImpl $ arg (`(SOP) .$ cde) .-> myType
-                    , def toImpl (mkTo ti)
-                    ] (appNames mkGeneric [fromImpl, toImpl])
+      x       = lambdaArg "x"
+      varX    = var "x"
+      from    = x .=> iCase varX implicitFalse (map fromClause names)
+      to      = x .=> iCase varX implicitFalse (map toClause names)
 
    in [ interfaceHint Public function funType
-      , def function [ var function .= impl ] ]
+      , def function [ var function .= appAll mkGeneric [from,to] ] ]
 
 export
-mkGeneric : Name -> Elab ()
-mkGeneric name = getParamInfo' name >>= declare . genericDecl
+deriveGeneric : Name -> Elab ()
+deriveGeneric name = getParamInfo' name >>= declare . genericDecl
 ```
 
 OK, let's give this a spin:
@@ -93,7 +74,7 @@ OK, let's give this a spin:
 private
 data Tree a = Leaf a | Branch (List (Tree a))
 
-%runElab (mkGeneric "Tree")
+%runElab (deriveGeneric "Tree")
  
 private
 Eq a => Eq (Tree a) where (==) = genEq
@@ -122,6 +103,8 @@ treeTest5 : (Leaf "foo" > Leaf "foo") = False
 treeTest5 = Refl
 ```
 
+And something a bit more involved:
+
 ```idris
 private
 data Crazy : (n : Nat) -> (a : Type) -> (f : Type -> Type) -> Type where
@@ -129,7 +112,7 @@ data Crazy : (n : Nat) -> (a : Type) -> (f : Type -> Type) -> Type where
   CrazyB : List (g b) -> Crazy n b g
   CrazyC : Crazy foo bar baz
 
-%runElab (mkGeneric "Crazy")
+%runElab (deriveGeneric "Crazy")
  
 private
 (Eq a, Eq (f a)) => Eq (Crazy n a f) where (==) = genEq

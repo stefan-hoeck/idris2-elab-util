@@ -193,7 +193,6 @@ actual constructor and create the `SOP` value according
 to this index.
 
 ```idris 
-
 export
 fromImpl : Name
 fromImpl = "fromImpl"
