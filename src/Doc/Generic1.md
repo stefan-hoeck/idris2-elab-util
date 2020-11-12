@@ -44,7 +44,7 @@ data SOP : (tss : List (List Type)) -> Type where
 ```
 
 The actual types in *generic-sop* are kind-polymorphic and
-add an additional type parameter of kind `Type -> Type`
+add an additional type parameter of kind `k -> Type`
 to allow for many powerful higher-order manipulations.
 We might return to that more versatile representation later on.
 
@@ -88,24 +88,10 @@ All2 Eq tss => All2 Ord tss => Ord (SOP tss) where
   compare (S v1) (S v2) = compare v1 v2
   compare (Z _ ) (S _)  = LT
   compare (S _ ) (Z _)  = GT
-
-public export
-All Semigroup ts => Semigroup (NP ts) where
-  Nil <+> Nil               = Nil
-  (h1 :: t1) <+> (h2 :: t2) = (h1 <+> h2) :: (t1 <+> t2)
-
-public export
-All Semigroup ts => Semigroup (SOP [ts]) where
-  (Z v1) <+> (Z v2) = Z $ v1 <+> v2
-
-public export
-{ts : _} -> All Semigroup ts => All Monoid ts => Monoid (NP ts) where
-  neutral {ts = Nil}    = Nil
-  neutral {ts = (_::_)} = neutral :: neutral
 ```
 
-Next, we need a data type for generic representations of algebraic
-data types:
+Next, we need an interface for converting from and to
+generic representations of algebraic data types:
 
 ```idris
 public export
@@ -201,8 +187,8 @@ mkCode : TypeInfo -> TTImp
 mkCode = listOf . map (listOf . map type . args) . cons
 ```
 
-For the pattern clauses in the implementation of `from'`
-and `to'`, we need to keep track of the index of the
+For the pattern clauses in the implementation of `from`
+and `to`, we need to keep track of the index of the
 actual constructor and create the `SOP` value according
 to this index.
 
@@ -220,9 +206,9 @@ toImpl = "toImpl"
 ||| of arguments. `k` is the index of the data type's
 ||| constructor.
 export
-mkSOP : (n : Int) -> (args : List TTImp) -> TTImp
-mkSOP n args     = if n <= 0 then `(Z) .$ listOf args
-                             else `(S) .$ mkSOP (n-1) args
+mkSOP : (k : Int) -> (args : List TTImp) -> TTImp
+mkSOP k args     = if k <= 0 then `(Z) .$ listOf args
+                             else `(S) .$ mkSOP (k-1) args
 
 export
 zipWithIndex : List a -> List (Int,a)
@@ -230,64 +216,77 @@ zipWithIndex as = run 0 as
   where run : Int -> List a -> List (Int,a)
         run _ []     = []
         run k (h::t) = (k,h) :: run (k+1) t
-
--- Implements function `from'`.
-private
-mkFrom : TypeInfo -> List Clause
-mkFrom = map cl . zipWithIndex . cons
-  where cl : (Int,Con) -> Clause
-        cl (n,c) = let names = toUN . name <$> args c
-                    in var fromImpl .$ appNames (name c) names .=
-                       mkSOP n (map var names)
-
--- Implements function `from'`.
-private
-mkTo : TypeInfo -> List Clause
-mkTo = map cl . zipWithIndex . cons
-  where cl : (Int,Con) -> Clause
-        cl (n,c) = let names = toUN . name <$> args c
-                    in var toImpl .$ mkSOP n (map var names) .=
-                       appNames (name c) names
 ```
 
-A quick note about function `toUN`: Idris does not accept
+For the implementations of functions `from` and `to`,
+we need to generate pattern clauses for every data
+constructor. We collect the require constructor
+name and list of arguments in a tuple:
+
+```idris
+||| Constructor name and names of arguments
+||| to be used in pattern match declarations
+public export
+ConNames : Type
+ConNames = (Name, List String, List TTImp)
+
+private
+conNames : Con -> ConNames
+conNames (MkCon con args _) = let ns   = map (nameStr . name) args
+                                  vars = map varStr ns
+                               in (con, ns, vars)
+
+export
+fromClause : (Int,ConNames) -> Clause
+fromClause (k,(con,ns,vars)) = bindAll con ns .= mkSOP k vars
+
+export
+toClause : (Int,ConNames) -> Clause
+toClause (k,(con,ns,vars)) = mkSOP k (map bindVar ns) .= appAll con vars
+```
+
+A quick note about function `nameStr`: Idris does not accept
 the machine-generated names of unnamed arguments in pattern matches.
 Function `toUN` converts such names to similar user-defined names.
 
 ```idris
+export
+mkGeneric : Name
+mkGeneric = singleCon "Generic"
+
 private
 genericDecl : TypeInfo -> List Decl
 genericDecl ti =
-  let -- Names
-      mkGeneric = singleCon "Generic"
+  let -- constructor name
+      names     = zipWithIndex (map conNames ti.cons)
+
+      -- name of implementation function
       function  = UN $ "implGeneric" ++ camelCase (name ti)
 
-      -- Vars
-      myType   = var (name ti)
+      -- type of implementation function
+      funType = `(Generic) .$ var (name ti) .$ mkCode ti
 
-      cde   = mkCode ti
+      -- implementation of from and to as anonymous functions
+      x       = lambdaArg "x"
+      varX    = var "x"
+      from    = x .=> iCase varX implicitFalse (map fromClause names)
+      to      = x .=> iCase varX implicitFalse (map toClause names)
 
-      impl  = local [ private' fromImpl $ arg myType .-> `(SOP) .$ cde
-                    , def fromImpl (mkFrom ti)
-
-                    , private' toImpl $ arg (`(SOP) .$ cde) .-> myType
-                    , def toImpl (mkTo ti)
-                    ] (appNames mkGeneric [fromImpl, toImpl])
-
-   in [ interfaceHint Public function (`(Generic) .$ myType .$ cde)
-      , def function [ var function .= impl ] ]
+   in [ interfaceHint Public function funType
+      , def function [ var function .= appAll mkGeneric [from,to] ] ]
 ```
 
 Let's break this down a bit: We first get access
 to `Generic`'s constructor and calculate the name
-of our implementation function. `cde` is a `TTImp`
-representation of our data type's generic code,
-and `impl` holds the type and pattern declarations
-of a local `where` block, container implementations
-of functions `from` and `to`.
+of our implementation function. We then calculate
+the implementation's type by applying our data type and
+generated code to the type constructor `Generic`.
+The actual implementation consists of functions `from`
+and `to`, both implemented as anonymous functions
+with a pattern clause for each data constructor.
 Finally, we return the type declaration of
-our implementation function together with the acutal
-function definition.
+the implementation function together with the acutal
+function definition consisting of a single pattern clause.
 
 The only thing still missing is an `Elab` function
 to actually have the elaborator include our derived
@@ -295,8 +294,8 @@ instances:
 
 ```idris
 private
-mkGeneric : Name -> Elab ()
-mkGeneric name = getInfo' name >>= declare . genericDecl
+deriveGeneric : Name -> Elab ()
+deriveGeneric name = getInfo' name >>= declare . genericDecl
 ```
 
 OK, let's give this a spin:
@@ -310,7 +309,7 @@ record Employee where
   salary     : Double
   supervisor : Maybe Employee
 
-%runElab (mkGeneric "Employee")
+%runElab (deriveGeneric "Employee")
  
 private
 Eq Employee where (==) = genEq
@@ -337,7 +336,7 @@ data Request = Login String String
              | Delete Employee
              | Logout
 
-%runElab (mkGeneric "Request")
+%runElab (deriveGeneric "Request")
 
 private
 Eq Request where (==) = genEq

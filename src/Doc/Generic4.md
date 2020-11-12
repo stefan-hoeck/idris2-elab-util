@@ -115,29 +115,11 @@ cleaning up parts of our code while we're at it.
 
 ```idris
 private
-mkGeneric : Name
-mkGeneric = singleCon "Generic"
-
--- Constructor name and names of arguments
--- to be used in pattern match declarations
-private
-ConNames : Type
-ConNames = (Name, List String, List TTImp)
-
-private
 conNames : ParamCon -> ConNames
 conNames (MkParamCon con args) = let ns   = map (nameStr . name) args
                                      vars = map varStr ns
                                   in (con, ns, vars)
 
-private
-fromClause : (Int,ConNames) -> Clause
-fromClause (k,(con,ns,vars)) = bindAll con ns .= mkSOP k vars
-
-private
-toClause : (Int,ConNames) -> Clause
-toClause (k,(con,ns,vars)) = mkSOP k (map bindVar ns) .= appAll con vars
-                                   
 export
 Generic' : MkImplementation
 Generic' g =

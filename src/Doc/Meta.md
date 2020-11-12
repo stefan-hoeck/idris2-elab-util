@@ -7,14 +7,14 @@ by inspecting the structure of existing data or function definitions
 and deriving new functions or data types from that structure.
 
 In Idris2, metaprogramming consists of the following
-three aspekts:
+three aspects:
 
   * Inspecting the structure of existing definitions
   * Programmatically write new definitions
-  * Include generated definitions in a project's source code
+  * Include generated definitions in a module's exported declarations
 
 All of the above are provided though the base module `Language.Reflection`,
-and in this tutorial we are going to look at each of them.
+and in this tutorial we are going to have a very quick look at each of them.
 
 ### TTImp: The Structure of Idris Programs
 

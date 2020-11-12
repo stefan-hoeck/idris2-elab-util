@@ -265,7 +265,7 @@ Inspecting quoted data declarations is also possible:
 
 ### What's next
 
-Now that we now how Idris expressions can be expressed
+Now that we now how Idris expressions can be defined
 by means of `TTImp` and `Decl`, we can start
 building them programmatically. As a first example,
 we will write a [macro for defining enumerations](Enum1.md).
