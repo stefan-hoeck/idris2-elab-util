@@ -19,46 +19,87 @@ import Doc.Generic3
 
 ### An Intermediary Utility Type for Generic Deriving
 
-```idris
-public export
-record GenericUtil where
-  constructor MkGenericUtil
-  typeInfo        : ParamTypeInfo
-  appliedType     : TTImp 
-  paramNames      : List Name
-  typesWithParams : List TTImp
-
-genericUtil : ParamTypeInfo -> GenericUtil
-genericUtil ti = let pNames = map fst $ params ti
-                     appTpe = appNames (name ti) pNames
-                     twps   = ti.cons >>= hasParamTypes
-                  in MkGenericUtil ti appTpe pNames twps
-```
+First, we write a utility data type holding additional
+precalculated values of parameterized data types that
+come up time and time again.
 
 ```idris
 export
-record Derivable where
-  constructor MkDerivable
-  interfaceName : String
-  impl          : TTImp
-  type          : TTImp
+record GenericUtil where
+  constructor MkGenericUtil
+
+  ||| The underlying type info
+  typeInfo           : ParamTypeInfo
+
+  ||| Fully applied data type, i.e. `var "Either" .$ var "a" .$ var "b"`
+  appliedType        : TTImp 
+
+  ||| The names of type parameters
+  paramNames         : List Name
+
+  ||| Types of constructor arguments where at least one
+  ||| type parameter makes an appearance. These are the
+  ||| `tpe` fields of `ExplicitArg` where `hasParam`
+  ||| is set to true. See the documentation of `ExplicitArg`
+  ||| when this is the case
+  argTypesWithParams : List TTImp
+
+private
+genericUtil : ParamTypeInfo -> GenericUtil
+genericUtil ti = let pNames = map fst $ params ti
+                     appTpe = appNames (name ti) pNames
+                     twps   = concatMap hasParamTypes ti.cons
+                  in MkGenericUtil ti appTpe pNames twps
 
 export
 implName : GenericUtil -> String -> Name
 implName g interfaceName =  UN $ "impl" ++ interfaceName
                                         ++ nameStr g.typeInfo.name
+```
+
+We make function `implName` for generating the name of the
+implementation function available, to allow interface
+implementation depending on other implementations
+to access this name. Is is for instance required in
+the implemenation of `Ord'` (see below).
+
+Since interface declarations always have the same
+structure, we gather the distinct parts in a separate
+data type:
+
+```idris
+export
+record InterfaceImpl where
+  constructor MkInterfaceImpl
+  interfaceName : String
+  impl          : TTImp
+  type          : TTImp
+
+public export
+MkImplementation : Type
+MkImplementation = GenericUtil -> InterfaceImpl
 
 private
-deriveDerivable : GenericUtil -> Derivable -> Elab ()
-deriveDerivable g d = let function = implName g d.interfaceName
-                       in declare [ interfaceHint Public function d.type
-                                  , def function [ var function .= d.impl ] ]
+implDecl : GenericUtil -> MkImplementation -> List Decl
+implDecl g f = let (MkInterfaceImpl iname impl type) = f g
+                   function = implName g iname
+                  in [ interfaceHint Public function type
+                     , def function [var function .= impl] ]
+```
+
+```idris
+private
+deriveDecls : Name -> List MkImplementation -> Elab (List Decl)
+deriveDecls name fs = mkDecls <$> getParamInfo' name 
+  where mkDecls : ParamTypeInfo -> List Decl
+        mkDecls pi = let g = genericUtil pi
+                      in concatMap (implDecl g) fs
+                  
 
 export
-derive : Name -> List (GenericUtil -> Derivable) -> Elab ()
-derive name fs = do g <- genericUtil <$> getParamInfo' name
-                    traverse_ (\f => deriveDerivable g (f g)) fs
-
+derive : Name -> List MkImplementation -> Elab ()
+derive name fs = do decls <- deriveDecls name fs
+                    declare decls
 ```
 
 ```idris
@@ -80,7 +121,7 @@ toClause (n,MkParamCon nm args) =
                                    
 
 export
-Generic' : GenericUtil -> Derivable
+Generic' : MkImplementation
 Generic' g =
   let cde     = mkCode g.typeInfo
 
@@ -93,7 +134,7 @@ Generic' g =
       to      = x .=> iCase (var "x") implicitFalse (map toClause iCons)
       impl    = appAll mkGeneric [from,to]
 
-   in MkDerivable "Generic" impl funType
+   in MkInterfaceImpl "Generic" impl funType
 
 private
 mkEq : TTImp
@@ -101,14 +142,14 @@ mkEq = var (singleCon "Eq") .$ `(genEq) .$ `(\a,b => not (a == b))
 
 export
 implementationType : TTImp -> GenericUtil -> TTImp
-implementationType iface (MkGenericUtil _ appTp names typesWithParams) =
+implementationType iface (MkGenericUtil _ appTp names argTypesWithParams) =
   let appIface = iface .$ appTp
-      autoArgs = piAllAuto appIface $ map (iface .$) typesWithParams
+      autoArgs = piAllAuto appIface $ map (iface .$) argTypesWithParams
    in piAllImplicit autoArgs names
 
 export
-Eq' : GenericUtil -> Derivable
-Eq' g = MkDerivable "Eq" mkEq (implementationType `(Eq) g)
+Eq' : MkImplementation
+Eq' g = MkInterfaceImpl "Eq" mkEq (implementationType `(Eq) g)
 
 private
 mkOrd : Name
@@ -126,10 +167,10 @@ ordFunctions = [ `(genCompare)
                ]
 
 export
-Ord' : GenericUtil -> Derivable
+Ord' : MkImplementation
 Ord' g = let eq   = var $ implName g "Eq"
              impl = appAll mkOrd (eq :: ordFunctions)
-          in MkDerivable "Ord" impl (implementationType `(Ord) g)
+          in MkInterfaceImpl "Ord" impl (implementationType `(Ord) g)
 ```
 
 Now, lets put our new utilities to work. Below, we derive
@@ -153,7 +194,7 @@ from `Language.Reflection.TT` and `Language.Reflection.TTImp`.
 %runElab (derive "DataOpt"    [Generic', Eq', Ord'])
 ```
 
-It is not possible, to use this method in a mutual
+It seems not yet to be possible, to use this method in a mutual
 block. Therefore, we have to write a tiny bit
 of boilerplate for `Eq` and `Ord` instances
 of `TTImp` and friends.
