@@ -13,3 +13,12 @@ package.
 Most tutorials in this repository are themselves literate Idris files.
 In order to typecheck or build those, package file elab-util-docs.ipkg
 is provided.
+
+## Related Libraries
+
+Part of the utilities in this package are put to work in
+[idris2-sop](https://github.com/stefan-hoeck/idris2-sop)
+a (still very experimental and incomplete) port of Haskell's
+[sop-core](https://hackage.haskell.org/package/sop-core) and
+[generic-sop](https://hackage.haskell.org/package/generics-sop)
+packages useful to automatically derive interface implementations.
