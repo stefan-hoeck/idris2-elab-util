@@ -1,13 +1,9 @@
-package idris2-elab-util
+package elab-util
 
 authors    = "stefan-hoeck"
 version    = "0.1.0"
 readme     = "README.md"
 license    = "BSD-2 Clause"
-
-executable = elab_util
-
-main       = Main
 
 sourcedir  = "src"
 depends    = base, contrib
@@ -15,11 +11,3 @@ depends    = base, contrib
 modules = Language.Reflection.Syntax
         , Language.Reflection.Pretty
         , Language.Reflection.Types
-
-        , Doc.Enum1
-        , Doc.Enum2
-        , Doc.Generic1
-        , Doc.Generic2
-        , Doc.Generic3
-        , Doc.Generic4
-        , Doc.Inspect

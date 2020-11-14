@@ -1,0 +1,18 @@
+package elab-util-docs
+
+authors    = "stefan-hoeck"
+version    = "0.1.1"
+readme     = "README.md"
+license    = "BSD-2 Clause"
+
+sourcedir  = "src"
+depends    = base, elab-util
+
+modules = Doc.Enum1
+        , Doc.Enum2
+        , Doc.Generic1
+        , Doc.Generic2
+        , Doc.Generic3
+        , Doc.Generic4
+        , Doc.Inspect
+
