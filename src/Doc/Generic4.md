@@ -17,6 +17,9 @@ import Doc.Generic3
 %language ElabReflection
 ```
 
+Note: Some of the types and utility functions described
+here have been added to module `Language.Reflection.Derive`.
+
 ### An Intermediary Utility Type for Generic Deriving
 
 First, we write a utility data type holding additional
@@ -25,8 +28,8 @@ come up time and time again.
 
 ```idris
 export
-record GenericUtil where
-  constructor MkGenericUtil
+record DeriveUtil where
+  constructor MkDeriveUtil
 
   ||| The underlying type info
   typeInfo           : ParamTypeInfo
@@ -45,14 +48,14 @@ record GenericUtil where
   argTypesWithParams : List TTImp
 
 private
-genericUtil : ParamTypeInfo -> GenericUtil
+genericUtil : ParamTypeInfo -> DeriveUtil
 genericUtil ti = let pNames = map fst $ params ti
                      appTpe = appNames (name ti) pNames
                      twps   = concatMap hasParamTypes ti.cons
-                  in MkGenericUtil ti appTpe pNames twps
+                  in MkDeriveUtil ti appTpe pNames twps
 
 export
-implName : GenericUtil -> String -> Name
+implName : DeriveUtil -> String -> Name
 implName g interfaceName =  UN $ "impl" ++ interfaceName
                                         ++ nameStr g.typeInfo.name
 ```
@@ -77,10 +80,10 @@ record InterfaceImpl where
 
 public export
 MkImplementation : Type
-MkImplementation = GenericUtil -> InterfaceImpl
+MkImplementation = DeriveUtil -> InterfaceImpl
 
 private
-implDecl : GenericUtil -> MkImplementation -> List Decl
+implDecl : DeriveUtil -> MkImplementation -> List Decl
 implDecl g f = let (MkInterfaceImpl iname impl type) = f g
                    function = implName g iname
 
@@ -150,8 +153,8 @@ for us:
 
 ```idris
 export
-implementationType : (iface : TTImp) -> GenericUtil -> TTImp
-implementationType iface (MkGenericUtil _ appTp names argTypesWithParams) =
+implementationType : (iface : TTImp) -> DeriveUtil -> TTImp
+implementationType iface (MkDeriveUtil _ appTp names argTypesWithParams) =
   let appIface = iface .$ appTp
       autoArgs = piAllAuto appIface $ map (iface .$) argTypesWithParams
    in piAllImplicit autoArgs names

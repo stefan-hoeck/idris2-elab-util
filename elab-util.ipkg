@@ -8,6 +8,7 @@ license    = "BSD-2 Clause"
 sourcedir  = "src"
 depends    = base, contrib
 
-modules = Language.Reflection.Syntax
+modules = Language.Reflection.Derive
         , Language.Reflection.Pretty
+        , Language.Reflection.Syntax
         , Language.Reflection.Types
