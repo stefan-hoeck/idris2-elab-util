@@ -8,6 +8,8 @@ module Language.Reflection.Derive
 import public Language.Reflection.Syntax
 import public Language.Reflection.Types
 
+%language ElabReflection
+
 ||| Utility type for deriving interface implementations
 ||| automatically. See implementations of `Eq'` and `Ord'`
 ||| in Doc.Generic4 as examples, how this can be done.
@@ -149,3 +151,141 @@ implementationType iface (MkDeriveUtil _ appTp names argTypesWithParams) =
   let appIface = iface .$ appTp
       autoArgs = piAllAuto appIface $ map (iface .$) argTypesWithParams
    in piAllImplicit autoArgs names
+
+
+--------------------------------------------------------------------------------
+--          Interface Factories
+--------------------------------------------------------------------------------
+
+||| Creates an `Eq` value from the passed implementation functions
+||| for (==) and (/=).
+export
+mkEq' : (eq : a -> a -> Bool) -> (neq : a -> a -> Bool) -> Eq a
+mkEq' = %runElab check (var $ singleCon "Eq")
+
+||| Like `mkEq'` but generates (/=) from the passed `eq` function.
+export
+mkEq : (eq : a -> a -> Bool) -> Eq a
+mkEq eq = mkEq' eq (\a,b => not $ eq a b)
+
+||| Creates an `Ord` value from the passed implementation functions
+||| for `compare`, `(<)`, `(>)`, `(<=)`, `(>=)`, `min`, `max`.
+export
+mkOrd' :  (1 _ : Eq a)
+      -> (compare : a -> a -> Ordering)
+      -> (lt : a -> a -> Bool)
+      -> (gt : a -> a -> Bool)
+      -> (leq : a -> a -> Bool)
+      -> (geq : a -> a -> Bool)
+      -> (min : a -> a -> a)
+      -> (max : a -> a -> a)
+      -> Ord a
+mkOrd' = %runElab check (var $ singleCon "Ord")
+
+||| Creates an `Ord` value deriving all functions from the
+||| passed `comp` function.
+export
+mkOrd : (1 prf : Eq a) => (comp : a -> a -> Ordering) -> Ord a
+mkOrd comp = mkOrd' prf
+                    comp
+                    (\a,b => comp a b == LT)
+                    (\a,b => comp a b == GT)
+                    (\a,b => comp a b /= GT)
+                    (\a,b => comp a b /= LT)
+                    (\a,b => if comp a b == GT then a else b)
+                    (\a,b => if comp a b == LT then a else b)
+
+||| Creates a `Num` value from the passed functions.
+export
+mkNum :  (plus : a -> a -> a)
+      -> (times : a -> a -> a)
+      -> (fromInt : Integer -> a)
+      -> Num a
+mkNum = %runElab check (var $ singleCon "Num")
+
+||| Creates a `Neg` value from the passed functions.
+export
+mkNeg' :  (1 num : Num a)
+      -> (negate : a -> a)
+      -> (minus  : a -> a -> a)
+      -> Neg a
+mkNeg' = %runElab check (var $ singleCon "Neg")
+
+||| Creates a `Neg` value from the passed `minus` function.
+export
+mkNeg :  (num : Num a) => (minus  : a -> a -> a) -> Neg a
+mkNeg minus = mkNeg' num (minus 0) minus
+
+||| Creates an `Abs` value from the passed function
+||| and `Num` instance.
+export
+mkAbs' :  (1 num : Num a) -> (abs : a -> a) -> Abs a
+mkAbs' = %runElab check (var $ singleCon "Abs")
+
+||| Creates an `Abs` value from the passed function,
+||| using an implicitly passed `Num` instance.
+export
+mkAbs :  (1 num : Num a) => (abs : a -> a) -> Abs a
+mkAbs abs = mkAbs' num abs
+
+||| Creates a `Fractional` value from the passed functions
+||| and `Num` instance.
+export
+mkFractional' :  (1 num : Num a)
+              -> (div : a -> a -> a)
+              -> (recip : a -> a)
+              -> Fractional a
+mkFractional' = %runElab check (var $ singleCon "Fractional")
+
+||| Creates a `Fractional` value from the passed function.
+export
+mkFractional : (num : Num a) => (div : a -> a -> a) -> Fractional a
+mkFractional div = mkFractional' num div (div 1)
+
+mkIntegral' :  (1 num : Num a)
+            -> (div : a -> a -> a)
+            -> (mod : a -> a -> a)
+            -> Integral a
+mkIntegral' = %runElab check (var $ singleCon "Integral")
+
+||| Creates an `Integral` value from the passed functions.
+export
+mkIntegral : (1 num : Num a)
+           => (div : a -> a -> a)
+           -> (mod : a -> a -> a)
+           -> Integral a
+mkIntegral div mod = mkIntegral' num div mod
+
+||| Creates a `Show` value from the passed functions.
+export
+mkShow' : (show : a -> String) -> (showPrec : Prec -> a -> String) -> Show a
+mkShow' = %runElab check (var $ singleCon "Show")
+
+||| Creates a `Show` value from the passed `show` functions.
+export
+mkShow : (show : a -> String) -> Show a
+mkShow show = mkShow' show (\_ => show)
+
+||| Creates a `Show` value from the passed `showPrec` functions.
+export
+mkShowPrec : (showPrec : Prec -> a -> String) -> Show a
+mkShowPrec showPrec = mkShow' (showPrec Open) showPrec
+
+||| Creates an `Uninhabited` value from the passed function.
+export
+mkUninhabited : (uninhabited : a -> Void) -> Uninhabited a
+mkUninhabited = %runElab check (var $ singleCon "Uninhabited")
+
+||| Creates a `Semigroup` value from the passed function.
+export
+mkSemigroup : (mappend : a -> a -> a) -> Semigroup a
+mkSemigroup = %runElab check (var $ singleCon "Semigroup")
+
+||| Creates a `Monoid` value from the passed neutral value.
+mkMonoid' : (1 semi : Semigroup a) -> (neutral : a) -> Monoid a
+mkMonoid' = %runElab check (var $ singleCon "Monoid")
+
+||| Creates a `Monoid` value from the passed neutral value.
+export
+mkMonoid : (1 semi : Semigroup a) => (neutral : a) -> Monoid a
+mkMonoid = mkMonoid' semi
