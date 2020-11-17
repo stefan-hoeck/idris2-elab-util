@@ -1,6 +1,6 @@
 ## Generics Part 5: Type checked Elaborator Scripts
 
-In this part of the tutorial we try out at a new technique to get back
+In this part of the tutorial we try out a new technique to get back
 some of our beloved type safety when writing elaborator scripts.
 
 ```idris
@@ -8,6 +8,11 @@ module Doc.Generic5
 
 import public Language.Reflection.Derive
 import Doc.Generic1
+
+%hide Language.Reflection.Derive.mkEq'
+%hide Language.Reflection.Derive.mkEq
+%hide Language.Reflection.Derive.mkOrd'
+%hide Language.Reflection.Derive.mkOrd
 
 %language ElabReflection
 ```
@@ -48,13 +53,13 @@ Eq' : DeriveUtil -> InterfaceImpl
 Eq' g = MkInterfaceImpl "Eq" Public `(mkEq genEq) (implementationType `(Eq) g)
 ```
 
-This time, we used the utilities from `Language.Reflection.Derive`. 
-They are very similar in functionality to the ones developed in
+This time, we used utilities from `Language.Reflection.Derive`. 
+They are very similar in functionality to the ones we developed in
 [Generics Part 4](Generic4.md). This
 approach is even more useful when deriving `Ord`: In our previous
 version we had to manually pass the `Eq` instance to the `Ord`
 constructor forcing us to get access to its implementation function
-by means of `implName`. This is now no longer necessary:
+by means of `implName`. This is no longer necessary:
 
 ```idris
 mkOrd' :  (1 _ : Eq a)
@@ -63,8 +68,8 @@ mkOrd' :  (1 _ : Eq a)
       -> (gt : a -> a -> Bool)
       -> (leq : a -> a -> Bool)
       -> (geq : a -> a -> Bool)
-      -> (min : a -> a -> a)
       -> (max : a -> a -> a)
+      -> (min : a -> a -> a)
       -> Ord a
 mkOrd' = %runElab check (var $ singleCon "Ord")
 
@@ -97,8 +102,55 @@ Generic (Test a) [[a],[String]] where
 
 %runElab (derive "Test" [Eq',Ord'])
 
-ordTest : Foo (the Int 12) <= Bar "bar" = True
-ordTest = Refl
+eqTest : let v = Foo (the Int 12) in v == v = True
+eqTest = Refl
+
+neqTest : let v = Foo (the Int 12) in v /= v = False
+neqTest = Refl
+```
+
+For `Ord` we need to be more thorough and make sure we
+did not mix up the order of functions in the constructor:
+
+```idris
+compareTest1 : compare (the (Test Int) (Foo 12)) (Bar "bar") = LT
+compareTest1 = Refl
+
+compareTest2 : compare (the (Test Int) (Foo 12)) (Foo 1) = GT
+compareTest2 = Refl
+
+compareTest3 : compare (the (Test Int) (Foo 12)) (Foo 12) = EQ
+compareTest3 = Refl
+
+ltTest1 : the (Test Int) (Foo 12) < Bar "bar" = True
+ltTest1 = Refl
+
+ltTest2 : the (Test Int) (Foo 12) < Foo 12 = False
+ltTest2 = Refl
+
+gtTest1 : the (Test Int) (Foo 12) > Foo 0 = True
+gtTest1 = Refl
+
+gtTest2 : the (Test Int) (Foo 12) > Foo 12 = False
+gtTest2 = Refl
+
+leqTest1 : the (Test Int) (Foo 12) <= Bar "bar" = True
+leqTest1 = Refl
+
+leqTest2 : the (Test Int) (Bar "bar") <= Bar "bar" = True
+leqTest2 = Refl
+
+geqTest1 : the (Test Int) (Foo 12) >= Foo 1 = True
+geqTest1 = Refl
+
+geqTest2 : the (Test Int) (Bar "bar") >= Bar "bar" = True
+geqTest2 = Refl
+
+minTest : min (the (Test Int) (Foo 2)) (Foo 3) = Foo 2
+minTest = Refl
+
+maxTest : max (the (Test Int) (Foo 2)) (Foo 3) = Foo 3
+maxTest = Refl
 ```
 
 ### Conclusion
