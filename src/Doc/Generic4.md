@@ -322,4 +322,4 @@ performance of the Idris compiler.
 Now that we have the means to derive some of the core interface
 implementations with pretty clean syntax, let us look into
 compile-time verification of these implementations.
-But first, we will try and [get back some type safety](Generics5.md).
+But first, we will try and [get back some type safety](Generic5.md).
