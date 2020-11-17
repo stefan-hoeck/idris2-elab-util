@@ -78,7 +78,7 @@ Pretty TypeInfo where
 ||| needs to be unambiguous.
 export
 getInfo' : Name -> Elab TypeInfo
-getInfo' n = 
+getInfo' n =
   do (n',tt)        <- lookupName n
      (args,IType _) <- unPiNamed tt
                     | (_,_) => fail "Type declaration does not end in IType"
@@ -105,7 +105,7 @@ singleCon n = do (MkTypeInfo _ _ cs) <- getInfo' n
 --          Parameterized Types
 --------------------------------------------------------------------------------
 
-||| Explicit arg of a data constructor 
+||| Explicit arg of a data constructor
 |||
 ||| The `hasParam` flag indicates, whether one of the
 ||| type parameters of the data type makes an appearance

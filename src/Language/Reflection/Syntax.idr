@@ -305,7 +305,7 @@ iCase = ICase EmptyFC
 ||| This is an alias for `IAs EmptyFC UseLeft`.
 export
 as : Name -> TTImp -> TTImp
-as = IAs EmptyFC UseLeft  
+as = IAs EmptyFC UseLeft
 
 --------------------------------------------------------------------------------
 --          Function Declarations
@@ -433,7 +433,7 @@ errMsg n xs = let rest = concat $ intersperse ", " $ map (show . fst) xs
 ||| Looks up a name in the current namespace.
 export
 lookupName : Name -> Elab (Name, TTImp)
-lookupName n = do pairs <- getType n 
+lookupName n = do pairs <- getType n
                   case (pairs,n) of
                        ([p],_)     => pure p
                        (ps,UN str) => inCurrentNS (UN str) >>= lookupName

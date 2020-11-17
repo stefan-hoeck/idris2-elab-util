@@ -19,7 +19,7 @@ import Doc.Generic1
 
 ### Properly Typed Default Implementations
 
-When we look back at [Generics Part 4](Generic4.md), 
+When we look back at [Generics Part 4](Generic4.md),
 we find that the writing of `Eq'` and `Ord'` forced us to implement these
 completely in the untyped world of `TTImp`, simply because we did not
 have access to the corresponding record constructors of
@@ -53,7 +53,7 @@ Eq' : DeriveUtil -> InterfaceImpl
 Eq' g = MkInterfaceImpl "Eq" Public `(mkEq genEq) (implementationType `(Eq) g)
 ```
 
-This time, we used utilities from `Language.Reflection.Derive`. 
+This time, we used utilities from `Language.Reflection.Derive`.
 They are very similar in functionality to the ones we developed in
 [Generics Part 4](Generic4.md). This
 approach is even more useful when deriving `Ord`: In our previous
