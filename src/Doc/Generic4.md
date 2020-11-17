@@ -35,7 +35,7 @@ record DeriveUtil where
   typeInfo           : ParamTypeInfo
 
   ||| Fully applied data type, i.e. `var "Either" .$ var "a" .$ var "b"`
-  appliedType        : TTImp 
+  appliedType        : TTImp
 
   ||| The names of type parameters
   paramNames         : List Name
@@ -99,11 +99,11 @@ will derive implementations for these interfaces:
 ```idris
 private
 deriveDecls : Name -> List MkImplementation -> Elab (List Decl)
-deriveDecls name fs = mkDecls <$> getParamInfo' name 
+deriveDecls name fs = mkDecls <$> getParamInfo' name
   where mkDecls : ParamTypeInfo -> List Decl
         mkDecls pi = let g = genericUtil pi
                       in concatMap (implDecl g) fs
-                  
+
 
 export
 derive : Name -> List MkImplementation -> Elab ()

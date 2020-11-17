@@ -194,7 +194,7 @@ eqImpl enumName cons =
       --         ...
       --         eq _ _ = False
       impl  = local [ private' eqName $ enum .-> enum .-> `(Bool)
-                    , def eqName $ map mkC cons ++ [defEq] 
+                    , def eqName $ map mkC cons ++ [defEq]
                     ] (var mkEq .$ eq .$ neq)
 
    in [ interfaceHint Public functionName (var "Eq" .$ type enum)
@@ -250,8 +250,8 @@ ordImpl enumName cons =
       --                         `comp X _ = LT`
       --                         `comp _ X = GT`
       mkC   = \x => [ comp .$ varStr x .$ varStr x     .= `(EQ)
-                    , comp .$ varStr x .$ implicitTrue .= `(LT) 
-                    , comp .$ implicitTrue .$ varStr x .= `(GT) 
+                    , comp .$ varStr x .$ implicitTrue .= `(LT)
+                    , comp .$ implicitTrue .$ varStr x .= `(GT)
                     ]
 
       -- implementations of (>),(>=),(<),(<=),min,max

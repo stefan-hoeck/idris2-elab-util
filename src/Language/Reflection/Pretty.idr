@@ -222,7 +222,7 @@ Pretty Constant where
 --------------------------------------------------------------------------------
 --          Pretty instance for TTImp
 --------------------------------------------------------------------------------
- 
+
 
 export
 Pretty BindMode where
@@ -342,7 +342,7 @@ mutual
 
     prettyPrec p (ICase _ arg ty cs) = applyH p "ICase" [arg,ty,cs]
 
-    prettyPrec p (ILocal _ decls tt) = 
+    prettyPrec p (ILocal _ decls tt) =
       indentLines (apply p "ILocal" [tt]) (map pretty decls)
 
     prettyPrec p (IUpdate _ ups tt) = applyH p"IUpdate" [ups,tt]

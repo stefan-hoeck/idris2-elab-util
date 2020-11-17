@@ -192,7 +192,7 @@ and `to`, we need to keep track of the index of the
 actual constructor and create the `SOP` value according
 to this index.
 
-```idris 
+```idris
 ||| Applies the proper n-ary sum constructor to a list
 ||| of arguments. `k` is the index of the data type's
 ||| constructor.
@@ -301,7 +301,7 @@ record Employee where
   supervisor : Maybe Employee
 
 %runElab (deriveGeneric "Employee")
- 
+
 private
 Eq Employee where (==) = genEq
 

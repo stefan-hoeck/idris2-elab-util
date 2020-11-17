@@ -42,7 +42,7 @@ Utility function `piAllImplicit` helps with this part.
 export
 genericDecl : ParamTypeInfo -> List Decl
 genericDecl ti =
-  let names    = zipWithIndex (map paramConNames ti.cons) 
+  let names    = zipWithIndex (map paramConNames ti.cons)
       function   = UN $ "implGeneric" ++ camelCase (name ti)
       paramNames = map fst $ params ti
 
@@ -75,7 +75,7 @@ private
 data Tree a = Leaf a | Branch (List (Tree a))
 
 %runElab (deriveGeneric "Tree")
- 
+
 private
 Eq a => Eq (Tree a) where (==) = genEq
 
@@ -113,7 +113,7 @@ data Crazy : (n : Nat) -> (a : Type) -> (f : Type -> Type) -> Type where
   CrazyC : Crazy foo bar baz
 
 %runElab (deriveGeneric "Crazy")
- 
+
 private
 (Eq a, Eq (f a)) => Eq (Crazy n a f) where (==) = genEq
 

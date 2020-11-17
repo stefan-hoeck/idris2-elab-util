@@ -23,7 +23,7 @@ record DeriveUtil where
   typeInfo           : ParamTypeInfo
 
   ||| Fully applied data type, i.e. `var "Either" .$ var "a" .$ var "b"`
-  appliedType        : TTImp 
+  appliedType        : TTImp
 
   ||| The names of type parameters
   paramNames         : List Name
@@ -116,11 +116,11 @@ implDecl g f = let (MkInterfaceImpl iname vis impl type) = f g
 
 private
 deriveDecls : Name -> List (DeriveUtil -> InterfaceImpl) -> Elab (List Decl)
-deriveDecls name fs = mkDecls <$> getParamInfo' name 
+deriveDecls name fs = mkDecls <$> getParamInfo' name
   where mkDecls : ParamTypeInfo -> List Decl
         mkDecls pi = let g = genericUtil pi
                       in concatMap (implDecl g) fs
-                  
+
 ||| Given a name of a data type plus a list of interfaces, tries
 ||| to implement these interfaces automatically using
 ||| elaborator reflection.
