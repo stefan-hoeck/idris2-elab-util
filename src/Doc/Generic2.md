@@ -214,7 +214,7 @@ Generic (ASum a b) [[a],[Maybe b]] where
 
 So, in order to derive a single instance of `Generic` automatically,
 we need to make sure that the data type in question has only
-parameters but no indices, and we either need to introduce conistent
+parameters but no indices, and we either need to introduce consistent
 naming of parameters or reject data types with inconsistently named
 parameters.
 
