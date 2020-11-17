@@ -1,6 +1,6 @@
 # idris2-elab-util
 
-Utilities and documentation for exploring Idirs 2 elaborator reflection.
+Utilities and documentation for exploring Idris 2 elaborator reflection.
 For a tutorial-ish introduction, [start here](/src/Doc/Meta.md).
 
 Part of the utilities in this package as well as some of my understanding
