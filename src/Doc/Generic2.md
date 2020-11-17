@@ -80,7 +80,7 @@ vectInfo = getInfo "Vect"
 ```
 
 ```
-...> :exec putPretty eitherInfo
+...> :exec putPretty vectInfo
 
   MkTypeInfo Data.Vect.Vect
              [ (MW ExplicitArg len : IVar Prelude.Types.Nat)
