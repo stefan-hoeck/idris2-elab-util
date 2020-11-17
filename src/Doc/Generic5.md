@@ -23,8 +23,8 @@ When we look back at [Generics Part 4](Generic4.md),
 we find that the writing of `Eq'` and `Ord'` forced us to implement these
 completely in the untyped world of `TTImp`, simply because we did not
 have access to the corresponding record constructors of
-`Eq` and `Ord`. But it is actually very easy to get that
-constructor back as a properly typed function by using
+`Eq` and `Ord`. But it is actually very easy to get those
+constructors back as a properly typed functions by using
 function `check` from `Language.Reflection`:
 
 ```idris
@@ -160,7 +160,7 @@ function `check` is useful whenever we try to implement
 a function using elaborator reflection whose type is already known at compile time.
 This was not the case for automatically derived interface implementations
 whose full type had to be put together from the correspoding
-data type's constructors, type parameters, and constructor
-arguments. It was, however, possible for functions to create
-interface record values whose type we already knew but whose
-strangely named constructors we could not use directly in our code.
+data type's name and type parameters.
+It was, however, possible for record constructors
+whose types we already knew but whose names we had
+to look up using elaborator reflection.
