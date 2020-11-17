@@ -154,7 +154,7 @@ Doc.Enum2> :exec putPretty eqInfo
 ### Interface Implementation, Part 2
 
 The above output shows the general structure we are heading towards.
-We somehow need to get access to that horribly named
+We somehow need to get access to that strangely named
 constructor of `Eq`, define local implementations for
 `(==)` and `(/=)` and then apply those implementations
 to the constructor.
