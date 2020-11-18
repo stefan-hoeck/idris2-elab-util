@@ -1,4 +1,4 @@
-## Generics Part 1
+## Sums of Products: A Generic Representation for Algebraic Data Types
 
 In Haskell, there are numerous libraries dealing with the
 concept of *Generics*: Canonical representations of algebraic

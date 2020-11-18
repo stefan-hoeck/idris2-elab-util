@@ -1,4 +1,4 @@
-## Generics Part 3
+## Deriving `Generic` for Parameterized Data Types
 
 After our analysis in [part 2](Generic2.md), we should now have
 the ingredients to derive `Generic` instances for parameterized
@@ -15,8 +15,6 @@ import Doc.Generic1
 %language ElabReflection
 
 ```
-
-### Deriving `Generic` for Parameterized Types
 
 Most of the utility functions are almost the same as
 in module `Doc.Generic1`.

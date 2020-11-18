@@ -1,4 +1,4 @@
-## Generics Part 2
+## The Challenges of Parameterized Data Types
 
 We will now try to generalize our `Generic` deriving
 to at the very least support parameterized types.

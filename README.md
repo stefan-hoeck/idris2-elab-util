@@ -1,7 +1,7 @@
-# idris2-elab-util
+# Idris 2 Elaborator Reflection : Utilities and Documentation
 
 Utilities and documentation for exploring Idris 2 elaborator reflection.
-For a tutorial-ish introduction, [start here](/src/Doc/Meta.md).
+For a tutorial-ish introduction, [start here](/src/Doc/Index.md).
 
 Part of the utilities in this package as well as some of my understanding
 of elaborator reflection in Idris came from
@@ -10,7 +10,7 @@ package.
 
 ## Docs and Tutorial
 
-Most tutorials in this repository are themselves literate Idris files.
+Most tutorial pages in this repository are themselves literate Idris files.
 In order to typecheck or build those, package file elab-util-docs.ipkg
 is provided.
 

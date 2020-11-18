@@ -1,4 +1,4 @@
-## Generics Part 5: Type checked Elaborator Scripts
+## Type checked Elaborator Scripts
 
 In this part of the tutorial we try out a new technique to get back
 some of our beloved type safety when writing elaborator scripts.

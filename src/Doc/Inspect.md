@@ -1,4 +1,4 @@
-## Inspecting Idris Expressions
+## Inspecting the Structure of Idris Expressions
 
 In this section of the tutorial we will learn how
 to look at the underlying structure of Idris expressions.

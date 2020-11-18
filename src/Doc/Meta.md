@@ -1,4 +1,4 @@
-## Introduction: Metaprogramming
+## A short Introduction to Metaprogramming
 
 Metaprogramming is about writing programs that write other programs
 typically by using existing programs as their input.

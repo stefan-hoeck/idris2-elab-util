@@ -1,4 +1,4 @@
-## Eq Instance for Enumerations
+## Interface Implementations for Enumerations
 
 First, again, some module setup stuff.
 

@@ -1,4 +1,4 @@
-## Generics Part 4
+## Generic Deriving of Interface Implementations
 
 We would now like to clean up the syntax for deriving
 generic instances a bit. There is quite a bit of redundant
