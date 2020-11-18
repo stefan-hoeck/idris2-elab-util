@@ -13,7 +13,7 @@ hope that others might find it useful. Have fun.
 
 1. [A short Introduction to Metaprogramming](Meta.md)
 2. [Inspecting the Structure of Idris Expressions](Inspect.md)
-3. Automtic Generation of Enumerations
+3. Automatic Generation of Enumerations
    1. [A First Metaprogram: Defining Enumerations](Enum1.md)
    2. [Interface Implementations for Enumerations](Enum2.md)
 4. Generics
