@@ -63,7 +63,7 @@ implName g interfaceName =  UN $ "impl" ++ interfaceName
 We make function `implName` for generating the name of the
 implementation function available, to allow interface
 implementations depending on other implementations
-to access this name. Is is for instance required in
+to access this name. This is, for instance, required in
 the implemenation of `Ord'` (see below).
 
 Since interface declarations always have the same
