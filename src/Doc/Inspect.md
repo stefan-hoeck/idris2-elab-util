@@ -17,7 +17,7 @@ to provide this functionality. The following
 command sets up our REPL for the experiments in this section:
 
 ```
-$ rlwrap idris2 --source-dir src src/Language/Reflection/Pretty.idr
+$ rlwrap idris2 --find-ipkg --source-dir src src/Language/Reflection/Pretty.idr
 ```
 
 ### Quotes
