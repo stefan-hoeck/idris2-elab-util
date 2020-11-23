@@ -2,7 +2,7 @@
 
 I've been planning to write this part of the tutorial
 about generics for quite some time, but the writing
-went not as smoothly as I anticipated. In the end I had
+went not as smoothly as I thought it would. In the end I had
 to change how interfaces for `NP` and `SOP` are defined, experience
 some unexpectedly long compilation times on the run, and change
 implementations once again, before I arrived at the solution
@@ -148,7 +148,7 @@ add those. It turns out that the instance for pairs
 requires us to deal with the laziness of the `(&&)`
 operator. We provide two utility functions for
 handling this (I got the idea for these from `Data.So`
-in base):
+in *base*):
 
 ```idris
 public export
@@ -263,7 +263,7 @@ EqV (NP []) where
 EqV t => EqV (NP ts) => EqV (NP (t :: ts)) where
 ```
 
-This works, and `EqV` instances can be derived almost exactly
+This works, and `EqV` instances can be implemented almost exactly
 the same way as for tuples above. However, since I'm using
 a similar design in [idris2-sop](https://github.com/stefan-hoeck/idris2-sop)
 I changed implementations there as well and soon realized that
@@ -491,10 +491,10 @@ export
   neqNotEq _ _      = Refl
 ```
 
-### Why not the orginial version of `All`
+### Why not the orginial version of `All`?
 
 Now, that we arrived at our goal of having a performant
-and proofably correct implementation of `Eq` for `SOP`,
+and provably correct implementation of `Eq` for `SOP`,
 I'd like to just quickly explain, why we redefined `All`
 when it still looks so similar to the original version.
 As a quick reminder, here's how `All` was implemented
@@ -509,14 +509,17 @@ All f (t::ts) = (f t, All f ts)
 The advantage of this representation as nested pairs is that
 there was no need to explicitly pattern match on the pair's
 structure when implementing `Eq` and `Ord` for `NP` and `SOP`.
-However, it was also not possible to write the following
+However, it was also not possible to implement the following
 function
 
 ```
-eqToOrd : All Eq ts -> All Ord ts
+allOrdToEq : All Ord ts -> All Eq ts
 ```
 
-unless we included `ts` as a non-erased argument:
+without a way to pattern match on `ts` to get an idea
+about the underlying structure of `All Ord ts`.
+For this, we would have had to included `ts`
+as a non-erased argument:
 
 ```
 allOrdToEq : {ts : List Type} -> All Eq ts -> All Ord ts
@@ -525,7 +528,7 @@ allOrdToEq : {ts : List Type} -> All Eq ts -> All Ord ts
 This would have forced us to also have `ts` as a non-erased
 argument to our interface implementations (ugly!)
 but even then Idris refuses to accept a `%hint` annotation
-on `eqToOrd` with the following error message:
+on `allOrdToEq` with the following error message:
 *Can only add hints for concrete return types*.
 Going via a well-structured data type resolved all these issues.
 
