@@ -22,5 +22,6 @@ hope that others might find it useful. Have fun.
    3. [Deriving `Generic` for Parameterized Data Types](Generic3.md)
    4. [Generic Deriving of Interface Implementations](Generic4.md)
    5. [Type checked Elaborator Scripts](Generic5.md)
+   6. [Verified Interfaces Part 1](Generic6.md)
 
 

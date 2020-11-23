@@ -15,5 +15,6 @@ modules = Doc.Enum1
         , Doc.Generic3
         , Doc.Generic4
         , Doc.Generic5
+        , Doc.Generic6
         , Doc.Inspect
 
