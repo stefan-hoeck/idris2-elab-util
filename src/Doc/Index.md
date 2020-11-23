@@ -23,5 +23,6 @@ hope that others might find it useful. Have fun.
    4. [Generic Deriving of Interface Implementations](Generic4.md)
    5. [Type checked Elaborator Scripts](Generic5.md)
    6. [Verified Interfaces Part 1](Generic6.md)
+   7. [Verified Interfaces Part 2](Generic7.md)
 
 
