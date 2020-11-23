@@ -8,7 +8,7 @@ some unexpectedly long compilation times on the run, and change
 implementations once again, before I arrived at the solution
 presented in this post.
 
-So here it is, the - for the time being - first part of the final post on
+So here it is, the first part of the - for the time being - final post on
 interface deriving using elaborator reflection. It will be
 rather lengthy with quite a bit of code repetition from earlier
 posts and its focus will probably not so much be on
@@ -144,10 +144,10 @@ EqV Double where
 However, the two most important pieces for a deriving strategy
 for `EqV` are still missing: Sums and products, the
 core building blocks of algebraic data types. Let's
-add those. Turns out that the instance for pairs
+add those. It turns out that the instance for pairs
 requires us to deal with the laziness of the `(&&)`
 operator. We provide two utility functions for
-dealing with this (I got the idea for these from `Data.So`
+handling this (I got the idea for these from `Data.So`
 in base):
 
 ```idris
@@ -224,7 +224,7 @@ It refused to accept any implementation for `EqV`'s
 propositions. The problem: `EqV` should only be able
 to proof the correctnes about the `Eq` instance
 that comes with itself. That's why we write
-`Eq a => EqV a where`. And it should of course
+`Eq a => EqV a` in our definition of `EqV`. And it should of course
 not be able to proof stuff about different, unrelated implementations
 of `Eq` without somehow holding a reference to those implementations.
 But that is what we are trying to do with the above
@@ -292,8 +292,7 @@ namespace NP
     Nil  : NP' k f []
     (::) : (v : f t) -> (vs : NP' k f ks) -> NP' k f (t :: ks)
 
-  ||| Type alias for `NP'` with type parameter `k` being
-  ||| implicit.
+  ||| Type alias for `NP'` with type parameter `k` being implicit.
   public export
   NP : {0 k : Type} -> (0 f : k -> Type) -> (0 ks : List k) -> Type
   NP = NP' k
@@ -396,3 +395,142 @@ export
 
 This is very similar to the `EqV` implementation
 for pairs, of course.
+
+### Verifying `Eq` for `SOP`
+
+It is now straight forward to write an implementation of `EqV`
+for `SOP`. However, we need another data structure for
+wrapping our interface instances in:
+
+```idris
+namespace POP
+  ||| A product of products used for wrapping constraints for `SOP`.
+  public export
+  data POP' :  (0 k : Type)
+            -> (0 f : k -> Type)
+            -> (0 kss : List $ List k)
+            -> Type where
+    Nil  : POP' k f []
+    (::) : (vs : NP' k f ks) -> (vss : POP' k f kss) -> POP' k f (ks :: kss)
+
+||| Type alias for `POP'` with type parameter `k` being implicit.
+public export
+POP : {0 k : Type} -> (0 f : k -> Type) -> (0 kss : List $ List k) -> Type
+POP = POP' k
+
+public export
+All2 : (f : k -> Type) -> (kss : List $ List k) -> Type
+All2 f kss = POP f kss
+
+public export
+mapPOP : (fun : forall a . f a -> g a) -> POP f kss -> POP g kss
+mapPOP fun []          = []
+mapPOP fun (vs :: vss) = mapNP fun vs :: mapPOP fun vss
+
+public export %hint
+allOrdToAllEqPOP :  {0 ks : List $ List k}
+                 -> All2 (Ord . f) kss -> All2 (Eq . f) kss
+allOrdToAllEqPOP = mapPOP (\_ => materialize Eq)
+
+public export %hint
+allEqvToAllEqPOP :  {0 ks : List $ List k}
+                 -> All2 (EqV . f) kss -> All2 (Eq . f) kss
+allEqvToAllEqPOP = mapPOP (\_ => materialize Eq)
+```
+
+And here's `SOP`, our sum of products plus interface implementations:
+
+```idris
+public export
+data SOP' :  (0 k : Type)
+          -> (0 f : k -> Type)
+          -> (0 kss : List $ List k)
+          -> Type where
+  Z : (vs : NP' k f ks)  -> SOP' k f (ks :: kss)
+  S : SOP' k f kss -> SOP' k f (ks :: kss)
+
+public export
+SOP : {0 k : Type} -> (0 f : k -> Type) -> (0 kss : List (List k)) -> Type
+SOP = SOP' k
+
+public export
+(all : All2 (Eq . f) kss) => Eq (SOP' k f kss) where
+  (==) {all = s::_} (Z vs) (Z ws) = vs == ws
+  (==) {all = _::_} (S x)  (S y)  = x  == y
+  (==) {all = _::_} _      _      = False
+
+public export
+(all : All2 (Ord . f) kss) => Ord (SOP' k f kss) where
+  compare {all = _::_} (Z vs) (Z ws) = compare vs ws
+  compare {all = _::_} (S x)  (S y)  = compare x y
+  compare {all = _::_} (Z _)  (S _)  = LT
+  compare {all = _::_} (S _)  (Z _)  = GT
+```
+
+We now have the ingredients to proof the correctness of
+`SOP`'s `Eq` implementation:
+
+```idris
+export
+(all : All2 (EqV . f) kss) => EqV (SOP' k f kss) where
+  eqRefl {all = _::_} (Z vs) = eqRefl vs
+  eqRefl {all = _::_} (S x)  = eqRefl x
+
+  eqSym {all = _::_} (Z vs) (Z ws) = eqSym vs ws
+  eqSym {all = _::_} (Z _)  (S _)  = Refl
+  eqSym {all = _::_} (S _)  (Z _)  = Refl
+  eqSym {all = _::_} (S x)  (S y)  = eqSym x y
+
+  eqTrans {all = _::_} (Z x) (Z y) (Z z) xy yz = eqTrans x y z xy yz
+  eqTrans {all = _::_} (S x) (S y) (S z) xy yz = eqTrans x y z xy yz
+  eqTrans {all = _::_} (Z _) (S _) _ _ _ impossible
+  eqTrans {all = _::_} _ (Z _) (S _) _ _ impossible
+  eqTrans {all = _::_} (S _) (Z _) _ _ _ impossible
+  eqTrans {all = _::_} _ (S _) (Z _) _ _ impossible
+
+  neqNotEq _ _      = Refl
+```
+
+### Why not the orginial version of `All`
+
+Now, that we arrived at our goal of having a performant
+and proofably correct implementation of `Eq` for `SOP`,
+I'd like to just quickly explain, why we redefined `All`
+when it still looks so similar to the original version.
+As a quick reminder, here's how `All` was implemented
+in the first post about generics:
+
+```
+All : (f : Type -> Type) -> (ts : List Type) -> Type
+All f [] = ()
+All f (t::ts) = (f t, All f ts)
+```
+
+The advantage of this representation as nested pairs is that
+there was no need to explicitly pattern match on the pair's
+structure when implementing `Eq` and `Ord` for `NP` and `SOP`.
+However, it was also not possible to write the following
+function
+
+```
+eqToOrd : All Eq ts -> All Ord ts
+```
+
+unless we included `ts` as a non-erased argument:
+
+```
+allOrdToEq : {ts : List Type} -> All Eq ts -> All Ord ts
+```
+
+This would have forced us to also have `ts` as a non-erased
+argument to our interface implementations (ugly!)
+but even then Idris refuses to accept a `%hint` annotation
+on `eqToOrd` with the following error message:
+*Can only add hints for concrete return types*.
+Going via a well-structured data type resolved all these issues.
+
+### What's next
+
+And that's it for this first part. We are now ready to automatically
+derive provably correct interface implementations. That second part will
+follow shortly.
