@@ -76,6 +76,9 @@ record InterfaceImpl where
   ||| Visibility of the implementation function.
   visibility    : Visibility
 
+  ||| Visibility of the implementation function.
+  options       : List FnOpt
+
   ||| Actual implementation of the implementation function.
   ||| This will be the right hand side of the sole pattern clause
   ||| in the function definition.
@@ -108,13 +111,13 @@ record InterfaceImpl where
 
 private
 implDecl : DeriveUtil -> (DeriveUtil -> InterfaceImpl) -> List Decl
-implDecl g f = let (MkInterfaceImpl iname vis impl type) = f g
+implDecl g f = let (MkInterfaceImpl iname vis opts impl type) = f g
                    function = implName g iname
 
-                in [ interfaceHint vis function type
+                in [ interfaceHintOpts vis opts function type
                    , def function [var function .= impl] ]
 
-private
+export
 deriveDecls : Name -> List (DeriveUtil -> InterfaceImpl) -> Elab (List Decl)
 deriveDecls name fs = mkDecls <$> getParamInfo' name
   where mkDecls : ParamTypeInfo -> List Decl
@@ -159,12 +162,12 @@ implementationType iface (MkDeriveUtil _ appTp names argTypesWithParams) =
 
 ||| Creates an `Eq` value from the passed implementation functions
 ||| for (==) and (/=).
-export
+export %inline
 mkEq' : (eq : a -> a -> Bool) -> (neq : a -> a -> Bool) -> Eq a
 mkEq' = %runElab check (var $ singleCon "Eq")
 
 ||| Like `mkEq'` but generates (/=) from the passed `eq` function.
-export
+export %inline
 mkEq : (eq : a -> a -> Bool) -> Eq a
 mkEq eq = mkEq' eq (\a,b => not $ eq a b)
 

@@ -351,6 +351,11 @@ export
 directHint : Visibility -> Name -> TTImp -> Decl
 directHint v = claim MW v [Hint True]
 
+||| `interfaceHint v opts` is an alias for `claim MW v (Hint False :: opts)`
+export
+interfaceHintOpts : Visibility -> List FnOpt -> Name -> TTImp -> Decl
+interfaceHintOpts v opts = claim MW v (Hint False :: opts)
+
 ||| `interfaceHint v` is an alias for `claim MW v [Hint False]`
 export
 interfaceHint : Visibility -> Name -> TTImp -> Decl
