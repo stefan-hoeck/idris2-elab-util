@@ -282,7 +282,7 @@ of `NP` and `SOP`.
 
 Before we can write *Verifying Eq for NP: Take Three*, we will
 need some more flexibility from `NP` itself: It is time
-to go full `idris2-sop` and turn `NP` and `SOP` into
+to go full *idris2-sop* and turn `NP` and `SOP` into
 [barbies](https://github.com/jcpetruzza/barbies):
 
 ```idris
