@@ -228,6 +228,11 @@ mkEqV :   (1 prf    : Eq a)
        -> EqV a
 mkEqV = mkEqV' prf
 
+Eq' : DeriveUtil -> InterfaceImpl
+Eq' g = MkInterfaceImpl "Eq" Public []
+          `(mkEq genEq)
+          (implementationType `(Eq) g)
+
 EqV' : DeriveUtil -> InterfaceImpl
 EqV' g = MkInterfaceImpl "EqV" Public []
         `(mkEqV genEqRefl genEqSym genEqTrans (\_,_ => Refl))
@@ -238,64 +243,39 @@ data AnotherSum : Type where
   Op    : (x : Int)    -> AnotherSum
   Empty : AnotherSum
 
-%runElab derive "AnotherSum" [Generic']
-
-Eq AnotherSum where (==) = genEq
-
-%runElab derive "AnotherSum" [EqV']
+%runElab derive "AnotherSum" [Generic', Eq', EqV']
 ```
 
 ### Limitations
 
-As already mentioned at the beginning of part one of this post,
-arriving here was harder than I expected
-and there are still quite a few rough edges and limitations.
-
-For instance, as can be seen in the last code sample above, it is not yet
-possible to do the following:
-
-```
-%runElab derive "AnotherSum" [Generic',Eq',EqV']
-```
-
-In the case above, the implementation details of `Eq AnotherSum`
-are not visible to `EqV`, which of course makes it impossible
-to proof that the implementation is correct. This seems
-to be directly related to the fact that with automatically
-derived interface implementations, we create the interface
-records 'manually' thus hiding their implementation details.
-I tried several things to make them visible again but
-so far, nothing seemed to work.
-
-Another limitation involves inductive data types: Deriving
-instance like `Eq` for those does not yet work, since
-the new instance is not yet visible to the new implementation.
-In [idris2-elab-deriving](https://github.com/MarcelineVQ/idris2-elab-deriving),
-MarcelineVQ seems to create declarations and implementations
-in two steps to get around this issue. I will give this
-a try and report back here, once I figured out, whether it
-works. This might also be related to the observation that
-deriving instances does not yet work in mutual blocks
-as described in an [earlier post](Generic4.md).
+Quite a few of the limitations listed here in earlier
+versions of this post could be resolved by now. I'll
+leave the following two notes as references for
+potential changes / challenges in the future:
 
 Concerning provably correct interface implementations,
-there is also [issue #72](https://github.com/idris-lang/Idris2/issues/72),
+there is [issue #72](https://github.com/idris-lang/Idris2/issues/72),
 leading to problems with diamond shaped inheritance structures.
 This was not a problem with `EqV` but it might well become
 a problem once we start writing an `OrdV` instance
 and try to put this in relation with `EqV`.
 
-Finally, there is [another proposal](https://github.com/idris-lang/Idris2/issues/777)
+In addition, there is [another proposal](https://github.com/idris-lang/Idris2/issues/777)
 for writing correctness proofs for interface implementations.
 With this, we'd not have to write additional interface
 hierarchies.
 
-Addendum: The issues with inductive types and mutual
-blocks could be resolved. See [here](Generic4.md) for an example
-with mutually dependant interface implementations.
 ### What's next
 
-I'll spend some more time trying to find solutions for some
-of the issues mentioned above, cleaning up *idris-sop*
-on the run. After that I'm sure new use cases for elaborator
-reflection will show up.
+I consider the part about generics to be mostly finished for the time
+being. Yet, there are some things still to be addressed: Support
+for generic derivation of indexed types and existentials might be
+of interest. Also the derivation of 'higher-kinded' interface
+implementations like for `Functor` and `Traversable` is not
+yet possible. Of course I will write about these things if
+I find working solutions.
+
+There will of course also be other use cases for elaborator
+reflection. I'm looking forward to learn something about
+using the technique for proof searching, for instance.
+Interesting results will be posted here, promise. :-)
