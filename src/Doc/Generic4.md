@@ -83,12 +83,12 @@ MkImplementation : Type
 MkImplementation = DeriveUtil -> InterfaceImpl
 
 private
-implDecl : DeriveUtil -> MkImplementation -> List Decl
+implDecl : DeriveUtil -> MkImplementation -> (Decl, Decl)
 implDecl g f = let (MkInterfaceImpl iname impl type) = f g
                    function = implName g iname
 
-                in [ interfaceHint Public function type
-                   , def function [var function .= impl] ]
+                in ( interfaceHint Public function type
+                   , def function [var function .= impl] )
 ```
 
 We are now ready to define function `derive`, which,
@@ -98,17 +98,19 @@ will derive implementations for these interfaces:
 
 ```idris
 private
-deriveDecls : Name -> List MkImplementation -> Elab (List Decl)
+deriveDecls : Name -> List MkImplementation -> Elab $ List (Decl, Decl)
 deriveDecls name fs = mkDecls <$> getParamInfo' name
-  where mkDecls : ParamTypeInfo -> List Decl
+  where mkDecls : ParamTypeInfo -> List $ (Decl, Decl)
         mkDecls pi = let g = genericUtil pi
-                      in concatMap (implDecl g) fs
+                      in map (implDecl g) fs
 
 
 export
 derive : Name -> List MkImplementation -> Elab ()
 derive name fs = do decls <- deriveDecls name fs
-                    declare decls
+                    -- Declare types first. Then declare implementations.
+                    declare $ map fst decls
+                    declare $ map snd decls
 ```
 
 ### Instances for `Generic`, `Eq`, and `Ord`
@@ -221,83 +223,36 @@ from `Language.Reflection.TT` and `Language.Reflection.TTImp`.
 %runElab (derive "DataOpt"    [Generic', Eq', Ord'])
 ```
 
-It seems not yet to be possible, to use this method in a mutual
+~~It seems not yet to be possible, to use this method in a mutual
 block. Therefore, we have to write a tiny bit
 of boilerplate for `Eq` and `Ord` instances
-for the data types from `Language.Reflection.TTImp`:
+for the data types from `Language.Reflection.TTImp`~~.
+
+I finally figured out how to derive mutally dependant implementations.
+The core idea was to declare all implementation types first,
+before actually declaring implementations. This separation has
+to occur in the `Elab` monad, as can be seen in the implementation
+of `deriveMutual`:
 
 ```idris
-%runElab (derive "TTImp"        [Generic'])
-%runElab (derive "IField"       [Generic'])
-%runElab (derive "IFieldUpdate" [Generic'])
-%runElab (derive "AltType"      [Generic'])
-%runElab (derive "FnOpt"        [Generic'])
-%runElab (derive "ITy"          [Generic'])
-%runElab (derive "Data"         [Generic'])
-%runElab (derive "Record"       [Generic'])
-%runElab (derive "Clause"       [Generic'])
-%runElab (derive "Decl"         [Generic'])
+export
+deriveMutual : List (Name, List MkImplementation) -> Elab ()
+deriveMutual pairs = do declss <- traverse (uncurry deriveDecls) pairs
+                        -- Declare types first. Then declare implementations.
+                        traverse_ (declare . map fst) declss
+                        traverse_ (declare . map snd) declss
 
-mutual
-  export
-  Eq TTImp where (==) = genEq
-
-  export
-  Eq IField where (==) = genEq
-
-  export
-  Eq IFieldUpdate where (==) = genEq
-
-  export
-  Eq AltType where (==) = genEq
-
-  export
-  Eq FnOpt where (==) = genEq
-
-  export
-  Eq ITy where (==) = genEq
-
-  export
-  Eq Data where (==) = genEq
-
-  export
-  Eq Record where (==) = genEq
-
-  export
-  Eq Clause where (==) = genEq
-
-  export
-  Eq Decl where (==) = genEq
-
-  export
-  Ord TTImp where compare = genCompare
-
-  export
-  Ord IField where compare = genCompare
-
-  export
-  Ord IFieldUpdate where compare = genCompare
-
-  export
-  Ord AltType where compare = genCompare
-
-  export
-  Ord FnOpt where compare = genCompare
-
-  export
-  Ord ITy where compare = genCompare
-
-  export
-  Ord Data where compare = genCompare
-
-  export
-  Ord Record where compare = genCompare
-
-  export
-  Ord Clause where compare = genCompare
-
-  export
-  Ord Decl where compare = genCompare
+%runElab deriveMutual [ ("TTImp",        [Generic', Eq',Ord'])
+                      , ("IField",       [Generic', Eq',Ord'])
+                      , ("IFieldUpdate", [Generic', Eq',Ord'])
+                      , ("AltType",      [Generic', Eq',Ord'])
+                      , ("FnOpt",        [Generic', Eq',Ord'])
+                      , ("ITy",          [Generic', Eq',Ord'])
+                      , ("Data",         [Generic', Eq',Ord'])
+                      , ("Record",       [Generic', Eq',Ord'])
+                      , ("Clause",       [Generic', Eq',Ord'])
+                      , ("Decl",         [Generic', Eq',Ord'])
+                      ]
 ```
 
 ### Compiler Performance

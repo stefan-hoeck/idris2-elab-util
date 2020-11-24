@@ -126,6 +126,16 @@ implDecl g f = let (MkInterfaceImpl iname vis opts impl type) = f g
                 in ( interfaceHintOpts vis opts function type
                    , def function [var function .= impl] )
 
+||| Generates a list of pairs of declarations for the
+||| implementations of the interfaces specified.
+|||
+||| The first elements of the pairs are type declarations, while
+||| the second elements are the actual implementations.
+|||
+||| This separation of type declaration and implementation
+||| allows us to first declare all types before declaring
+||| the actual implementations. This is essential in the
+||| implementation of `deriveMutual`.
 export
 deriveDecls : Name -> List (DeriveUtil -> InterfaceImpl) -> Elab $ List (Decl,Decl)
 deriveDecls name fs = mkDecls <$> getParamInfo' name
@@ -145,6 +155,18 @@ derive name fs = do decls <- deriveDecls name fs
                     -- Declare types first. Then declare implementations.
                     declare $ map fst decls
                     declare $ map snd decls
+
+||| Allows the derivation of mutually dependant interface
+||| implementations by first defining type declarations before
+||| declaring implementations.
+|||
+||| Note: There is no need to call this from withi a `mutual` block.
+export
+deriveMutual : List (Name, List (DeriveUtil -> InterfaceImpl)) -> Elab()
+deriveMutual pairs = do declss <- traverse (uncurry deriveDecls) pairs
+                        -- Declare types first. Then declare implementations.
+                        traverse_ (declare . map fst) declss
+                        traverse_ (declare . map snd) declss
 
 ||| Given a `TTImp` representing an interface, generates
 ||| the type of the implementation function with all type

@@ -290,6 +290,9 @@ for writing correctness proofs for interface implementations.
 With this, we'd not have to write additional interface
 hierarchies.
 
+Addendum: The issues with inductive types and mutual
+blocks could be resolved. See [here](Generic4.md) for an example
+with mutually dependant interface implementations.
 ### What's next
 
 I'll spend some more time trying to find solutions for some
