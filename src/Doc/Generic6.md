@@ -536,4 +536,4 @@ Going via a well-structured data type resolved all these issues.
 
 And that's it for this first part. We are now ready to automatically
 derive provably correct interface implementations. That second part will
-follow shortly.
+[follow shortly](Generic7.md).

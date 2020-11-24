@@ -229,34 +229,71 @@ And thus, we can derive provably lawful instances of `Eq`
 automatically from a data type's generic representation:
 
 ```idris
-Eq' : DeriveUtil -> InterfaceImpl
-Eq' g = MkInterfaceImpl "Eq" Public [Inline] `(mkEq genEq) (implementationType `(Eq) g)
-
 EqV' : DeriveUtil -> InterfaceImpl
-EqV' g = 
-  let decls = `[ reflImpl : (x : ~(g.appliedType)) -> IsEq x x
-                 reflImpl = genEqRefl
-
-                 symImpl : (x,y : ~(g.appliedType)) -> (x == y) = (y == x)
-                 symImpl = genEqSym
-
-                 transImpl : (x,y,z : ~(g.appliedType)) -> IsEq x y -> IsEq y z -> IsEq x z
-                 transImpl = genEqTrans
-
-                 neqImpl :  (x,y : ~(g.appliedType)) -> (x /= y) = not (x == y)
-                 neqImpl _ _ = Refl ]
-   in MkInterfaceImpl "EqV" Public []
-        (local decls `(mkEqV reflImpl symImpl transImpl neqImpl))
+EqV' g = MkInterfaceImpl "EqV" Public []
+        `(mkEqV genEqRefl genEqSym genEqTrans (\_,_ => Refl))
         (implementationType `(EqV) g)
 
 data AnotherSum : Type where
   Var   : (v : String) -> AnotherSum
-  Op    : (x : Int) -> AnotherSum
+  Op    : (x : Int)    -> AnotherSum
   Empty : AnotherSum
 
-%runElab derive "AnotherSum" [Generic',Eq']
+%runElab derive "AnotherSum" [Generic']
 
--- Eq AnotherSum where (==) = genEq
+Eq AnotherSum where (==) = genEq
 
--- %runElab derive "AnotherSum" [EqV']
+%runElab derive "AnotherSum" [EqV']
 ```
+
+### Limitations
+
+As already mentioned at the beginning of part one of this post,
+arriving here was harder than I expected
+and there are still quite a few rough edges and limitations.
+
+For instance, as can be seen in the last code sample above, it is not yet
+possible to do the following:
+
+```
+%runElab derive "AnotherSum" [Generic',Eq',EqV']
+```
+
+In the case above, the implementation details of `Eq AnotherSum`
+are not visible to `EqV`, which of course makes it impossible
+to proof that the implementation is correct. This seems
+to be directly related to the fact that with automatically
+derived interface implementations, we create the interface
+record manually thus hiding its implementation details.
+I tried several things to make them visible again, but
+so far, nothing seemed to work.
+
+Another limitation involves inductive data types: Deriving
+instance like `Eq` for those does not yet work, since
+the new instance is not yet visible to the new implementation.
+In [idris2-elab-deriving](https://github.com/MarcelineVQ/idris2-elab-deriving),
+MarcelineVQ seems to create declarations and implementations
+in two steps to get around this issue. I will give this
+a try and report back here, once I figured out, whether it
+works. This might also be related to the observation that
+deriving instances does not yet work in mutual blocks
+as described in an [earlier post](Generic4.md).
+
+Concerning provably correct interface implementations,
+there is also [issue #72](https://github.com/idris-lang/Idris2/issues/72),
+leading to problems with diamond shaped inheritance structures.
+This was not a problem with `EqV` but it might well become
+a problem once we start writing an `OrdV` instance
+and try to put this in relation with `EqV`.
+
+Finally, there is [another proposal](https://github.com/idris-lang/Idris2/issues/777)
+for writing correctness proofs for interface implementations.
+With this, we'd not have to write additional interface
+hierarchies.
+
+### What's next
+
+I'll spend some more time trying to find solutions for some
+of the issues mentioned above, cleaning up *idris-sop*
+on the run. After that I'm sure new use cases for elaborator
+reflection will show up.
