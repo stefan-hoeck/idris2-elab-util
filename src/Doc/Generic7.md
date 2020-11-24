@@ -1,6 +1,6 @@
 ## Verified Interfaces Part 2
 
-With all the preparations fro [part 1](Generic6.md) behind us,
+With all the preparations from [part 1](Generic6.md) behind us,
 we will derive provably correct implementations for `Eq`
 automatically.
 
@@ -9,7 +9,6 @@ module Doc.Generic7
 
 import Doc.Generic6
 
-import public Language.Reflection.Pretty
 import Language.Reflection.Derive
 
 %language ElabReflection
@@ -17,8 +16,8 @@ import Language.Reflection.Derive
 
 ### A lawful version of `Generic`
 
-First, we must make sure that implementations of `Generic`
-themselves are well behaved. We expect, that a data type
+First, we should make sure that implementations of `Generic`
+themselves are well behaved. We expect that a data type
 and its generic representation are isomorphic and not
 a single piece of information is lost when going from one
 to the other and back. Thus, the following two laws must hold:
@@ -202,6 +201,17 @@ data TestSum  = A Int String
 
 Eq TestSum where (==) = genEq
 
+EqV TestSum where
+  eqRefl       = genEqRefl
+  eqSym        = genEqSym
+  eqTrans      = genEqTrans
+  neqNotEq _ _ = Refl
+```
+
+And thus, we can derive provably lawful instances of `Eq`
+automatically from a data type's generic representation:
+
+```idris
 mkEqV' :  (1 _ : Eq a)
        -> (eqRefl   : (x : a) -> IsEq x x)
        -> (eqSym    : (x,y : a) -> (x == y) = (y == x))
@@ -218,17 +228,6 @@ mkEqV :   (1 prf    : Eq a)
        -> EqV a
 mkEqV = mkEqV' prf
 
-EqV TestSum where
-  eqRefl       = genEqRefl
-  eqSym        = genEqSym
-  eqTrans      = genEqTrans
-  neqNotEq _ _ = Refl
-```
-
-And thus, we can derive provably lawful instances of `Eq`
-automatically from a data type's generic representation:
-
-```idris
 EqV' : DeriveUtil -> InterfaceImpl
 EqV' g = MkInterfaceImpl "EqV" Public []
         `(mkEqV genEqRefl genEqSym genEqTrans (\_,_ => Refl))
@@ -264,8 +263,8 @@ are not visible to `EqV`, which of course makes it impossible
 to proof that the implementation is correct. This seems
 to be directly related to the fact that with automatically
 derived interface implementations, we create the interface
-record manually thus hiding its implementation details.
-I tried several things to make them visible again, but
+records 'manually' thus hiding their implementation details.
+I tried several things to make them visible again but
 so far, nothing seemed to work.
 
 Another limitation involves inductive data types: Deriving
