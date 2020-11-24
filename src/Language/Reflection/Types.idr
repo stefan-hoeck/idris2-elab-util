@@ -122,14 +122,24 @@ singleCon n = do (MkTypeInfo _ _ cs) <- getInfo' n
 public export
 record ExplicitArg where
   constructor MkExplicitArg
-  name     : Name
-  tpe      : TTImp
-  hasParam : Bool
+  ||| Name of the argument
+  name        : Name
+
+  ||| Argument's type as a `TTImp` tree
+  tpe         : TTImp
+
+  ||| True if any of the data type's parameters makes
+  ||| an appearance in `tpe`
+  hasParam    : Bool
+
+  ||| True if the name of the data type itself
+  ||| makes an appearance in `tpe`
+  isRecursive : Bool
 
 export
 Pretty ExplicitArg where
-  prettyPrec p (MkExplicitArg n tpe hasParam) =
-    applyH p "MkExplicitArg" [n, tpe, hasParam]
+  prettyPrec p (MkExplicitArg n tpe hasParam isRecursive) =
+    applyH p "MkExplicitArg" [n, tpe, hasParam, isRecursive]
 
 ||| Constructor of a parameterized data type.
 |||
@@ -155,8 +165,8 @@ export
 hasParamTypes : ParamCon -> List TTImp
 hasParamTypes = mapMaybe hasParamType . explicitArgs
   where hasParamType : ExplicitArg -> Maybe TTImp
-        hasParamType (MkExplicitArg _ t True) = Just t
-        hasParamType _                        = Nothing
+        hasParamType (MkExplicitArg _ t True _) = Just t
+        hasParamType _                          = Nothing
 
 ||| Information about a parameterized data type.
 |||
@@ -233,25 +243,38 @@ conParams con as t = run as (snd $ unApp t)
         run (_ :: as) ((IVar _ n) :: ts) = (n ::) <$> run as ts
         run _         _                  = Left err
 
+private
+sameArgName : (dataType : Name) -> (arg : Name) -> Bool
+sameArgName (UN x)   (UN y)       = x == y
+sameArgName (NS nsx x) (NS nsy y) = nsx == nsy && sameArgName x y
+sameArgName (NS _ x) y            = sameArgName x y
+sameArgName _        _            = False
+
 -- Renames all type parameter names in an argument's
 -- type according to the given Vect of pairs.
 -- Returns the renamed type and `True` if at least
 -- one parameter was found, `False` otherwise.
+-- The last Bool is True if the argument is recursive,
+-- that is, the data types's name appears in the argument's type.
 private
-rename : Vect n (Name,Name) -> TTImp -> (TTImp, Bool)
-rename ns (IVar x n)        = case lookup n ns of
-                                Nothing => (IVar x n, False)
-                                Just n' => (IVar x n', True)
+rename : (dataType : Name)
+       -> Vect n (Name,Name)
+       -> TTImp
+       -> (TTImp, Bool,Bool)
+rename dt ns (IVar x n) =
+  case lookup n ns of
+       Nothing => (IVar x n, False, sameArgName dt n)
+       Just n' => (IVar x n', True, sameArgName dt n)
 
-rename ns (IPi x y z w a r) = let (a',ba) = rename ns a
-                                  (r',br) = rename ns r
-                               in (IPi x y z w a' r', ba || br)
+rename dt ns (IPi x y z w a r) = let (a',ba,ca) = rename dt ns a
+                                     (r',br,cr) = rename dt ns r
+                                  in (IPi x y z w a' r', ba || br, ca || cr)
 
-rename ns (IApp x y z)      = let (y',by) = rename ns y
-                                  (z',bz) = rename ns z
-                               in (IApp x y' z', by || bz)
+rename dt ns (IApp x y z)      = let (y',by,cy) = rename dt ns y
+                                     (z',bz,cz) = rename dt ns z
+                                  in (IApp x y' z', by || bz, cy || cz)
 
-rename _ t                  = (t, False)
+rename _ _ t                   = (t, False, False)
 
 private
 implicitErr : (con: Name) -> (n : Name) -> Res a
@@ -274,11 +297,12 @@ indicesErr con ns = Left $ show con ++ ": Type indices found: " ++ show ns
 --               function arguments
 --            b) The function has additional non-implicit arguments
 private
-argPairs :  (con : Name)
+argPairs :  (dataType : Name)
+         -> (con : Name)
          -> Vect n (Name,Name)
          -> List NamedArg
          -> Res $ List ExplicitArg
-argPairs con names = run names
+argPairs dt con names = run names
   where delete : Name -> Vect (S k) (Name,a) -> Res $ Vect k (Name,a)
         delete m ((n,a) :: ns)  =
           if m == n then Right ns
@@ -287,8 +311,8 @@ argPairs con names = run names
                               ns@(_::_) => ((n,a) ::) <$> delete m ns
 
         mkArg : NamedArg -> Res ExplicitArg
-        mkArg (MkArg _ ExplicitArg n t) = let (t',isP) = rename names t
-                                           in Right $ MkExplicitArg n t' isP
+        mkArg (MkArg _ ExplicitArg n t) = let (t',isP,isD) = rename dt names t
+                                           in Right $ MkExplicitArg n t' isP isD
         mkArg (MkArg _ _ n _)           = implicitErr con n
 
         run : Vect k (Name,a) -> List NamedArg -> Res $ List ExplicitArg
@@ -298,17 +322,17 @@ argPairs con names = run names
 
 
 private
-paramCon : Vect n Name -> Con -> Res $ ParamCon
-paramCon ns (MkCon n as t) = do params <- conParams n ns t
-                                args   <- argPairs n (zip params ns) as
-                                pure $ MkParamCon n args
+paramCon : (dt : Name) -> Vect n Name -> Con -> Res $ ParamCon
+paramCon dt ns (MkCon n as t) = do params <- conParams n ns t
+                                   args   <- argPairs dt n (zip params ns) as
+                                   pure $ MkParamCon n args
 
 private
 toParamTypeInfo : TypeInfo -> Res ParamTypeInfo
 toParamTypeInfo (MkTypeInfo n as cs) =
   do ps  <- traverse expPair as
      let ns = map fst $ fromList ps
-     cs' <- traverse (paramCon ns) cs
+     cs' <- traverse (paramCon n ns) cs
      pure $ MkParamTypeInfo n ps cs'
   where expPair : NamedArg -> Res (Name,TTImp)
         expPair  (MkArg _ ExplicitArg n t) = Right (n,t)

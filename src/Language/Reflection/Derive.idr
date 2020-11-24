@@ -31,10 +31,18 @@ record DeriveUtil where
   ||| Types of constructor arguments where at least one
   ||| type parameter makes an appearance. These are the
   ||| `tpe` fields of `ExplicitArg` where `hasParam`
-  ||| is set to true. See the documentation of `ExplicitArg`
+  ||| is set to true and `isRecursive` is set
+  ||| to false. See the documentation of `ExplicitArg`
   ||| when this is the case
   argTypesWithParams : List TTImp
 
+
+private
+nonRecursiveParamTypes : ParamCon -> List TTImp
+nonRecursiveParamTypes = mapMaybe use . explicitArgs
+  where use : ExplicitArg -> Maybe TTImp
+        use (MkExplicitArg _ t True False) = Just t
+        use _                              = Nothing
 
 ||| Creates a deriving utility from information about
 ||| a (possibly) parameterized type.
@@ -42,7 +50,7 @@ export
 genericUtil : ParamTypeInfo -> DeriveUtil
 genericUtil ti = let pNames = map fst $ params ti
                      appTpe = appNames (name ti) pNames
-                     twps   = concatMap hasParamTypes ti.cons
+                     twps   = concatMap nonRecursiveParamTypes ti.cons
                   in MkDeriveUtil ti appTpe pNames twps
 
 ||| Generates the name of an interface's implementation function
@@ -109,20 +117,21 @@ record InterfaceImpl where
   ||| ```
   type          : TTImp
 
+-- pair of type and implementation 
 private
-implDecl : DeriveUtil -> (DeriveUtil -> InterfaceImpl) -> List Decl
+implDecl : DeriveUtil -> (DeriveUtil -> InterfaceImpl) ->  (Decl,Decl)
 implDecl g f = let (MkInterfaceImpl iname vis opts impl type) = f g
                    function = implName g iname
 
-                in [ interfaceHintOpts vis opts function type
-                   , def function [var function .= impl] ]
+                in ( interfaceHintOpts vis opts function type
+                   , def function [var function .= impl] )
 
 export
-deriveDecls : Name -> List (DeriveUtil -> InterfaceImpl) -> Elab (List Decl)
+deriveDecls : Name -> List (DeriveUtil -> InterfaceImpl) -> Elab $ List (Decl,Decl)
 deriveDecls name fs = mkDecls <$> getParamInfo' name
-  where mkDecls : ParamTypeInfo -> List Decl
+  where mkDecls : ParamTypeInfo -> List (Decl,Decl)
         mkDecls pi = let g = genericUtil pi
-                      in concatMap (implDecl g) fs
+                      in map (implDecl g) fs
 
 ||| Given a name of a data type plus a list of interfaces, tries
 ||| to implement these interfaces automatically using
@@ -133,7 +142,9 @@ deriveDecls name fs = mkDecls <$> getParamInfo' name
 export
 derive : Name -> List (DeriveUtil -> InterfaceImpl) -> Elab ()
 derive name fs = do decls <- deriveDecls name fs
-                    declare decls
+                    -- Declare types first. Then declare implementations.
+                    declare $ map fst decls
+                    declare $ map snd decls
 
 ||| Given a `TTImp` representing an interface, generates
 ||| the type of the implementation function with all type
