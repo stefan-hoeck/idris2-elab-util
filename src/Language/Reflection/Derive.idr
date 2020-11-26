@@ -5,6 +5,7 @@
 ||| using the functionality provided here.
 module Language.Reflection.Derive
 
+import Decidable.Equality
 import public Language.Reflection.Syntax
 import public Language.Reflection.Types
 
@@ -326,3 +327,9 @@ mkMonoid' = %runElab check (var $ singleCon "Monoid")
 public export %inline
 mkMonoid : (1 semi : Semigroup a) => (neutral : a) -> Monoid a
 mkMonoid = mkMonoid' semi
+
+||| Creates a `DecEq` value from the passed implementation function
+||| for `decEq`
+public export %inline
+mkDecEq : (decEq : (x1 : a) -> (x2 : a) -> Dec (x1 = x2)) -> DecEq a
+mkDecEq = %runElab check (var $ singleCon "DecEq")
