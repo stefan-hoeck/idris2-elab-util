@@ -38,20 +38,13 @@ record DeriveUtil where
   argTypesWithParams : List TTImp
 
 
-private
-nonRecursiveParamTypes : ParamCon -> List TTImp
-nonRecursiveParamTypes = mapMaybe use . explicitArgs
-  where use : ExplicitArg -> Maybe TTImp
-        use (MkExplicitArg _ t True False) = Just t
-        use _                              = Nothing
-
 ||| Creates a deriving utility from information about
 ||| a (possibly) parameterized type.
 export
 genericUtil : ParamTypeInfo -> DeriveUtil
 genericUtil ti = let pNames = map fst $ params ti
                      appTpe = appNames (name ti) pNames
-                     twps   = concatMap nonRecursiveParamTypes ti.cons
+                     twps   = calcArgTypesWithParams ti
                   in MkDeriveUtil ti appTpe pNames twps
 
 ||| Generates the name of an interface's implementation function

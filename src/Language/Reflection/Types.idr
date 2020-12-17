@@ -227,6 +227,32 @@ Pretty ParamTypeInfo where
         cons = indent 2 $ vsep (map pretty cons)
      in vsep [head,cons]
 
+
+||| Given the constructor arguments of a data type, returns
+||| the list of those argument types, in which at least one
+||| of the data type's parameters makes an appearance.
+|||
+||| This function uses a rudimentary comparison to make
+||| sure that returned list contains only distinct types.
+|||
+||| This function is used to calculate the list of required constraints
+||| when automatically deriving interface implementations.
+export
+calcArgTypesWithParams : ParamTypeInfo -> List TTImp
+calcArgTypesWithParams = nubBy sameType . concatMap nonRecursiveParamTypes . cons
+  where useArg : ExplicitArg -> Maybe TTImp
+        useArg (MkExplicitArg _ t True False) = Just t
+        useArg _                              = Nothing
+
+        nonRecursiveParamTypes : ParamCon -> List TTImp
+        nonRecursiveParamTypes = mapMaybe useArg . explicitArgs
+
+        sameType : TTImp -> TTImp -> Bool
+        sameType (IVar _ x)   (IVar _ a)   = x == a
+        sameType (IApp _ x y) (IApp _ a b) = sameType x a && sameType y b
+        sameType _ _                       = False
+
+
 -- Given a Vect of type parameters (from the surrounding
 -- data type), tries to extract a list of type parameter names
 -- from the type declaration of a constructor.
@@ -245,10 +271,12 @@ conParams con as t = run as (snd $ unApp t)
 
 private
 sameArgName : (dataType : Name) -> (arg : Name) -> Bool
-sameArgName (UN x)   (UN y)       = x == y
-sameArgName (NS nsx x) (NS nsy y) = nsx == nsy && sameArgName x y
-sameArgName (NS _ x) y            = sameArgName x y
-sameArgName _        _            = False
+sameArgName = (==)
+
+-- sameArgName (UN x)   (UN y)       = x == y
+-- sameArgName (NS nsx x) (NS nsy y) = nsx == nsy && sameArgName x y
+-- sameArgName (NS _ x) y            = sameArgName x y
+-- sameArgName _        _            = False
 
 -- Renames all type parameter names in an argument's
 -- type according to the given Vect of pairs.
