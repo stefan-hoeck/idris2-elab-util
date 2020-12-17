@@ -62,20 +62,19 @@ constructor forcing us to get access to its implementation function
 by means of `implName`. This is no longer necessary:
 
 ```idris
-mkOrd' :  (1 _ : Eq a)
-      -> (compare : a -> a -> Ordering)
-      -> (lt : a -> a -> Bool)
-      -> (gt : a -> a -> Bool)
-      -> (leq : a -> a -> Bool)
-      -> (geq : a -> a -> Bool)
-      -> (max : a -> a -> a)
-      -> (min : a -> a -> a)
-      -> Ord a
+mkOrd' :  Eq a
+       => (compare : a -> a -> Ordering)
+       -> (lt : a -> a -> Bool)
+       -> (gt : a -> a -> Bool)
+       -> (leq : a -> a -> Bool)
+       -> (geq : a -> a -> Bool)
+       -> (max : a -> a -> a)
+       -> (min : a -> a -> a)
+       -> Ord a
 mkOrd' = %runElab check (var $ singleCon "Ord")
 
-mkOrd : (1 prf : Eq a) => (comp : a -> a -> Ordering) -> Ord a
-mkOrd comp = mkOrd' prf
-                    comp
+mkOrd : Eq a => (comp : a -> a -> Ordering) -> Ord a
+mkOrd comp = mkOrd' comp
                     (\a,b => comp a b == LT)
                     (\a,b => comp a b == GT)
                     (\a,b => comp a b /= GT)

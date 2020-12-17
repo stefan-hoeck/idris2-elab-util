@@ -195,8 +195,7 @@ ordFunctions = [ `(genCompare)
 
 export
 Ord' : MkImplementation
-Ord' g = let eq   = var $ implName g "Eq"
-             impl = appAll mkOrd (eq :: ordFunctions)
+Ord' g = let impl = appAll mkOrd ordFunctions
           in MkInterfaceImpl "Ord" impl (implementationType `(Ord) g)
 ```
 

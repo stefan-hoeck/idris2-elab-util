@@ -241,7 +241,6 @@ ordImpl enumName cons =
       functionName = UN $ "implOrd" ++ enumName
 
       -- vars
-      eq           = varStr $ "implEq" ++ enumName
       comp         = var compName
       function     = var functionName
       enum         = arg $ varStr enumName
@@ -264,7 +263,7 @@ ordImpl enumName cons =
 
       impl = local [ private' compName $ enum .-> enum .-> `(Ordering)
                    , def compName $ cons >>= mkC
-                   ] (var mkOrd .$ eq .$ comp .$ lt .$ gt .$ leq .$ geq .$ max .$ min)
+                   ] (var mkOrd .$ comp .$ lt .$ gt .$ leq .$ geq .$ max .$ min)
 
    in [ interfaceHint Public functionName (var "Ord" .$ type enum)
       , def functionName [ function .= impl ] ]

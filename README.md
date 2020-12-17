@@ -22,3 +22,10 @@ a (still very experimental and incomplete) port of Haskell's
 [sop-core](https://hackage.haskell.org/package/sop-core) and
 [generic-sop](https://hackage.haskell.org/package/generics-sop)
 packages useful to automatically derive interface implementations.
+
+## Supported Idris Versions
+For the time being, this library tries to (and is forced to) follow closely the
+latest builds of [Idris2](https://github.com/idris-lang/Idris2).
+
+The latest commit has been built against commit
+043faf8baff33d2379cfff1810b14f47a88ab3aa.

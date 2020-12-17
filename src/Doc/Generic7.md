@@ -30,7 +30,7 @@ I : Type -> Type
 I = id
 
 public export
-interface Generic (t : Type) (code : List $ List Type) | t where
+interface Generic (0 t : Type) (0 code : List $ List Type) | t where
   ||| Converts the data type to its generic representation.
   total from : (v : t) -> SOP I code
 
@@ -212,21 +212,13 @@ And thus, we can derive provably lawful instances of `Eq`
 automatically from a data type's generic representation:
 
 ```idris
-mkEqV' :  (1 _ : Eq a)
-       -> (eqRefl   : (x : a) -> IsEq x x)
-       -> (eqSym    : (x,y : a) -> (x == y) = (y == x))
-       -> (eqTrans  : (x,y,z : a) -> IsEq x y -> IsEq y z -> IsEq x z)
-       -> (neqNotEq : (x,y : a) -> (x /= y) = not (x == y))
-       -> EqV a
-mkEqV' = %runElab check (var $ singleCon "EqV")
-
-mkEqV :   (1 prf    : Eq a)
-       => (eqRefl   : (x : a) -> IsEq x x)
-       -> (eqSym    : (x,y : a) -> (x == y) = (y == x))
-       -> (eqTrans  : (x,y,z : a) -> IsEq x y -> IsEq y z -> IsEq x z)
-       -> (neqNotEq : (x,y : a) -> (x /= y) = not (x == y))
-       -> EqV a
-mkEqV = mkEqV' prf
+mkEqV :  Eq a
+      => (eqRefl   : (x : a) -> IsEq x x)
+      -> (eqSym    : (x,y : a) -> (x == y) = (y == x))
+      -> (eqTrans  : (x,y,z : a) -> IsEq x y -> IsEq y z -> IsEq x z)
+      -> (neqNotEq : (x,y : a) -> (x /= y) = not (x == y))
+      -> EqV a
+mkEqV = %runElab check (var $ singleCon "EqV")
 
 Eq' : DeriveUtil -> InterfaceImpl
 Eq' g = MkInterfaceImpl "Eq" Public []

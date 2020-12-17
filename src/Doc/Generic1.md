@@ -95,7 +95,7 @@ generic representations of algebraic data types:
 
 ```idris
 public export
-interface Generic (t : Type) (code : List (List Type)) | t where
+interface Generic (0 t : Type) (0 code : List (List Type)) | t where
   from : t -> SOP code
   to   : SOP code -> t
 

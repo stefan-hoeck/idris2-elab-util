@@ -277,7 +277,7 @@ mutual
     prettyPrec _ ExternFn       = "ExternFn"
     prettyPrec p (ForeignFn xs) = apply p "ForeignFn" xs
     prettyPrec _ Invertible     = "Invertible"
-    prettyPrec p (Totalty x)    = apply p "Totality" [x]
+    prettyPrec p (Totality x)   = apply p "Totality" [x]
     prettyPrec _ Macro          = "Macro"
     prettyPrec p (SpecArgs xs)  = apply p "SpecArgs" xs
 
@@ -353,11 +353,23 @@ mutual
             args (IApp _ f t) = prettyBacktick t :: args f
             args t            = [prettyBacktick t]
 
-    prettyPrec p x@(IImplicitApp _ _ _ _) =
-      backtickParens p (alignInfix "IImplicitApp" "$" $ reverse (args x))
+    prettyPrec p x@(IAutoApp _ _ _) =
+      backtickParens p (alignInfix "IAutoApp" "$" $ reverse (args x))
       where args : TTImp -> List (Doc ann)
-            args (IImplicitApp _ f n t) = parens (hsepH[n,":",t]) :: args f
-            args t                      = [prettyBacktick t]
+            args (IAutoApp _ f t) = prettyBacktick t :: args f
+            args t                = [prettyBacktick t]
+
+    prettyPrec p x@(INamedApp _ _ _ _) =
+      backtickParens p (alignInfix "INamedApp" "$" $ reverse (args x))
+      where args : TTImp -> List (Doc ann)
+            args (INamedApp _ f n t) = prettyBacktick t :: args f
+            args t                   = [prettyBacktick t]
+
+--    prettyPrec p x@(IImplicitApp _ _ _ _) =
+--      backtickParens p (alignInfix "IImplicitApp" "$" $ reverse (args x))
+--      where args : TTImp -> List (Doc ann)
+--            args (IImplicitApp _ f n t) = parens (hsepH[n,":",t]) :: args f
+--            args t                      = [prettyBacktick t]
 
     prettyPrec p x@(IWithApp _ _ _) =
       backtickParens p (alignInfix "IWithApp" "$" $ reverse (args x))

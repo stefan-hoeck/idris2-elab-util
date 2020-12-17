@@ -153,8 +153,12 @@ bindAll : (fun : Name) -> (args : List String) -> TTImp
 bindAll fun = appAll fun . map bindVar
 
 export
-implicitApp : TTImp -> Maybe Name -> TTImp -> TTImp
-implicitApp = IImplicitApp EmptyFC
+autoApp : TTImp -> TTImp -> TTImp
+autoApp = IAutoApp EmptyFC
+
+export
+namedApp : TTImp -> Name -> TTImp -> TTImp
+namedApp = INamedApp EmptyFC
 
 --------------------------------------------------------------------------------
 --          Function Arguments
