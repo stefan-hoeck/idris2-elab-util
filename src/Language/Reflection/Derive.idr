@@ -222,6 +222,7 @@ mkOrd' = %runElab check (var $ singleCon "Ord")
 ||| Creates an `Ord` value from the passed comparison function
 ||| using default implementations based on `comp` for all
 ||| other function.
+public export
 mkOrd : Eq a => (comp : a -> a -> Ordering) -> Ord a
 mkOrd comp = mkOrd' comp
                     (\a,b => comp a b == LT)
