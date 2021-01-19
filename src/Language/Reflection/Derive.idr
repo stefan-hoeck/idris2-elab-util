@@ -111,7 +111,7 @@ record InterfaceImpl where
   ||| ```
   type          : TTImp
 
--- pair of type and implementation 
+-- pair of type and implementation
 private
 implDecl : DeriveUtil -> (DeriveUtil -> InterfaceImpl) ->  (Decl,Decl)
 implDecl g f = let (MkInterfaceImpl iname vis opts impl type) = f g
