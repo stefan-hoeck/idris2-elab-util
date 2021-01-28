@@ -16,7 +16,7 @@
 module Language.Reflection.Pretty
 
 import public Data.HVect
-import Data.Strings
+import Data.String
 import public Language.Reflection
 import public Text.PrettyPrint.Prettyprinter
 import Text.PrettyPrint.Prettyprinter.Render.String
@@ -311,7 +311,7 @@ mutual
     prettyPrec p (IDef _ n cs) = applyH p "IDef" [n,cs]
     prettyPrec p (IParameters _ ps decs) = applyH p "IParameters" [ps,decs]
     prettyPrec p (IRecord _ v r) = applyH p "IRecord" [v, r]
-    prettyPrec p (INamespace _ ns ds) =
+    prettyPrec p (INamespace _ (MkNS ns) ds) =
       indentLines (applyDoc p "INamespace" [dotted ns]) (map pretty ds)
 
     prettyPrec p (ITransform _ n a b) = applyH p "ITransform" [n,a,b]

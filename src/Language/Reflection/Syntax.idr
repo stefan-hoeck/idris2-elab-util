@@ -9,7 +9,7 @@
 ||| Expressions can be quoted like so: `(\x => x * x)
 module Language.Reflection.Syntax
 
-import public Data.Strings
+import public Data.String
 import public Data.List1
 import public Language.Reflection
 import Language.Reflection.Pretty
