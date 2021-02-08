@@ -309,7 +309,7 @@ iCase = ICase EmptyFC
 ||| This is an alias for `IAs EmptyFC UseLeft`.
 export
 as : Name -> TTImp -> TTImp
-as = IAs EmptyFC UseLeft
+as = IAs EmptyFC EmptyFC UseLeft
 
 --------------------------------------------------------------------------------
 --          Function Declarations
@@ -320,7 +320,7 @@ as = IAs EmptyFC UseLeft
 ||| This is an alias for `MkTyp EmptyFC`.
 export
 mkTy : (n : Name) -> (ty : TTImp) -> ITy
-mkTy = MkTy EmptyFC
+mkTy = MkTy EmptyFC EmptyFC
 
 ||| Type declaration of a function.
 |||
@@ -423,7 +423,7 @@ simpleDataExport = simpleData Export
 export
 iLet : Count -> Name -> (nTy : TTImp) -> (nVal : TTImp)
     -> (scope : TTImp) -> TTImp
-iLet = ILet EmptyFC
+iLet = ILet EmptyFC EmptyFC
 
 --------------------------------------------------------------------------------
 --          Elab Utils

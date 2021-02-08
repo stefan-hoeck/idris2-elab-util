@@ -283,7 +283,7 @@ mutual
 
   export
   Pretty ITy where
-    prettyPrec p (MkTy x n t) = applyH p "MkTy" [n, t]
+    prettyPrec p (MkTy _ _ n t) = applyH p "MkTy" [n, t]
 
   export
   Pretty Data where
@@ -337,7 +337,7 @@ mutual
 
             args rt = [prettyBacktick rt]
 
-    prettyPrec p (ILet _ cnt name nTy nVal scope) =
+    prettyPrec p (ILet _ _ cnt name nTy nVal scope) =
       applyH p "ILet" [cnt,name,nTy,nVal,scope]
 
     prettyPrec p (ICase _ arg ty cs) = applyH p "ICase" [arg,ty,cs]
@@ -384,7 +384,7 @@ mutual
     prettyPrec p (IRewrite _ y z)   = applyH p "IRewrite" [y, z]
     prettyPrec p (IBindHere _ y z)  = applyH p "IBindHere" [y, z]
     prettyPrec p (IBindVar _ y)     = apply p "IBindVar" [y]
-    prettyPrec p (IAs _ use n w)    = applyH p "IAs" [use,n,w]
+    prettyPrec p (IAs _ _ use n w)  = applyH p "IAs" [use,n,w]
     prettyPrec p (IMustUnify _ y z) = applyH p "IMustUnify" [y,z]
     prettyPrec p (IDelayed _ y z)   = applyH p "IDelayed" [y,z]
     prettyPrec p (IDelay _ y)       = apply p "IDelay" [y]
