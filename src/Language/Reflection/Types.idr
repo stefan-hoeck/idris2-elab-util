@@ -189,7 +189,7 @@ hasParamTypes = mapMaybe hasParamType . explicitArgs
 |||   Wrap : Vect n t -> Wrapper n t
 ||| ```
 |||
-||| Examples of valid parameterized data types
+||| Examples of invalid parameterized data types
 |||
 ||| Indexed types families:
 |||
