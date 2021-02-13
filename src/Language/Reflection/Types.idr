@@ -233,7 +233,7 @@ Pretty ParamTypeInfo where
 ||| of the data type's parameters makes an appearance.
 |||
 ||| This function uses a rudimentary comparison to make
-||| sure that returned list contains only distinct types.
+||| sure that the returned list contains only distinct types.
 |||
 ||| This function is used to calculate the list of required constraints
 ||| when automatically deriving interface implementations.
