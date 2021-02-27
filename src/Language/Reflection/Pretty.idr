@@ -237,12 +237,13 @@ Pretty UseSide where
 
 export
 Pretty DotReason where
-  pretty NonLinearVar   = "NonLinearVar"
-  pretty VarApplied     = "VarApplied"
-  pretty NotConstructor = "NotConstructor"
-  pretty ErasedArg      = "ErasedArg"
-  pretty UserDotted     = "UserDotted"
-  pretty UnknownDot     = "UnknownDot"
+  pretty NonLinearVar    = "NonLinearVar"
+  pretty VarApplied      = "VarApplied"
+  pretty NotConstructor  = "NotConstructor"
+  pretty ErasedArg       = "ErasedArg"
+  pretty UserDotted      = "UserDotted"
+  pretty UnknownDot      = "UnknownDot"
+  pretty UnderAppliedCon = "UnderAppliedCon"
 
 export
 Pretty DataOpt where
