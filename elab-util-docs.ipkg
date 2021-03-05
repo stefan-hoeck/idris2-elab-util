@@ -1,12 +1,13 @@
 package elab-util-docs
 
 authors    = "stefan-hoeck"
-version    = "0.1.1"
+version    = 0.1.1
 readme     = "README.md"
 license    = "BSD-2 Clause"
 
 sourcedir  = "src"
-depends    = base, contrib, elab-util
+depends    = base    >= 0.3.0
+           , contrib >= 0.3.0
 
 modules = Doc.Enum1
         , Doc.Enum2

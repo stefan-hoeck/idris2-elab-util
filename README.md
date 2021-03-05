@@ -28,4 +28,4 @@ For the time being, this library tries to (and is forced to) follow closely the
 latest builds of [Idris2](https://github.com/idris-lang/Idris2).
 
 The latest commit has been built against Idris2 version 0.3.0
-(commit aa27ccbdb655c1c55560857ce8a92156260df62d).
+(commit 8d4321eb9a085e3d4b9c1f7a75490b0782343acd).
