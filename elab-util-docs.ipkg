@@ -1,7 +1,7 @@
 package elab-util-docs
 
 authors    = "stefan-hoeck"
-version    = 0.1.1
+version    = 0.1.2
 readme     = "README.md"
 license    = "BSD-2 Clause"
 
@@ -19,4 +19,4 @@ modules = Doc.Enum1
         , Doc.Generic6
         , Doc.Generic7
         , Doc.Inspect
-
+        , Doc.Primitives
