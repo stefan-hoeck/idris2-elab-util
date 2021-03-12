@@ -112,7 +112,7 @@ refinedShow dt accessor =
 ||| Convenience function combining `refinedEq`, `refinedOrd`,
 ||| and `refinedShow`.
 export covering
-refinedEqOrdShow : (dataType : String) -> (accessor : Name) -> Elab () 
+refinedEqOrdShow : (dataType : String) -> (accessor : Name) -> Elab ()
 refinedEqOrdShow dt acc = do refinedEq dt acc
                              refinedOrd dt acc
                              refinedShow dt acc
@@ -141,17 +141,17 @@ refinedEqOrdShow dt acc = do refinedEq dt acc
 ||| ```idris example
 ||| Eq AtomicNr where
 |||   (==) = (==) `on` value
-||| 
+|||
 ||| Ord AtomicNr where
 |||   compare = compare `on` value
-||| 
+|||
 ||| Show AtomicNr where
 |||   showPrec p = showPrec p . value
-||| 
+|||
 ||| namespace AtomicNr
 |||   refine : Int -> Maybe AtomicNr
 |||   refine = refineSo MkAtomicNr
-||| 
+|||
 |||   fromInteger :  (v : Integer)
 |||               -> {auto 0 _: IsJust (refine $ fromInteger v)}
 |||               -> AtomicNr
@@ -176,7 +176,7 @@ refinedIntegral dt con acc tpe =
           `[ public export
              refine : ~(tpe) -> Maybe ~(varStr dt)
              refine = refineSo ~(var con)
- 
+
              public export
              fromInteger :  (n : Integer)
                          -> {auto 0 _: IsJust (~(refineNS) $ fromInteger n)}
@@ -266,17 +266,17 @@ refinedBits64 dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Bits64)
 ||| ```idris example
 ||| Eq Abundance where
 |||   (==) = (==) `on` value
-||| 
+|||
 ||| Ord Abundance where
 |||   compare = compare `on` value
-||| 
+|||
 ||| Show Abundance where
 |||   showPrec p = showPrec p . value
-||| 
+|||
 ||| namespace Abundance
 |||   refine : Double -> Maybe Abundance
 |||   refine = refineSo MkAbundance
-||| 
+|||
 |||   fromDouble :  (v : Double)
 |||              -> {auto 0 _: IsJust (refine v)}
 |||              -> Abundance
@@ -300,7 +300,7 @@ refinedFloating dt con acc =
           `[ public export
              refine : Double -> Maybe ~(varStr dt)
              refine = refineSo ~(var con)
- 
+
              public export
              fromDouble :  (n : Double)
                         -> {auto 0 _: IsJust (~(refineNS) n)}
@@ -340,17 +340,17 @@ refinedDouble dt = refinedFloating dt (UN $ "Mk" ++ dt) `{{value}}
 ||| ```idris example
 ||| Eq Html where
 |||   (==) = (==) `on` value
-||| 
+|||
 ||| Ord Html where
 |||   compare = compare `on` value
-||| 
+|||
 ||| Show Html where
 |||   showPrec p = showPrec p . value
-||| 
+|||
 ||| namespace Html
 |||   refine : String -> Maybe Html
 |||   refine = refineSo MkHtml
-||| 
+|||
 |||   fromString :  (v : String)
 |||              -> {auto 0 _: IsJust (refine v)}
 |||              -> Html
@@ -374,7 +374,7 @@ refinedText dt con acc =
           `[ public export
              refine : String -> Maybe ~(varStr dt)
              refine = refineSo ~(var con)
- 
+
              public export
              fromString :  (n : String)
                         -> {auto 0 _: IsJust (~(refineNS) n)}

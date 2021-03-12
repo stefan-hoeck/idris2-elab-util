@@ -183,7 +183,7 @@ refinedInt n =
           `[ public export
              refine : Int -> Maybe ~(varStr n)
              refine = refineSo ~(con)
- 
+
              public export
              fromInteger :  (n : Integer)
                          -> {auto 0 _: IsJust (~(refineNS) $ fromInteger n)}
