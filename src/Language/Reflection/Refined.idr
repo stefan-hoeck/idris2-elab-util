@@ -171,7 +171,8 @@ refinedIntegral dt con acc tpe =
       -- in fromInteger
       refineNS = var $ NS ns (UN "refine")
 
-   in declare
+   in refinedEqOrdShow dt acc >>
+      declare
         [ INamespace EmptyFC ns
           `[ public export
              refine : ~(tpe) -> Maybe ~(varStr dt)
@@ -295,7 +296,8 @@ refinedFloating dt con acc =
       -- in fromInteger
       refineNS = var $ NS ns (UN "refine")
 
-   in declare
+   in refinedEqOrdShow dt acc >>
+      declare
         [ INamespace EmptyFC ns
           `[ public export
              refine : Double -> Maybe ~(varStr dt)
@@ -369,7 +371,8 @@ refinedText dt con acc =
       -- in fromInteger
       refineNS = var $ NS ns (UN "refine")
 
-   in declare
+   in refinedEqOrdShow dt acc >>
+      declare
         [ INamespace EmptyFC ns
           `[ public export
              refine : String -> Maybe ~(varStr dt)
