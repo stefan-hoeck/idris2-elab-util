@@ -282,6 +282,13 @@ piAllAuto res = piAll res . map (MkArg MW AutoImplicit Nothing)
 --          Pattern Matching
 --------------------------------------------------------------------------------
 
+||| An impossible clause in a pattern match.
+|||
+||| This is an alias for `ImpossibleClause EmptyFC`.
+export
+impossibleClause : (lhs : TTImp) -> Clause
+impossibleClause = ImpossibleClause EmptyFC
+
 ||| A pattern clause consisting of the left-hand and
 ||| right-hand side of the pattern arrow "=>".
 |||
