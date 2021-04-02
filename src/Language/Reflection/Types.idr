@@ -161,13 +161,6 @@ Pretty ParamCon where
   prettyPrec p (MkParamCon n explicitArgs) =
     applyH p "MkParamCon" [n, explicitArgs]
 
-export
-hasParamTypes : ParamCon -> List TTImp
-hasParamTypes = mapMaybe hasParamType . explicitArgs
-  where hasParamType : ExplicitArg -> Maybe TTImp
-        hasParamType (MkExplicitArg _ t True _) = Just t
-        hasParamType _                          = Nothing
-
 ||| Information about a parameterized data type.
 |||
 ||| The constructors of such a data type are only
@@ -272,11 +265,6 @@ conParams con as t = run as (snd $ unApp t)
 private
 sameArgName : (dataType : Name) -> (arg : Name) -> Bool
 sameArgName = (==)
-
--- sameArgName (UN x)   (UN y)       = x == y
--- sameArgName (NS nsx x) (NS nsy y) = nsx == nsy && sameArgName x y
--- sameArgName (NS _ x) y            = sameArgName x y
--- sameArgName _        _            = False
 
 -- Renames all type parameter names in an argument's
 -- type according to the given Vect of pairs.
