@@ -51,7 +51,7 @@ private
 genericUtil : ParamTypeInfo -> DeriveUtil
 genericUtil ti = let pNames = map fst $ params ti
                      appTpe = appNames (name ti) pNames
-                     twps   = concatMap hasParamTypes ti.cons
+                     twps   = calcArgTypesWithParams ti
                   in MkDeriveUtil ti appTpe pNames twps
 
 export
