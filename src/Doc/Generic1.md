@@ -193,13 +193,18 @@ actual constructor and create the `SOP` value according
 to this index.
 
 ```idris
+||| Applies the proper n-ary sum constructor to an argument
+||| of arguments. `k` is the level of nesting used
+export
+mkSOP1 : (k : Int) -> (arg : TTImp) -> TTImp
+mkSOP1 k arg = if k <= 0 then `(Z) .$ arg
+                         else `(S) .$ mkSOP1 (k-1) arg
+
 ||| Applies the proper n-ary sum constructor to a list
-||| of arguments. `k` is the index of the data type's
-||| constructor.
+||| of arguments. `k` is the level of nesting used.
 export
 mkSOP : (k : Int) -> (args : List TTImp) -> TTImp
-mkSOP k args     = if k <= 0 then `(Z) .$ listOf args
-                             else `(S) .$ mkSOP (k-1) args
+mkSOP k = mkSOP1 k . listOf
 
 export
 zipWithIndex : List a -> List (Int,a)
@@ -234,6 +239,14 @@ fromClause (k,(con,ns,vars)) = bindAll con ns .= mkSOP k vars
 export
 toClause : (Int,ConNames) -> Clause
 toClause (k,(con,ns,vars)) = mkSOP k (map bindVar ns) .= appAll con vars
+
+export
+toClauses : List (Int,ConNames) -> List Clause
+toClauses cs = map toClause cs ++
+               -- in certain pathological cases, the coverage checker can not
+               -- determine on its own that the above list of clauses is covering.
+               -- we therefore append an explicit `impossible` clause.
+               [impossibleClause $ mkSOP1 (cast $ length cs) implicitTrue]
 ```
 
 A quick note about function `nameStr`: Idris does not accept
@@ -261,7 +274,7 @@ genericDecl ti =
       x       = lambdaArg "x"
       varX    = var "x"
       from    = x .=> iCase varX implicitFalse (map fromClause names)
-      to      = x .=> iCase varX implicitFalse (map toClause names)
+      to      = x .=> iCase varX implicitFalse (toClauses names)
 
    in [ interfaceHint Public function funType
       , def function [ var function .= appAll mkGeneric [from,to] ] ]

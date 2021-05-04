@@ -56,7 +56,7 @@ genericDecl ti =
       x       = lambdaArg "x"
       varX    = var "x"
       from    = x .=> iCase varX implicitFalse (map fromClause names)
-      to      = x .=> iCase varX implicitFalse (map toClause names)
+      to      = x .=> iCase varX implicitFalse (toClauses names)
 
    in [ interfaceHint Public function funType
       , def function [ var function .= appAll mkGeneric [from,to] ] ]
