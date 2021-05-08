@@ -94,7 +94,7 @@ from `Language.Reflection.Syntax`.
 
 ### Generating Enum Definitions
 
-In order to us `enumDecl` to define an actual enum type,
+In order to use `enumDecl` to define an actual enum type,
 we need function `declare` from `Language.Reflection`:
 
 ```idris
@@ -103,11 +103,22 @@ mkEnum : (name : String) -> (cons : List String) -> Elab ()
 mkEnum name cons = declare [enumDecl name cons]
 ```
 
-Lets try it:
+We can now tell Idris to generate an enum from
+a data name and a list of constructor names for us:
 
 ```idris
-%runElab (mkEnum "Gender" ["Female","Male","NonBinary"])
+%runElab mkEnum "Gender" ["Female","Male","NonBinary"]
+```
 
+The line above tells Idris to run the elaborator script
+(`%runElab`) returned from the call to `mkEnum`. This
+results in a new data type called `Gender` with nullary
+data constructors `Female`, `Male`, and `NonBinary`
+being defined. We should now have access to this new data
+type. In order to test this, we implement an `Eq` instance
+for it:
+
+```idris
 export
 Eq Gender where
   Female     == Female     = True
@@ -116,7 +127,9 @@ Eq Gender where
   _          == _          = False
 ```
 
-It worked! We need to enable `%language ElabReflection` to
+It worked! When we typecheck this file, Idris knows about
+data type `Gender` and will accept our `Eq` implementation.
+Note, that we needed to enable `%language ElabReflection` to
 get access to `%runElab`.
 
 ### What's next
