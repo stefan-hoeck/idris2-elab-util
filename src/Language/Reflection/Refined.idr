@@ -6,6 +6,8 @@ import public Data.Maybe
 import public Data.So
 import public Language.Reflection.Derive
 
+%default total
+
 --------------------------------------------------------------------------------
 --          Utilities
 --------------------------------------------------------------------------------
@@ -42,7 +44,7 @@ refineSo make val = case maybeSo (f val) of
 |||
 ||| %runElab refinedEq "AtomicNr" `{{value}}
 ||| ```
-export covering
+export
 refinedEq : (dataType : String) -> (accessor : Name) -> Elab ()
 refinedEq dt accessor =
   let eqFun   = UN $ "implEq"   ++ dt
@@ -68,7 +70,7 @@ refinedEq dt accessor =
 |||
 ||| %runElab refinedOrd "AtomicNr" `{{value}}
 ||| ```
-export covering
+export
 refinedOrd : (dataType : String) -> (accessor : Name) -> Elab ()
 refinedOrd dt accessor =
   let ordFun  = UN $ "implOrd"  ++ dt
@@ -95,7 +97,7 @@ refinedOrd dt accessor =
 |||
 ||| %runElab refinedShow "AtomicNr" `{{value}}
 ||| ```
-export covering
+export
 refinedShow : (dataType : String) -> (accessor : Name) -> Elab ()
 refinedShow dt accessor =
   let showFun = UN $ "implShow" ++ dt
@@ -111,7 +113,7 @@ refinedShow dt accessor =
 
 ||| Convenience function combining `refinedEq`, `refinedOrd`,
 ||| and `refinedShow`.
-export covering
+export
 refinedEqOrdShow : (dataType : String) -> (accessor : Name) -> Elab ()
 refinedEqOrdShow dt acc = do refinedEq dt acc
                              refinedOrd dt acc
@@ -157,7 +159,7 @@ refinedEqOrdShow dt acc = do refinedEq dt acc
 |||               -> AtomicNr
 |||   fromInteger v = fromJust (refine $ fromInteger v)
 ||| ```
-export covering
+export
 refinedIntegral :  (dataType : String)
                 -> (con      : Name)
                 -> (accessor : Name)
@@ -201,7 +203,7 @@ refinedIntegral dt con acc tpe =
 |||
 ||| %runElab refinedInt "AtomicNr"
 ||| ```
-export covering
+export
 refinedInt : (dataType : String) -> Elab ()
 refinedInt dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Int)
 
@@ -211,7 +213,7 @@ refinedInt dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Int)
 |||  * If a data type's name is `Foo` its constructor is named `MkFoo`.
 |||  * The field accessor of the wrapped Int is named `value`.
 |||  * The proof of validity consists of a single zero quantity `So`.
-export covering
+export
 refinedBits8 : (dataType : String) -> Elab ()
 refinedBits8 dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Bits8)
 
@@ -221,7 +223,7 @@ refinedBits8 dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Bits8)
 |||  * If a data type's name is `Foo` its constructor is named `MkFoo`.
 |||  * The field accessor of the wrapped Int is named `value`.
 |||  * The proof of validity consists of a single zero quantity `So`.
-export covering
+export
 refinedBits16 : (dataType : String) -> Elab ()
 refinedBits16 dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Bits16)
 
@@ -231,7 +233,7 @@ refinedBits16 dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Bits16)
 |||  * If a data type's name is `Foo` its constructor is named `MkFoo`.
 |||  * The field accessor of the wrapped Int is named `value`.
 |||  * The proof of validity consists of a single zero quantity `So`.
-export covering
+export
 refinedBits32 : (dataType : String) -> Elab ()
 refinedBits32 dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Bits32)
 
@@ -241,7 +243,7 @@ refinedBits32 dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Bits32)
 |||  * If a data type's name is `Foo` its constructor is named `MkFoo`.
 |||  * The field accessor of the wrapped Int is named `value`.
 |||  * The proof of validity consists of a single zero quantity `So`.
-export covering
+export
 refinedBits64 : (dataType : String) -> Elab ()
 refinedBits64 dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Bits64)
 
@@ -283,7 +285,7 @@ refinedBits64 dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Bits64)
 |||              -> Abundance
 |||   fromDouble v = fromJust (refine v)
 ||| ```
-export covering
+export
 refinedFloating :  (dataType : String)
                 -> (con      : Name)
                 -> (accessor : Name)
@@ -317,7 +319,7 @@ refinedFloating dt con acc =
 |||  * If a data type's name is `Foo` its constructor is named `MkFoo`.
 |||  * The field accessor of the wrapped Int is named `value`.
 |||  * The proof of validity consists of a single zero quantity `So`.
-export covering
+export
 refinedDouble : (dataType : String) -> Elab ()
 refinedDouble dt = refinedFloating dt (UN $ "Mk" ++ dt) `{{value}}
 
@@ -358,7 +360,7 @@ refinedDouble dt = refinedFloating dt (UN $ "Mk" ++ dt) `{{value}}
 |||              -> Html
 |||   fromString v = fromJust (refine v)
 ||| ```
-export covering
+export
 refinedText :  (dataType : String)
             -> (con      : Name)
             -> (accessor : Name)
@@ -392,6 +394,6 @@ refinedText dt con acc =
 |||  * If a data type's name is `Foo` its constructor is named `MkFoo`.
 |||  * The field accessor of the wrapped Int is named `value`.
 |||  * The proof of validity consists of a single zero quantity `So`.
-export covering
+export
 refinedString : (dataType : String) -> Elab ()
 refinedString dt = refinedText dt (UN $ "Mk" ++ dt) `{{value}}

@@ -9,6 +9,8 @@ import Text.PrettyPrint.Prettyprinter
 
 %language ElabReflection
 
+%default total
+
 --------------------------------------------------------------------------------
 --          Utilities
 --------------------------------------------------------------------------------
@@ -48,6 +50,7 @@ getCon n = do (n',tt)    <- lookupName n
               pure $ MkCon n' args tpe
 
 export
+covering
 Pretty Con where
   prettyPrec p (MkCon n args tpe) = applyH p "MkCon" [n, args, tpe]
 
@@ -67,6 +70,7 @@ record TypeInfo where
   cons : List Con
 
 export
+covering
 Pretty TypeInfo where
   pretty (MkTypeInfo name args cons) =
     let head = applyH Open "MkTypeInfo" [name, args]
@@ -141,6 +145,7 @@ record ExplicitArg where
   isRecursive : Bool
 
 export
+covering
 Pretty ExplicitArg where
   prettyPrec p (MkExplicitArg n tpe paramTypes isRecursive) =
     applyH p "MkExplicitArg" [n, tpe, paramTypes, isRecursive]
@@ -161,6 +166,7 @@ record ParamCon where
   explicitArgs : List ExplicitArg
 
 export
+covering
 Pretty ParamCon where
   prettyPrec p (MkParamCon n explicitArgs) =
     applyH p "MkParamCon" [n, explicitArgs]
@@ -218,6 +224,7 @@ record ParamTypeInfo where
   cons   : List ParamCon
 
 export
+covering
 Pretty ParamTypeInfo where
   pretty (MkParamTypeInfo name params cons) =
     let head = applyH Open "MkParamTypeInfo" [name, toList params]

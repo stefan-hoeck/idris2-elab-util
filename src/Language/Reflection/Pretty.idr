@@ -21,6 +21,8 @@ import public Language.Reflection
 import public Text.PrettyPrint.Prettyprinter
 import Text.PrettyPrint.Prettyprinter.Render.String
 
+%default total
+
 --------------------------------------------------------------------------------
 --          Utils
 --------------------------------------------------------------------------------
@@ -254,6 +256,8 @@ Pretty DataOpt where
   prettyPrec _ NoNewtype     = "NoNewtype"
 
 mutual
+
+  %default covering
 
   export
   Pretty IFieldUpdate where

@@ -14,6 +14,8 @@ import public Data.List1
 import public Language.Reflection
 import Language.Reflection.Pretty
 
+%default total
+
 --------------------------------------------------------------------------------
 --          Names
 --------------------------------------------------------------------------------
@@ -24,7 +26,7 @@ FromString Name where
     where run : List1 String -> List String -> Name
           run (h ::: []) []        = UN h
           run (h ::: []) ns        = NS (MkNS ns) (UN h)
-          run (h ::: (y :: ys)) xs = run (y ::: ys) (h :: xs)
+          run ll@(h ::: (y :: ys)) xs = run (assert_smaller ll $ y ::: ys) (h :: xs)
 
 ||| Takes a (probably fully qualified name) and generates a
 ||| identifier from this without the dots.
@@ -195,6 +197,7 @@ isExplicit (MkArg _ ExplicitArg _ _) = True
 isExplicit (MkArg _ _           _ _) = False
 
 export
+covering
 Pretty NamedArg where
   pretty (MkArg count piInfo name type) =
     parens $ hsepH [count, piInfo, name, ":", type]
@@ -452,5 +455,5 @@ lookupName : Name -> Elab (Name, TTImp)
 lookupName n = do pairs <- getType n
                   case (pairs,n) of
                        ([p],_)     => pure p
-                       (ps,UN str) => inCurrentNS (UN str) >>= lookupName
+                       (ps,UN str) => inCurrentNS (UN str) >>= assert_total {-now argument is NS, not UN-} lookupName
                        (ps,_)      => fail $ errMsg n ps
