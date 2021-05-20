@@ -27,5 +27,4 @@ packages useful to automatically derive interface implementations.
 For the time being, this library tries to (and is forced to) follow closely the
 latest builds of [Idris2](https://github.com/idris-lang/Idris2).
 
-The latest commit has been built against Idris2 version 0.3.0
-(commit e972a231263c53c441b1208efa42992f38eaa7a9).
+The latest commit has been built against Idris 2, version 0.3.0-daf30ee4f.
