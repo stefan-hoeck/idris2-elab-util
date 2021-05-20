@@ -11,6 +11,8 @@ import public Language.Reflection.Types
 
 %language ElabReflection
 
+%default total
+
 ||| Utility type for deriving interface implementations
 ||| automatically. See implementations of `Eq'` and `Ord'`
 ||| in Doc.Generic4 as examples, how this can be done.
