@@ -2,29 +2,10 @@
 ||| tutorial post about [refined primitives](../../Doc/Primitives.md).
 module Language.Reflection.Refined
 
-import public Data.Maybe
-import public Data.So
+import public Language.Reflection.Refined.Util
 import public Language.Reflection.Derive
 
 %default total
-
---------------------------------------------------------------------------------
---          Utilities
---------------------------------------------------------------------------------
-
-public export
-maybeSo : (b : Bool) -> Maybe (So b)
-maybeSo True  = Just Oh
-maybeSo False = Nothing
-
-public export
-refineSo :  {f : a -> Bool}
-         -> (make : (v : a) -> (0 prf : So $ f v) -> b)
-         -> (val : a)
-         -> Maybe b
-refineSo make val = case maybeSo (f val) of
-                         Just oh => Just $ make val oh
-                         Nothing => Nothing
 
 --------------------------------------------------------------------------------
 --          Elab Scripts
@@ -36,23 +17,26 @@ refineSo make val = case maybeSo (f val) of
 ||| This is hardly useful on its own but convenient when
 ||| combined with other interface implementors.
 |||
+||| In some occasions it is useful to have one or several
+||| phantom types for the refined type. Therefore, the exact
+||| type should be given as a `TTImp`.
+|||
 ||| ```idris example
-||| record AtomicNr where
+||| record AtomicNr a where
 |||   constructor MkAtomicNr
 |||   value : Int
 |||   0 inBounds : So (1 <= value && value <= 118)
 |||
-||| %runElab refinedEq "AtomicNr" `{{value}}
+||| %runElab refinedEq "AtomicNr" `(AtomicNr a) `{{value}}
 ||| ```
 export
-refinedEq : (dataType : String) -> (accessor : Name) -> Elab ()
-refinedEq dt accessor =
+refinedEq : (dataType : String) -> (dt : TTImp) -> (accessor : Name) -> Elab ()
+refinedEq dt t accessor =
   let eqFun   = UN $ "implEq"   ++ dt
-      tpe     = varStr dt
       acc     = var accessor
 
    in declare
-        [ interfaceHint Public eqFun `(Eq ~(tpe))
+        [ interfaceHint Public eqFun `(Eq ~(t))
         , def eqFun [patClause (var eqFun) `(mkEq ((==) `on` ~(acc)))]
         ]
 
@@ -63,23 +47,21 @@ refinedEq dt accessor =
 ||| combined with other interface implementors.
 |||
 ||| ```idris example
-||| record AtomicNr where
+||| record AtomicNr a where
 |||   constructor MkAtomicNr
 |||   value : Int
 |||   0 inBounds : So (1 <= value && value <= 118)
 |||
-||| %runElab refinedOrd "AtomicNr" `{{value}}
+||| %runElab refinedOrd "AtomicNr" `(AtomicNr a) `{{value}}
 ||| ```
 export
-refinedOrd : (dataType : String) -> (accessor : Name) -> Elab ()
-refinedOrd dt accessor =
+refinedOrd : (dataType : String) -> (dt : TTImp) -> (accessor : Name) -> Elab ()
+refinedOrd dt t accessor =
   let ordFun  = UN $ "implOrd"  ++ dt
-
-      tpe     = varStr dt
       acc     = var accessor
 
    in declare
-        [ interfaceHint Public ordFun `(Ord ~(tpe))
+        [ interfaceHint Public ordFun `(Ord ~(t))
         , def ordFun [patClause (var ordFun) `(mkOrd (compare `on` ~(acc)))]
         ]
 
@@ -90,23 +72,21 @@ refinedOrd dt accessor =
 ||| combined with other interface implementors.
 |||
 ||| ```idris example
-||| record AtomicNr where
+||| record AtomicNr a where
 |||   constructor MkAtomicNr
 |||   value : Int
 |||   0 inBounds : So (1 <= value && value <= 118)
 |||
-||| %runElab refinedShow "AtomicNr" `{{value}}
+||| %runElab refinedShow "AtomicNr" `(AtomicNr a) `{{value}}
 ||| ```
 export
-refinedShow : (dataType : String) -> (accessor : Name) -> Elab ()
-refinedShow dt accessor =
+refinedShow : (dataType : String) -> (dt : TTImp) -> (accessor : Name) -> Elab ()
+refinedShow dt t accessor =
   let showFun = UN $ "implShow" ++ dt
-
-      tpe     = varStr dt
       acc     = var accessor
 
    in declare
-        [ interfaceHint Public showFun `(Show ~(tpe))
+        [ interfaceHint Public showFun `(Show ~(t))
         , def showFun [patClause (var showFun)
                        `(mkShowPrec (\p => showPrec p . ~(acc)))]
         ]
@@ -114,10 +94,13 @@ refinedShow dt accessor =
 ||| Convenience function combining `refinedEq`, `refinedOrd`,
 ||| and `refinedShow`.
 export
-refinedEqOrdShow : (dataType : String) -> (accessor : Name) -> Elab ()
-refinedEqOrdShow dt acc = do refinedEq dt acc
-                             refinedOrd dt acc
-                             refinedShow dt acc
+refinedEqOrdShow :  (dataType : String)
+                 -> (dt : TTImp)
+                 -> (accessor : Name)
+                 -> Elab ()
+refinedEqOrdShow dt t acc = do refinedEq dt t acc
+                               refinedOrd dt t acc
+                               refinedShow dt t acc
 
 ||| This creates `Eq`, `Ord`, and `Show` implementations as
 ||| well as conversion functions for a refined integral number.
@@ -127,12 +110,13 @@ refinedEqOrdShow dt acc = do refinedEq dt acc
 ||| data type's name.
 |||
 ||| ```idris example
-||| record AtomicNr where
+||| record AtomicNr a where
 |||   constructor MkAtomicNr
 |||   value : Int
 |||   0 inBounds : So (1 <= value && value <= 118)
 |||
 ||| %runElab refinedIntegral "AtomicNr"
+|||                          `(AtomicNr a)
 |||                          `{{MkAtomicNr}}
 |||                          `{{value}}
 |||                          `(Int)
@@ -161,11 +145,12 @@ refinedEqOrdShow dt acc = do refinedEq dt acc
 ||| ```
 export
 refinedIntegral :  (dataType : String)
+                -> (dt       : TTImp)
                 -> (con      : Name)
                 -> (accessor : Name)
                 -> (tpe      : TTImp)
                 -> Elab ()
-refinedIntegral dt con acc tpe =
+refinedIntegral dt t con acc tpe =
   let ns   = MkNS [dt]
 
       -- this has to be namespaced
@@ -173,20 +158,25 @@ refinedIntegral dt con acc tpe =
       -- in fromInteger
       refineNS = var $ NS ns (UN "refine")
 
-   in refinedEqOrdShow dt acc >>
+   in refinedEqOrdShow dt t acc >>
       declare
         [ INamespace EmptyFC ns
           `[ public export
-             refine : ~(tpe) -> Maybe ~(varStr dt)
+             refine : ~(tpe) -> Maybe ~(t)
              refine = refineSo ~(var con)
 
              public export
              fromInteger :  (n : Integer)
                          -> {auto 0 _: IsJust (~(refineNS) $ fromInteger n)}
-                         -> ~(varStr dt)
+                         -> ~(t)
              fromInteger n = fromJust (refine $ fromInteger n)
            ]
         ]
+
+export
+refinedIntegralDflt : (dataType : String) -> (tpe : TTImp) -> Elab ()
+refinedIntegralDflt dt tpe =
+  refinedIntegral dt (varStr dt) (UN $ "Mk" ++ dt) `{{value}} tpe
 
 ||| Specialized version of `refinedIntegral` for data types,
 ||| which adhere to the following conventions:
@@ -205,7 +195,7 @@ refinedIntegral dt con acc tpe =
 ||| ```
 export
 refinedInt : (dataType : String) -> Elab ()
-refinedInt dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Int)
+refinedInt dt = refinedIntegralDflt dt `(Int)
 
 ||| Specialized version of `refinedIntegral` for data types,
 ||| which adhere to the following conventions:
@@ -215,7 +205,7 @@ refinedInt dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Int)
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
 refinedBits8 : (dataType : String) -> Elab ()
-refinedBits8 dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Bits8)
+refinedBits8 dt = refinedIntegralDflt dt `(Bits8)
 
 ||| Specialized version of `refinedIntegral` for data types,
 ||| which adhere to the following conventions:
@@ -225,7 +215,7 @@ refinedBits8 dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Bits8)
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
 refinedBits16 : (dataType : String) -> Elab ()
-refinedBits16 dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Bits16)
+refinedBits16 dt = refinedIntegralDflt dt `(Bits16)
 
 ||| Specialized version of `refinedIntegral` for data types,
 ||| which adhere to the following conventions:
@@ -235,7 +225,7 @@ refinedBits16 dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Bits16)
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
 refinedBits32 : (dataType : String) -> Elab ()
-refinedBits32 dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Bits32)
+refinedBits32 dt = refinedIntegralDflt dt `(Bits32)
 
 ||| Specialized version of `refinedIntegral` for data types,
 ||| which adhere to the following conventions:
@@ -245,7 +235,7 @@ refinedBits32 dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Bits32)
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
 refinedBits64 : (dataType : String) -> Elab ()
-refinedBits64 dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Bits64)
+refinedBits64 dt = refinedIntegralDflt dt `(Bits64)
 
 ||| This creates `Eq`, `Ord`, and `Show` implementations as
 ||| well as conversion functions for a refined floating point
@@ -256,12 +246,12 @@ refinedBits64 dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Bits64)
 ||| data type's name.
 |||
 ||| ```idris example
-||| record Abundance where
+||| record Abundance a where
 |||   constructor MkAbundance
 |||   value : Double
 |||   0 inBounds : So (0 < value && value <= 1)
 |||
-||| %runElab refinedFloating "Abundance" `{{MkAbundance}} `{{value}}
+||| %runElab refinedFloating "Abundance" `(Abundance a) `{{MkAbundance}} `{{value}}
 ||| ```
 |||
 ||| The above will result in the following declarations being generated:
@@ -287,10 +277,11 @@ refinedBits64 dt = refinedIntegral dt (UN $ "Mk" ++ dt) `{{value}} `(Bits64)
 ||| ```
 export
 refinedFloating :  (dataType : String)
+                -> (dt       : TTImp)
                 -> (con      : Name)
                 -> (accessor : Name)
                 -> Elab ()
-refinedFloating dt con acc =
+refinedFloating dt t con acc =
   let ns   = MkNS [dt]
 
       -- this has to be namespaced
@@ -298,17 +289,17 @@ refinedFloating dt con acc =
       -- in fromInteger
       refineNS = var $ NS ns (UN "refine")
 
-   in refinedEqOrdShow dt acc >>
+   in refinedEqOrdShow dt t acc >>
       declare
         [ INamespace EmptyFC ns
           `[ public export
-             refine : Double -> Maybe ~(varStr dt)
+             refine : Double -> Maybe ~(t)
              refine = refineSo ~(var con)
 
              public export
              fromDouble :  (n : Double)
                         -> {auto 0 _: IsJust (~(refineNS) n)}
-                        -> ~(varStr dt)
+                        -> ~(t)
              fromDouble n = fromJust (refine n)
            ]
         ]
@@ -321,7 +312,7 @@ refinedFloating dt con acc =
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
 refinedDouble : (dataType : String) -> Elab ()
-refinedDouble dt = refinedFloating dt (UN $ "Mk" ++ dt) `{{value}}
+refinedDouble dt = refinedFloating dt (varStr dt) (UN $ "Mk" ++ dt) `{{value}}
 
 ||| This creates `Eq`, `Ord`, and `Show` implementations as
 ||| well as conversion functions for a refined string value.
@@ -331,12 +322,12 @@ refinedDouble dt = refinedFloating dt (UN $ "Mk" ++ dt) `{{value}}
 ||| data type's name.
 |||
 ||| ```idris example
-||| record Html where
+||| record Html a where
 |||   constructor MkHtml
 |||   value : String
 |||   0 inBounds : So (isValidHtml value)
 |||
-||| %runElab refinedText "Html" `{{MkHtml}} `{{value}}
+||| %runElab refinedText "Html" `(Html a) `{{MkHtml}} `{{value}}
 ||| ```
 |||
 ||| The above will result in the following declarations being generated:
@@ -362,10 +353,11 @@ refinedDouble dt = refinedFloating dt (UN $ "Mk" ++ dt) `{{value}}
 ||| ```
 export
 refinedText :  (dataType : String)
+            -> (dt       : TTImp)
             -> (con      : Name)
             -> (accessor : Name)
             -> Elab ()
-refinedText dt con acc =
+refinedText dt t con acc =
   let ns   = MkNS [dt]
 
       -- this has to be namespaced
@@ -373,17 +365,17 @@ refinedText dt con acc =
       -- in fromInteger
       refineNS = var $ NS ns (UN "refine")
 
-   in refinedEqOrdShow dt acc >>
+   in refinedEqOrdShow dt t acc >>
       declare
         [ INamespace EmptyFC ns
           `[ public export
-             refine : String -> Maybe ~(varStr dt)
+             refine : String -> Maybe ~(t)
              refine = refineSo ~(var con)
 
              public export
              fromString :  (n : String)
                         -> {auto 0 _: IsJust (~(refineNS) n)}
-                        -> ~(varStr dt)
+                        -> ~(t)
              fromString n = fromJust (refine n)
            ]
         ]
@@ -396,4 +388,4 @@ refinedText dt con acc =
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
 refinedString : (dataType : String) -> Elab ()
-refinedString dt = refinedText dt (UN $ "Mk" ++ dt) `{{value}}
+refinedString dt = refinedText dt (varStr dt) (UN $ "Mk" ++ dt) `{{value}}

@@ -12,5 +12,6 @@ depends    = base    >= 0.3.0
 modules = Language.Reflection.Derive
         , Language.Reflection.Pretty
         , Language.Reflection.Refined
+        , Language.Reflection.Refined.Util
         , Language.Reflection.Syntax
         , Language.Reflection.Types
