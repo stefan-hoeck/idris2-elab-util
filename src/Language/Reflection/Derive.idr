@@ -217,3 +217,9 @@ mkShow show = MkShow show (\_ => show)
 public export %inline
 mkShowPrec : (showPrec : Prec -> a -> String) -> Show a
 mkShowPrec showPrec = MkShow (showPrec Open) showPrec
+
+||| Creates a `DecEq` value from the passed implementation function
+||| for `decEq`
+public export %inline
+mkDecEq : (decEq : (x1 : a) -> (x2 : a) -> Dec (x1 = x2)) -> DecEq a
+mkDecEq = %runElab check (var $ singleCon "DecEq")
