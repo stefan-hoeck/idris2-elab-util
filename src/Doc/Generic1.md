@@ -96,6 +96,7 @@ generic representations of algebraic data types:
 ```idris
 public export
 interface Generic (0 t : Type) (0 code : List (List Type)) | t where
+  constructor MkGeneric
   from : t -> SOP code
   to   : SOP code -> t
 
@@ -254,10 +255,6 @@ the machine-generated names of unnamed arguments in pattern matches.
 Function `nameStr` converts such names to similar user-defined names.
 
 ```idris
-export
-mkGeneric : Name
-mkGeneric = singleCon "Generic"
-
 private
 genericDecl : TypeInfo -> List Decl
 genericDecl ti =
@@ -277,7 +274,7 @@ genericDecl ti =
       to      = x .=> iCase varX implicitFalse (toClauses names)
 
    in [ interfaceHint Public function funType
-      , def function [ var function .= appAll mkGeneric [from,to] ] ]
+      , def function [ var function .= appAll "MkGeneric" [from,to] ] ]
 ```
 
 Let's break this down a bit: We first get access

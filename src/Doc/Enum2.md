@@ -110,22 +110,11 @@ eqInterfaceDecl = `[ Eq Gender ]
 From the [implementation notes](https://idris2.readthedocs.io/en/latest/implementation/overview.html#auto-implicits)
 we learn that interfaces are translated to records and
 implementations to search hints, so we might try to create
-such a record value manually. However, there comes a new hurdle.
-What's the name of `Eq`'s constructor? There are several ways
-to find out, but easiest is probably case expansion
-in interactive edting. The result comes as a surprise:
-
-```
-inspectEq : Eq Gender -> Eq Gender
-inspectEq (Eq at Prelude/EqOrd.idr:13:1--22:7 _ _) = ?eqTest_rhs_1
-```
-
-This does not seem to be a constructor we can use
-in a quote directly. However, it is possible to reflect on it and
-use it in metaprograms. `Language.Reflection` defines utilities
-for finding data types and their constructors by name.
-In addition, module `Language.Reflect.Types` in this package
-allows us to gather detailed information about data types.
+such a record value manually. All interfaces in `prelude`
+and `base` have been given properly named constructor recently,
+so creating an `Eq` value manually is very easy.
+For interfaces without explicit constructor we can use
+`getInfo` to inspect the type at hand:
 
 ```idris
 export
@@ -139,7 +128,7 @@ Pretty printing the above `TypeInfo` yields the following:
 Doc.Enum2> :exec putPretty eqInfo
 
   MkTypeInfo Prelude.EqOrd.Eq [(MW ExplicitArg ty : IHole _)]
-    MkCon Prelude.EqOrd.Eq at Prelude/EqOrd.idr:13:1--22:7
+    MkCon Prelude.EqOrd.MkEq
           [ (M0 ImplicitArg ty : IType)
           , (MW ExplicitArg == : IPi.  (MW ExplicitArg {arg:2} : IVar ty)
                                     -> (MW ExplicitArg {arg:3} : IVar ty)
@@ -154,22 +143,16 @@ Doc.Enum2> :exec putPretty eqInfo
 ### Interface Implementation, Part 2
 
 The above output shows the general structure we are heading towards.
-We somehow need to get access to that strangely named
-constructor of `Eq`, define local implementations for
+We need to define local implementations for
 `(==)` and `(/=)` and then apply those implementations
 to the constructor.
-
-Luckily, module `Language.Reflection.Types` provides a macro `singleCon`
-for extracting the name of the sole constructor of a data type
-if it exists. Otherwise the elaborator fails, throwing a compile-time
-exception.
 
 ```idris
 export
 eqImpl : String -> List String -> List Decl
 eqImpl enumName cons =
   let -- names
-      mkEq         = singleCon "Eq"
+      mkEq         = UN "MkEq"
       eqName       = UN "eq"
       functionName = UN $ "implEq" ++ enumName
 
@@ -236,7 +219,7 @@ export
 ordImpl : String -> List String -> List Decl
 ordImpl enumName cons =
   let -- names
-      mkOrd        = singleCon "Ord"
+      mkOrd        = UN "MkOrd"
       compName     = UN "comp"
       functionName = UN $ "implOrd" ++ enumName
 
@@ -278,7 +261,7 @@ export
 showImpl : String -> List String -> List Decl
 showImpl enumName cons =
   let -- names
-      mkShow       = singleCon "Show"
+      mkShow       = UN "MkShow"
       showName     = UN "show"
       functionName = UN $ "implShow" ++ enumName
 

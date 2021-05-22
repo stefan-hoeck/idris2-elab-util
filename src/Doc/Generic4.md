@@ -136,7 +136,7 @@ Generic' g =
 
       from    = x .=> iCase varX implicitFalse (map fromClause names)
       to      = x .=> iCase varX implicitFalse (map toClause names)
-      impl    = appAll mkGeneric [from,to]
+      impl    = appAll "MkGeneric" [from,to]
 
    in MkInterfaceImpl "Generic" impl funType
 ```
@@ -168,7 +168,7 @@ a `Generic` implementation:
 ```idris
 private
 mkEq : TTImp
-mkEq = var (singleCon "Eq") .$ `(genEq) .$ `(\a,b => not (a == b))
+mkEq = varStr "MkEq" .$ `(genEq) .$ `(\a,b => not (a == b))
 
 export
 Eq' : MkImplementation
@@ -178,10 +178,6 @@ Eq' g = MkInterfaceImpl "Eq" mkEq (implementationType `(Eq) g)
 Same for `Ord`:
 
 ```idris
-private
-mkOrd : Name
-mkOrd = singleCon "Ord"
-
 private
 ordFunctions : List TTImp
 ordFunctions = [ `(genCompare)
@@ -195,7 +191,7 @@ ordFunctions = [ `(genCompare)
 
 export
 Ord' : MkImplementation
-Ord' g = let impl = appAll mkOrd ordFunctions
+Ord' g = let impl = appAll "MkOrd" ordFunctions
           in MkInterfaceImpl "Ord" impl (implementationType `(Ord) g)
 ```
 

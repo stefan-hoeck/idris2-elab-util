@@ -9,9 +9,7 @@ module Doc.Generic5
 import public Language.Reflection.Derive
 import Doc.Generic1
 
-%hide Language.Reflection.Derive.mkEq'
 %hide Language.Reflection.Derive.mkEq
-%hide Language.Reflection.Derive.mkOrd'
 %hide Language.Reflection.Derive.mkOrd
 
 %language ElabReflection
@@ -31,6 +29,10 @@ function `check` from `Language.Reflection`:
 mkEq' : (eq : a -> a -> Bool) -> (neq : a -> a -> Bool) -> Eq a
 mkEq' = %runElab check (var $ singleCon "Eq")
 ```
+
+Note that strictly speaking, the above is no longer necessary,
+as `Eq` has been given a properly named constructor. I still
+leave this as a usage example of `check`.
 
 So, `check` tries to retype an untyped `TTImp` value during
 elaboration reflection. Needless to say, we get a type error

@@ -59,7 +59,7 @@ genericDecl ti =
       to      = x .=> iCase varX implicitFalse (toClauses names)
 
    in [ interfaceHint Public function funType
-      , def function [ var function .= appAll mkGeneric [from,to] ] ]
+      , def function [ var function .= appAll "MkGeneric" [from,to] ] ]
 
 export
 deriveGeneric : Name -> Elab ()

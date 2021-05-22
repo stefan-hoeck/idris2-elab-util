@@ -189,108 +189,31 @@ implementationType iface (MkDeriveUtil _ appTp names argTypesWithParams) =
 --          Interface Factories
 --------------------------------------------------------------------------------
 
-||| Creates an `Eq` value from the passed implementation functions
-||| for (==) and (/=).
-public export %inline
-mkEq' : (eq : a -> a -> Bool) -> (neq : a -> a -> Bool) -> Eq a
-mkEq' = %runElab check (var $ singleCon "Eq")
-
 ||| Like `mkEq'` but generates (/=) from the passed `eq` function.
 public export %inline
 mkEq : (eq : a -> a -> Bool) -> Eq a
-mkEq eq = mkEq' eq (\a,b => not $ eq a b)
-
-||| Creates an `Ord` value from the passed implementation functions
-||| for `compare`, `(<)`, `(>)`, `(<=)`, `(>=)`, `min`, `max`.
-public export %inline
-mkOrd' : Eq a
-       => (compare : a -> a -> Ordering)
-       -> (lt : a -> a -> Bool)
-       -> (gt : a -> a -> Bool)
-       -> (leq : a -> a -> Bool)
-       -> (geq : a -> a -> Bool)
-       -> (min : a -> a -> a)
-       -> (max : a -> a -> a)
-       -> Ord a
-mkOrd' = %runElab check (var $ singleCon "Ord")
+mkEq eq = MkEq eq (\a,b => not $ eq a b)
 
 ||| Creates an `Ord` value from the passed comparison function
 ||| using default implementations based on `comp` for all
 ||| other function.
 public export
 mkOrd : Eq a => (comp : a -> a -> Ordering) -> Ord a
-mkOrd comp = mkOrd' comp
-                    (\a,b => comp a b == LT)
-                    (\a,b => comp a b == GT)
-                    (\a,b => comp a b /= GT)
-                    (\a,b => comp a b /= LT)
-                    (\a,b => if comp a b == GT then a else b)
-                    (\a,b => if comp a b == LT then a else b)
-
-||| Creates a `Num` value from the passed functions.
-public export %inline
-mkNum :  (plus : a -> a -> a)
-      -> (times : a -> a -> a)
-      -> (fromInt : Integer -> a)
-      -> Num a
-mkNum = %runElab check (var $ singleCon "Num")
-
-||| Creates a `Neg` value from the passed functions.
-public export %inline
-mkNeg : Num a
-      => (negate : a -> a)
-      -> (minus  : a -> a -> a)
-      -> Neg a
-mkNeg = %runElab check (var $ singleCon "Neg")
-
-||| Creates an `Abs` value from the passed function
-||| and `Num` instance.
-public export
-mkAbs :  Num a => (abs : a -> a) -> Abs a
-mkAbs = %runElab check (var $ singleCon "Abs")
-
-||| Creates a `Fractional` value from the passed functions
-||| and `Num` instance.
-public export %inline
-mkFractional : Num a => (div : a -> a -> a) -> (recip : a -> a) -> Fractional a
-mkFractional = %runElab check (var $ singleCon "Fractional")
-
-||| Creates an `Integral` value from the passed functions.
-mkIntegral : Num a => (div : a -> a -> a) -> (mod : a -> a -> a) -> Integral a
-mkIntegral = %runElab check (var $ singleCon "Integral")
-
-||| Creates a `Show` value from the passed functions.
-public export %inline
-mkShow' : (show : a -> String) -> (showPrec : Prec -> a -> String) -> Show a
-mkShow' = %runElab check (var $ singleCon "Show")
+mkOrd comp =
+  MkOrd comp
+    (\a,b => comp a b == LT)
+    (\a,b => comp a b == GT)
+    (\a,b => comp a b /= GT)
+    (\a,b => comp a b /= LT)
+    (\a,b => if comp a b == GT then a else b)
+    (\a,b => if comp a b == LT then a else b)
 
 ||| Creates a `Show` value from the passed `show` functions.
 public export %inline
 mkShow : (show : a -> String) -> Show a
-mkShow show = mkShow' show (\_ => show)
+mkShow show = MkShow show (\_ => show)
 
 ||| Creates a `Show` value from the passed `showPrec` functions.
 public export %inline
 mkShowPrec : (showPrec : Prec -> a -> String) -> Show a
-mkShowPrec showPrec = mkShow' (showPrec Open) showPrec
-
-||| Creates an `Uninhabited` value from the passed function.
-public export %inline
-mkUninhabited : (uninhabited : a -> Void) -> Uninhabited a
-mkUninhabited = %runElab check (var $ singleCon "Uninhabited")
-
-||| Creates a `Semigroup` value from the passed function.
-public export %inline
-mkSemigroup : (mappend : a -> a -> a) -> Semigroup a
-mkSemigroup = %runElab check (var $ singleCon "Semigroup")
-
-||| Creates a `Monoid` value from the passed neutral value.
-public export %inline
-mkMonoid : Semigroup a => (neutral : a) -> Monoid a
-mkMonoid = %runElab check (var $ singleCon "Monoid")
-
-||| Creates a `DecEq` value from the passed implementation function
-||| for `decEq`
-public export %inline
-mkDecEq : (decEq : (x1 : a) -> (x2 : a) -> Dec (x1 = x2)) -> DecEq a
-mkDecEq = %runElab check (var $ singleCon "DecEq")
+mkShowPrec showPrec = MkShow (showPrec Open) showPrec
