@@ -202,20 +202,23 @@ Finally, lets put our new utilities to work. Below, we derive
 from `Language.Reflection.TT` and `Language.Reflection.TTImp`.
 
 ```idris
-%runElab (derive "FC"         [Generic', Eq', Ord'])
-%runElab (derive "NameType"   [Generic', Eq', Ord'])
-%runElab (derive "Constant"   [Generic', Eq', Ord'])
-%runElab (derive "Namespace"  [Generic', Eq', Ord'])
-%runElab (derive "Name"       [Generic', Eq', Ord'])
-%runElab (derive "Count"      [Generic', Eq', Ord'])
-%runElab (derive "LazyReason" [Generic', Eq', Ord'])
-%runElab (derive "PiInfo"     [Generic', Eq', Ord'])
-%runElab (derive "BindMode"   [Generic', Eq', Ord'])
-%runElab (derive "UseSide"    [Generic', Eq', Ord'])
-%runElab (derive "DotReason"  [Generic', Eq', Ord'])
-%runElab (derive "Visibility" [Generic', Eq', Ord'])
-%runElab (derive "TotalReq"   [Generic', Eq', Ord'])
-%runElab (derive "DataOpt"    [Generic', Eq', Ord'])
+%runElab (derive "ModuleIdent"  [Generic', Eq', Ord'])
+%runElab (derive "VirtualIdent" [Generic', Eq', Ord'])
+%runElab (derive "OriginDesc"  [Generic', Eq', Ord'])
+%runElab (derive "FC"          [Generic', Eq', Ord'])
+%runElab (derive "NameType"    [Generic', Eq', Ord'])
+%runElab (derive "Constant"    [Generic', Eq', Ord'])
+%runElab (derive "Namespace"   [Generic', Eq', Ord'])
+%runElab (derive "Name"        [Generic', Eq', Ord'])
+%runElab (derive "Count"       [Generic', Eq', Ord'])
+%runElab (derive "LazyReason"  [Generic', Eq', Ord'])
+%runElab (derive "PiInfo"      [Generic', Eq', Ord'])
+%runElab (derive "BindMode"    [Generic', Eq', Ord'])
+%runElab (derive "UseSide"     [Generic', Eq', Ord'])
+%runElab (derive "DotReason"   [Generic', Eq', Ord'])
+%runElab (derive "Visibility"  [Generic', Eq', Ord'])
+%runElab (derive "TotalReq"    [Generic', Eq', Ord'])
+%runElab (derive "DataOpt"     [Generic', Eq', Ord'])
 ```
 
 ~~It seems not yet to be possible, to use this method in a mutual
