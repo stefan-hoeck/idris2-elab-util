@@ -201,6 +201,11 @@ export
 Pretty Constant where
   pretty (I x)       = pretty x
   pretty (BI x)      = pretty x
+  -- TODO : use `pretty` directly, once #1648 is merged
+  pretty (I8 x)      = pretty $ show x
+  pretty (I16 x)     = pretty $ show x
+  pretty (I32 x)     = pretty $ show x
+  pretty (I64 x)     = pretty $ show x
   pretty (B8 x)      = pretty x
   pretty (B16 x)     = pretty x
   pretty (B32 x)     = pretty x
@@ -211,6 +216,10 @@ Pretty Constant where
   pretty WorldVal    = "%World"
   pretty IntType     = "Int"
   pretty IntegerType = "Integer"
+  pretty Int8Type    = "Int8"
+  pretty Int16Type   = "Int16"
+  pretty Int32Type   = "Int32"
+  pretty Int64Type   = "Int64"
   pretty Bits8Type   = "Bits8"
   pretty Bits16Type  = "Bits16"
   pretty Bits32Type  = "Bits32"
