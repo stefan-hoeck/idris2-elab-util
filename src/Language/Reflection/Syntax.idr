@@ -455,5 +455,5 @@ lookupName : Name -> Elab (Name, TTImp)
 lookupName n = do pairs <- getType n
                   case (pairs,n) of
                        ([p],_)     => pure p
-                       (ps,UN str) => inCurrentNS (UN str) >>= assert_total {-now argument is NS, not UN-} lookupName
+                       (ps,UN str) => inCurrentNS (UN str) >>= \m => assert_total {-now argument is NS, not UN-} $ lookupName m
                        (ps,_)      => fail $ errMsg n ps
