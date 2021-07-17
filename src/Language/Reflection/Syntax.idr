@@ -43,6 +43,9 @@ nameStr (NS _ x) = nameStr x
 nameStr (MN x y) = x ++ show y
 nameStr (DN _ x) = nameStr x
 nameStr (RF x)   = x
+nameStr (Nested (x,y) n) = #"nested_\#{nameStr n}_\#{show x}_\#{show y}"#
+nameStr (CaseBlock x n) = #"case_n_\#{show x}"#
+nameStr (WithBlock x n) = #"with_n_\#{show x}"#
 
 --------------------------------------------------------------------------------
 --          Vars

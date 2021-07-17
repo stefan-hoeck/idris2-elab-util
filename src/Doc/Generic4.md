@@ -219,6 +219,8 @@ from `Language.Reflection.TT` and `Language.Reflection.TTImp`.
 %runElab (derive "Visibility"  [Generic', Eq', Ord'])
 %runElab (derive "TotalReq"    [Generic', Eq', Ord'])
 %runElab (derive "DataOpt"     [Generic', Eq', Ord'])
+%runElab (derive "WithFlag"    [Generic', Eq', Ord'])
+%runElab (derive "BuiltinType" [Generic', Eq', Ord'])
 ```
 
 ~~It seems not yet to be possible, to use this method in a mutual

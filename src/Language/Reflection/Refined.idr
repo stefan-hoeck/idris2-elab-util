@@ -176,7 +176,7 @@ refinedIntegral dt t con acc tpe =
 export
 refinedIntegralDflt : (dataType : String) -> (tpe : TTImp) -> Elab ()
 refinedIntegralDflt dt tpe =
-  refinedIntegral dt (varStr dt) (UN $ "Mk" ++ dt) `{{value}} tpe
+  refinedIntegral dt (varStr dt) (UN $ "Mk" ++ dt) `{value} tpe
 
 ||| Specialized version of `refinedIntegral` for data types,
 ||| which adhere to the following conventions:
@@ -312,7 +312,7 @@ refinedFloating dt t con acc =
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
 refinedDouble : (dataType : String) -> Elab ()
-refinedDouble dt = refinedFloating dt (varStr dt) (UN $ "Mk" ++ dt) `{{value}}
+refinedDouble dt = refinedFloating dt (varStr dt) (UN $ "Mk" ++ dt) `{value}
 
 ||| This creates `Eq`, `Ord`, and `Show` implementations as
 ||| well as conversion functions for a refined string value.
@@ -388,4 +388,4 @@ refinedText dt t con acc =
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
 refinedString : (dataType : String) -> Elab ()
-refinedString dt = refinedText dt (varStr dt) (UN $ "Mk" ++ dt) `{{value}}
+refinedString dt = refinedText dt (varStr dt) (UN $ "Mk" ++ dt) `{value}
