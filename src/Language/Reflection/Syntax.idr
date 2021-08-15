@@ -269,7 +269,7 @@ export
 
 ||| Extracts the arguments from a function type.
 export
-piAll : TTImp -> List $ Arg False -> TTImp
+piAll : TTImp -> List (Arg False) -> TTImp
 piAll res = foldr (.->) res
 
 ||| Extracts the arguments from a function type.
