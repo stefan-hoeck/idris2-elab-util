@@ -4,7 +4,7 @@ lib_pkg = elab-util.ipkg
 
 docs_pkg = elab-util-docs.ipkg
 
-.PHONY: all lib doc install clean clean-install repl
+.PHONY: all lib doc install clean clean-install repl develop
 
 all: lib docs
 
@@ -27,3 +27,6 @@ clean:
 # Start a REPL in rlwrap
 repl:
 	rlwrap -pGreen ${IDRIS2} --find-ipkg src/Language/Reflection/Pretty.idr
+
+develop:
+	find -name "*.idr" | entr -d idris2 --typecheck ${lib_pkg}
