@@ -208,28 +208,26 @@ Pretty NamedArg where
 ||| Extracts the arguments from a function type.
 export
 unPi : TTImp -> (List $ Arg False, TTImp)
-unPi (IPi _ c p n at rt) = let (args,rt') = unPi rt
-                            in (MkArg c p n at :: args, rt')
+unPi (IPi _ c p n at rt) = mapFst (MkArg c p n at ::) $ unPi rt
 unPi tpe                 = ([],tpe)
 
 ||| Extracts properly named arguments from a function type.
 export
 unPiNamed : TTImp -> Elab (List NamedArg, TTImp)
 unPiNamed v = let (args,rt') = unPi v
-               in map (`MkPair` rt') $ traverse namedArg args
+               in (, rt') <$> traverse namedArg args
 
 ||| Extracts the arguments from a lambda.
 export
 unLambda : TTImp -> (List $ Arg False, TTImp)
-unLambda (ILam _ c p n at rt) = let (args,rt') = unLambda rt
-                                 in (MkArg c p n at :: args, rt')
+unLambda (ILam _ c p n at rt) = mapFst (MkArg c p n at ::) $ unLambda rt
 unLambda tpe                  = ([],tpe)
 
 ||| Extracts properly named arguments from a lambda.
 export
 unLambdaNamed : TTImp -> Elab (List NamedArg, TTImp)
 unLambdaNamed v = let (args,rt') = unLambda v
-               in map (`MkPair` rt') $ traverse namedArg args
+                  in (, rt') <$> traverse namedArg args
 
 --------------------------------------------------------------------------------
 --          Lambdas
