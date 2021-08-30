@@ -264,7 +264,7 @@ Pretty BuiltinType where
 
 export
 Pretty WithFlag where
-  pretty v = ?bar
+  pretty Syntactic = "Syntactic"
 
 export
 Pretty DataOpt where
