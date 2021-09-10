@@ -237,6 +237,46 @@ export
 refinedBits64 : (dataType : String) -> Elab ()
 refinedBits64 dt = refinedIntegralDflt dt `(Bits64)
 
+||| Specialized version of `refinedIntegral` for data types,
+||| which adhere to the following conventions:
+|||
+|||  * If a data type's name is `Foo` its constructor is named `MkFoo`.
+|||  * The field accessor of the wrapped Int is named `value`.
+|||  * The proof of validity consists of a single zero quantity `So`.
+export
+refinedInt8 : (dataType : String) -> Elab ()
+refinedInt8 dt = refinedIntegralDflt dt `(Int8)
+
+||| Specialized version of `refinedIntegral` for data types,
+||| which adhere to the following conventions:
+|||
+|||  * If a data type's name is `Foo` its constructor is named `MkFoo`.
+|||  * The field accessor of the wrapped Int is named `value`.
+|||  * The proof of validity consists of a single zero quantity `So`.
+export
+refinedInt16 : (dataType : String) -> Elab ()
+refinedInt16 dt = refinedIntegralDflt dt `(Int16)
+
+||| Specialized version of `refinedIntegral` for data types,
+||| which adhere to the following conventions:
+|||
+|||  * If a data type's name is `Foo` its constructor is named `MkFoo`.
+|||  * The field accessor of the wrapped Int is named `value`.
+|||  * The proof of validity consists of a single zero quantity `So`.
+export
+refinedInt32 : (dataType : String) -> Elab ()
+refinedInt32 dt = refinedIntegralDflt dt `(Int32)
+
+||| Specialized version of `refinedIntegral` for data types,
+||| which adhere to the following conventions:
+|||
+|||  * If a data type's name is `Foo` its constructor is named `MkFoo`.
+|||  * The field accessor of the wrapped Int is named `value`.
+|||  * The proof of validity consists of a single zero quantity `So`.
+export
+refinedInt64 : (dataType : String) -> Elab ()
+refinedInt64 dt = refinedIntegralDflt dt `(Int64)
+
 ||| This creates `Eq`, `Ord`, and `Show` implementations as
 ||| well as conversion functions for a refined floating point
 ||| number.
@@ -389,3 +429,79 @@ refinedText dt t con acc =
 export
 refinedString : (dataType : String) -> Elab ()
 refinedString dt = refinedText dt (varStr dt) (UN $ "Mk" ++ dt) `{value}
+
+||| This creates `Eq`, `Ord`, and `Show` implementations as
+||| well as conversion functions for a refined charater.
+|||
+||| Conversion functions are called `refine` and `fromChar`
+||| and are put in their own namespace, named after the
+||| data type's name.
+|||
+||| ```idris example
+||| record Digit a where
+|||   constructor MkDigit
+|||   value : Char
+|||   0 inBounds : So (isDigit value)
+|||
+||| %runElab refinedText "Digit" `(Digit a) `{{MkDigit}} `{{value}}
+||| ```
+|||
+||| The above will result in the following declarations being generated:
+|||
+||| ```idris example
+||| Eq Digit where
+|||   (==) = (==) `on` value
+|||
+||| Ord Digit where
+|||   compare = compare `on` value
+|||
+||| Show Digit where
+|||   showPrec p = showPrec p . value
+|||
+||| namespace Digit
+|||   refine : Char -> Maybe Digit
+|||   refine = refineSo MkDigit
+|||
+|||   fromChar :  (v : Char)
+|||            -> {auto 0 _: IsJust (refine v)}
+|||            -> Digit
+|||   fromChar v = fromJust (refine v)
+||| ```
+export
+refinedCharacter :  (dataType : String)
+                 -> (dt       : TTImp)
+                 -> (con      : Name)
+                 -> (accessor : Name)
+                 -> Elab ()
+refinedCharacter dt t con acc =
+  let ns   = MkNS [dt]
+
+      -- this has to be namespaced
+      -- to avoid disambiguities when being used
+      -- in fromInteger
+      refineNS = var $ NS ns (UN "refine")
+
+   in refinedEqOrdShow dt t acc >>
+      declare
+        [ INamespace EmptyFC ns
+          `[ public export
+             refine : Char -> Maybe ~(t)
+             refine = refineSo ~(var con)
+
+             public export
+             fromChar :  (n : Char)
+                      -> {auto 0 _: IsJust (~(refineNS) n)}
+                      -> ~(t)
+             fromChar n = fromJust (refine n)
+           ]
+        ]
+
+||| Convenience version of `refinedCharacter` for data types,
+||| which adhere to the following conventions:
+|||
+|||  * If a data type's name is `Foo` its constructor is named `MkFoo`.
+|||  * The field accessor of the wrapped Char is named `value`.
+|||  * The proof of validity consists of a single zero quantity `So`.
+export
+refinedChar : (dataType : String) -> Elab ()
+refinedChar dt = refinedCharacter dt (varStr dt) (UN $ "Mk" ++ dt) `{value}
