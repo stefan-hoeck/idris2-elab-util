@@ -52,8 +52,8 @@ genericUtil ti = let pNames = map fst $ params ti
 ||| Generates the name of an interface's implementation function
 export
 implName : DeriveUtil -> String -> Name
-implName g interfaceName =  UN $ "impl" ++ interfaceName
-                                        ++ nameStr g.typeInfo.name
+implName g interfaceName = UN $ Basic $ "impl" ++ interfaceName
+                                               ++ nameStr g.typeInfo.name
 
 ||| Syntax tree and additional info about the
 ||| implementation function of an interface.

@@ -24,8 +24,8 @@ public export
 FromString Name where
   fromString s = run (split ('.' ==) s) []
     where run : List1 String -> List String -> Name
-          run (h ::: []) []        = UN h
-          run (h ::: []) ns        = NS (MkNS ns) (UN h)
+          run (h ::: []) []        = UN $ Basic h
+          run (h ::: []) ns        = NS (MkNS ns) (UN $ Basic h)
           run ll@(h ::: (y :: ys)) xs = run (assert_smaller ll $ y ::: ys) (h :: xs)
 
 ||| Takes a (probably fully qualified name) and generates a
@@ -38,11 +38,12 @@ camelCase = concat . split ('.' ==) . show
 
 export
 nameStr : Name -> String
-nameStr (UN x)   = x
+nameStr (UN $ Basic x)  = x
+nameStr (UN $ Field x)  = x
+nameStr (UN Underscore) = "_"
 nameStr (NS _ x) = nameStr x
 nameStr (MN x y) = x ++ show y
 nameStr (DN _ x) = nameStr x
-nameStr (RF x)   = x
 nameStr (Nested (x,y) n) = #"nested_\#{nameStr n}_\#{show x}_\#{show y}"#
 nameStr (CaseBlock x n) = #"case_n_\#{show x}"#
 nameStr (WithBlock x n) = #"with_n_\#{show x}"#
