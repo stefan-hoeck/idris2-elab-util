@@ -32,7 +32,7 @@ import public Language.Reflection.Derive
 export
 refinedEq : (dataType : String) -> (dt : TTImp) -> (accessor : Name) -> Elab ()
 refinedEq dt t accessor =
-  let eqFun   = UN $ "implEq"   ++ dt
+  let eqFun   = UN $ Basic $ "implEq"   ++ dt
       acc     = var accessor
 
    in declare
@@ -57,7 +57,7 @@ refinedEq dt t accessor =
 export
 refinedOrd : (dataType : String) -> (dt : TTImp) -> (accessor : Name) -> Elab ()
 refinedOrd dt t accessor =
-  let ordFun  = UN $ "implOrd"  ++ dt
+  let ordFun  = UN $ Basic $ "implOrd"  ++ dt
       acc     = var accessor
 
    in declare
@@ -82,7 +82,7 @@ refinedOrd dt t accessor =
 export
 refinedShow : (dataType : String) -> (dt : TTImp) -> (accessor : Name) -> Elab ()
 refinedShow dt t accessor =
-  let showFun = UN $ "implShow" ++ dt
+  let showFun = UN $ Basic $ "implShow" ++ dt
       acc     = var accessor
 
    in declare
@@ -156,7 +156,7 @@ refinedIntegral dt t con acc tpe =
       -- this has to be namespaced
       -- to avoid disambiguities when being used
       -- in fromInteger
-      refineNS = var $ NS ns (UN "refine")
+      refineNS = var $ NS ns (UN $ Basic "refine")
 
    in refinedEqOrdShow dt t acc >>
       declare
@@ -176,7 +176,7 @@ refinedIntegral dt t con acc tpe =
 export
 refinedIntegralDflt : (dataType : String) -> (tpe : TTImp) -> Elab ()
 refinedIntegralDflt dt tpe =
-  refinedIntegral dt (varStr dt) (UN $ "Mk" ++ dt) `{value} tpe
+  refinedIntegral dt (varStr dt) (UN $ Basic $ "Mk" ++ dt) `{value} tpe
 
 ||| Specialized version of `refinedIntegral` for data types,
 ||| which adhere to the following conventions:
@@ -327,7 +327,7 @@ refinedFloating dt t con acc =
       -- this has to be namespaced
       -- to avoid disambiguities when being used
       -- in fromInteger
-      refineNS = var $ NS ns (UN "refine")
+      refineNS = var $ NS ns (UN $ Basic "refine")
 
    in refinedEqOrdShow dt t acc >>
       declare
@@ -352,7 +352,7 @@ refinedFloating dt t con acc =
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
 refinedDouble : (dataType : String) -> Elab ()
-refinedDouble dt = refinedFloating dt (varStr dt) (UN $ "Mk" ++ dt) `{value}
+refinedDouble dt = refinedFloating dt (varStr dt) (UN $ Basic $ "Mk" ++ dt) `{value}
 
 ||| This creates `Eq`, `Ord`, and `Show` implementations as
 ||| well as conversion functions for a refined string value.
@@ -403,7 +403,7 @@ refinedText dt t con acc =
       -- this has to be namespaced
       -- to avoid disambiguities when being used
       -- in fromInteger
-      refineNS = var $ NS ns (UN "refine")
+      refineNS = var $ NS ns (UN $ Basic "refine")
 
    in refinedEqOrdShow dt t acc >>
       declare
@@ -428,7 +428,7 @@ refinedText dt t con acc =
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
 refinedString : (dataType : String) -> Elab ()
-refinedString dt = refinedText dt (varStr dt) (UN $ "Mk" ++ dt) `{value}
+refinedString dt = refinedText dt (varStr dt) (UN $ Basic $ "Mk" ++ dt) `{value}
 
 ||| This creates `Eq`, `Ord`, and `Show` implementations as
 ||| well as conversion functions for a refined charater.
@@ -479,7 +479,7 @@ refinedCharacter dt t con acc =
       -- this has to be namespaced
       -- to avoid disambiguities when being used
       -- in fromInteger
-      refineNS = var $ NS ns (UN "refine")
+      refineNS = var $ NS ns (UN $ Basic "refine")
 
    in refinedEqOrdShow dt t acc >>
       declare
@@ -504,4 +504,4 @@ refinedCharacter dt t con acc =
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
 refinedChar : (dataType : String) -> Elab ()
-refinedChar dt = refinedCharacter dt (varStr dt) (UN $ "Mk" ++ dt) `{value}
+refinedChar dt = refinedCharacter dt (varStr dt) (UN $ Basic $ "Mk" ++ dt) `{value}
