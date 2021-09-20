@@ -41,7 +41,7 @@ export
 genericDecl : ParamTypeInfo -> List Decl
 genericDecl ti =
   let names    = zipWithIndex (map paramConNames ti.cons)
-      function   = UN $ "implGeneric" ++ camelCase (name ti)
+      function   = UN . Basic $ "implGeneric" ++ camelCase (name ti)
       paramNames = map fst $ params ti
 
       -- Applies parameters to type constructor, i.e. `Either a b`

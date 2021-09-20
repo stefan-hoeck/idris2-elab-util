@@ -54,7 +54,7 @@ functions (and infix operators) provided by
 export
 eqDecl1 : String -> List String -> List Decl
 eqDecl1 enumName cons =
-  let functionName = UN $ "impl1Eq" ++ enumName
+  let functionName = UN . Basic $ "impl1Eq" ++ enumName
       function     = var functionName
       enum         = arg $ varStr enumName
 
@@ -152,9 +152,9 @@ export
 eqImpl : String -> List String -> List Decl
 eqImpl enumName cons =
   let -- names
-      mkEq         = UN "MkEq"
-      eqName       = UN "eq"
-      functionName = UN $ "implEq" ++ enumName
+      mkEq         = UN $ Basic "MkEq"
+      eqName       = UN $ Basic "eq"
+      functionName = UN . Basic $ "implEq" ++ enumName
 
       -- vars
       eq           = var eqName
@@ -219,9 +219,9 @@ export
 ordImpl : String -> List String -> List Decl
 ordImpl enumName cons =
   let -- names
-      mkOrd        = UN "MkOrd"
-      compName     = UN "comp"
-      functionName = UN $ "implOrd" ++ enumName
+      mkOrd        = UN $ Basic "MkOrd"
+      compName     = UN $ Basic "comp"
+      functionName = UN . Basic $ "implOrd" ++ enumName
 
       -- vars
       comp         = var compName
@@ -261,9 +261,9 @@ export
 showImpl : String -> List String -> List Decl
 showImpl enumName cons =
   let -- names
-      mkShow       = UN "MkShow"
-      showName     = UN "show"
-      functionName = UN $ "implShow" ++ enumName
+      mkShow       = UN $ Basic "MkShow"
+      showName     = UN $ Basic "show"
+      functionName = UN . Basic $ "implShow" ++ enumName
 
       -- vars
       show         = var showName

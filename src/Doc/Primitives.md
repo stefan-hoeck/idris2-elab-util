@@ -146,9 +146,9 @@ are just quoted versions of what we wrote above:
 export covering
 refinedEqOrdShow : String -> List Decl
 refinedEqOrdShow n =
-  let eqFun   = UN $ "implEq"   ++ n
-      ordFun  = UN $ "implOrd"  ++ n
-      showFun = UN $ "implShow" ++ n
+  let eqFun   = UN . Basic $ "implEq"   ++ n
+      ordFun  = UN . Basic $ "implOrd"  ++ n
+      showFun = UN . Basic $ "implShow" ++ n
 
       tpe     = varStr n
 
@@ -176,7 +176,7 @@ refinedInt n =
       -- this has to be namespaced
       -- to avoid disambiguities when being used
       -- in fromInteger
-      refineNS = var $ NS ns (UN "refine")
+      refineNS = var $ NS ns (UN $ Basic "refine")
 
    in declare $ refinedEqOrdShow n ++
         [ INamespace EmptyFC ns

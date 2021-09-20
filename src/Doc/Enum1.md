@@ -57,10 +57,10 @@ This leads to the following implementation:
 ```idris
 enumDecl1 name cons = IData EmptyFC Public dat
   where enumName : Name
-        enumName = UN name
+        enumName = UN $ Basic name
 
         mkCon : String -> ITy
-        mkCon n = MkTy EmptyFC EmptyFC (UN n) (IVar EmptyFC enumName)
+        mkCon n = MkTy EmptyFC EmptyFC (UN $ Basic n) (IVar EmptyFC enumName)
 
         dat : Data
         dat = MkData EmptyFC enumName (IType EmptyFC) [] (map mkCon cons)
@@ -84,9 +84,9 @@ the string passed whether the name is fully qualified or not.
 ```idris
 export
 enumDecl : (name : String) -> (cons : List String) -> Decl
-enumDecl name = simpleData Public (UN name) . map mkCon
+enumDecl name = simpleData Public (UN $ Basic name) . map mkCon
   where mkCon : String -> ITy
-        mkCon n = mkTy (UN n) (varStr name)
+        mkCon n = mkTy (UN $ Basic n) (varStr name)
 ```
 
 Here, we used functions `simpleData`, `mkTy`, and `varStr`

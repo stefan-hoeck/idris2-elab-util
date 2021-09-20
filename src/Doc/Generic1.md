@@ -262,7 +262,7 @@ genericDecl ti =
       names     = zipWithIndex (map conNames ti.cons)
 
       -- name of implementation function
-      function  = UN $ "implGeneric" ++ camelCase (name ti)
+      function  = UN . Basic $ "implGeneric" ++ camelCase (name ti)
 
       -- type of implementation function
       funType = `(Generic) .$ var (name ti) .$ mkCode ti

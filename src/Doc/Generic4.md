@@ -56,8 +56,8 @@ genericUtil ti = let pNames = map fst $ params ti
 
 export
 implName : DeriveUtil -> String -> Name
-implName g interfaceName =  UN $ "impl" ++ interfaceName
-                                        ++ nameStr g.typeInfo.name
+implName g interfaceName =  UN . Basic $ "impl" ++ interfaceName
+                                       ++ nameStr g.typeInfo.name
 ```
 
 We make function `implName` for generating the name of the
@@ -209,6 +209,7 @@ from `Language.Reflection.TT` and `Language.Reflection.TTImp`.
 %runElab (derive "NameType"    [Generic', Eq', Ord'])
 %runElab (derive "Constant"    [Generic', Eq', Ord'])
 %runElab (derive "Namespace"   [Generic', Eq', Ord'])
+%runElab (derive "UserName"    [Generic', Eq', Ord'])
 %runElab (derive "Name"        [Generic', Eq', Ord'])
 %runElab (derive "Count"       [Generic', Eq', Ord'])
 %runElab (derive "LazyReason"  [Generic', Eq', Ord'])
