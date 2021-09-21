@@ -1,13 +1,13 @@
 package elab-util
 
 authors    = "stefan-hoeck"
-version    = 0.3.1
+version    = 0.5.0
 readme     = "README.md"
 license    = "BSD-2 Clause"
 
 sourcedir  = "src"
-depends    = base    >= 0.4.0
-           , contrib >= 0.4.0
+depends    = base    >= 0.5.1
+           , contrib >= 0.5.1
 
 modules = Language.Reflection.Derive
         , Language.Reflection.Pretty

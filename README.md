@@ -24,7 +24,8 @@ a (still very experimental and incomplete) port of Haskell's
 packages useful to automatically derive interface implementations.
 
 ## Supported Idris Versions
-For the time being, this library tries to (and is forced to) follow closely the
-latest builds of [Idris2](https://github.com/idris-lang/Idris2).
+Starting from Idris2 version 0.5.1, tagged releases of the same
+minor version number (e.g. 0.5.x) will be made available, while the main
+branch keeps following the Idris2 main branch
 
-The latest commit has been built against Idris 2, version 0.4.0-426441eec.
+The latest commit has been built against Idris 2, version 0.5.1-bf0a15725.
