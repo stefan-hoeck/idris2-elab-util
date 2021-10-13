@@ -1,0 +1,45 @@
+name: The library
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - '**'
+  pull_request:
+    branches:
+      - main
+      - master
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+
+  read-ver:
+    name: Aquire compiler version
+    runs-on: ubuntu-latest
+    env:
+      IDRIS_VERSION_FILE: .idris-version
+    outputs:
+      idris-ver: ${{ steps.read-ver.outputs.idris-ver }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Read the version
+        id: read-ver
+        run: sed 's/^/::set-output name=idris-ver::/' < "${IDRIS_VERSION_FILE}"
+
+  build:
+    name: Build and test the lib
+    needs: read-ver
+    runs-on: ubuntu-latest
+    container: snazzybucket/idris2api:${{ needs.read-ver.outputs.idris-ver }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build lib
+        run: make lib
+      - name: Build docs
+        run: make docs
