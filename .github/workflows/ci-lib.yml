@@ -32,10 +32,16 @@ jobs:
         run: sed 's/^/::set-output name=idris-ver::/' < "${IDRIS_VERSION_FILE}"
 
   build:
-    name: Build and test the lib
+    name: Build the lib with ${{ matrix.idris-version }}
     needs: read-ver
     runs-on: ubuntu-latest
-    container: snazzybucket/idris2api:${{ needs.read-ver.outputs.idris-ver }}
+    strategy:
+      fail-fast: false
+      matrix:
+        idris-version:
+          - ${{ needs.read-ver.outputs.idris-ver }}
+          - latest
+    container: snazzybucket/idris2api:${{ matrix.idris-version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
