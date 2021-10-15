@@ -1,4 +1,4 @@
-name: The library
+name: Build
 
 on:
   push:
