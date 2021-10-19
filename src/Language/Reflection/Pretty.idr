@@ -237,9 +237,10 @@ Pretty Constant where
 
 export
 Pretty BindMode where
-  prettyPrec p (PI x)  = apply p "PI" [x]
-  prettyPrec _ PATTERN = "PATTERN"
-  prettyPrec _ NONE    = "NONE"
+  prettyPrec p (PI x)   = apply p "PI" [x]
+  prettyPrec _ PATTERN  = "PATTERN"
+  prettyPrec _ NONE     = "NONE"
+  prettyPrec _ COVERAGE = "COVERAGE"
 
 export
 Pretty UseSide where
