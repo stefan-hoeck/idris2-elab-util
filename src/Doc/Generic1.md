@@ -100,11 +100,11 @@ interface Generic (0 t : Type) (0 code : List (List Type)) | t where
   from : t -> SOP code
   to   : SOP code -> t
 
-public export
+public export total
 genEq : Generic t code => All2 Eq code => t -> t -> Bool
 genEq a b = from a == from b
 
-public export
+public export total
 genCompare :  Generic t code
            => All2 Eq code
            => All2 Ord code
@@ -132,15 +132,19 @@ Generic Person [[String,Int,List Person]] where
   to (Z [n,a,cs]) = MkPerson n a cs
 
 export
-Eq Person where (==) = genEq
+Eq Person where (==) = assert_total genEq
 
 export
-Ord Person where compare = genCompare
+Ord Person where compare = assert_total genCompare
 ```
 
 As can be seen, once we have an instance of `Generic t`,
 it is trivial to derive implementations of `Eq` and other
 typeclasses without the need of meta programming.
+Note, however, that due to the inductive nature of
+`Person` it is necessary to convince the totality checker
+by using `assert_total`. There doesn't seem to be a way
+around this right now.
 
 Another example, this time with a sum-type:
 
@@ -313,10 +317,10 @@ record Employee where
 %runElab (deriveGeneric "Employee")
 
 private
-Eq Employee where (==) = genEq
+Eq Employee where (==) = assert_total genEq
 
 private
-Ord Employee where compare = genCompare
+Ord Employee where compare = assert_total genCompare
 
 -- Just being able to write the type of this function like this
 -- is amazing. :-)

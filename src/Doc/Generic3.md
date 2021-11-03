@@ -75,10 +75,10 @@ data Tree a = Leaf a | Branch (List (Tree a))
 %runElab (deriveGeneric "Tree")
 
 private
-Eq a => Eq (Tree a) where (==) = genEq
+Eq a => Eq (Tree a) where (==) = assert_total genEq
 
 private
-Ord a => Ord (Tree a) where compare = genCompare
+Ord a => Ord (Tree a) where compare = assert_total genCompare
 
 private
 treeTest1 : (Leaf "foo" == Leaf "foo") = True
