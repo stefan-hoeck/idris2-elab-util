@@ -208,7 +208,7 @@ Our first approach might be the following (the same
 technique was used for the `Ord` instances
 in the [first post about generics](Generic1.md)):
 
-```
+```repl
 All Eq ts => All EqV ts => EqV (NP ts) where
 ```
 
@@ -253,7 +253,7 @@ The solution seems clear: We must drop our fancy single instance
 definitions using `All` and do it the classical way
 as in `Data.HVect` from contrib:
 
-```
+```repl
 Eq (NP []) where
 
 Eq t => Eq (NP ts) => Eq (NP (t :: ts)) where
@@ -500,7 +500,7 @@ when it still looks so similar to the original version.
 As a quick reminder, here's how `All` was implemented
 in the first post about generics:
 
-```
+```repl
 All : (f : Type -> Type) -> (ts : List Type) -> Type
 All f [] = ()
 All f (t::ts) = (f t, All f ts)
@@ -512,7 +512,7 @@ structure when implementing `Eq` and `Ord` for `NP` and `SOP`.
 However, it was also not possible to implement the following
 function
 
-```
+```repl
 allOrdToEq : All Ord ts -> All Eq ts
 ```
 
@@ -521,7 +521,7 @@ about the underlying structure of `All Ord ts`.
 For this, we would have had to included `ts`
 as a non-erased argument:
 
-```
+```repl
 allOrdToEq : {ts : List Type} -> All Eq ts -> All Ord ts
 ```
 

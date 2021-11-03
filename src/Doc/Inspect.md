@@ -16,7 +16,7 @@ command line utility [rlwrap](https://github.com/hanslub42/rlwrap)
 to provide this functionality. The following
 command sets up our REPL for the experiments in this section:
 
-```
+```repl
 $ rlwrap idris2 --find-ipkg src/Language/Reflection/Pretty.idr
 ```
 
@@ -33,7 +33,7 @@ constructors, functions, parameters, and variables.
 They can be quoted by putting an identifier in double
 curly braces:
 
-```
+```repl
 Language.Reflection.Pretty> :t `{{ Just }}
 UN "Just" : Name
 ```
@@ -42,7 +42,7 @@ Here, Idris not only shows us the types but also the
 data stucture of the interpreted value. We can also
 prefix names with a namespace:
 
-```
+```repl
 Language.Reflection.Pretty> `{{ Prelude.Types.Either }}
 NS (MkNS ["Types", "Prelude"]) (UN "Either") : Name
 ```
@@ -66,7 +66,7 @@ Probably the most important quoting facility
 is the ability to quote expressions. This
 results in values of type `Language.Reflection.TTImp.TTImp`
 
-```
+```repl
 Language.Reflection.Pretty> :t `(2 * x)
 ```
 
@@ -77,7 +77,7 @@ information. In order to render this a bit more readable while still
 trying to make the underlying tree structure visible, a
 pretty printer is provided:
 
-```
+```repl
 Language.Reflection.Pretty> :exec putPretty `(2 * x)
 
   IApp. IVar * $ (IApp. IVar fromInteger $ IPrimVal 2) $ IVar x
@@ -102,7 +102,7 @@ available infix operator `(.->)`)
 and lambdas (data constructor `ILam` and nesting
 operator `=>`; infix operator `(.=>)`):
 
-```
+```repl
 Language.Reflection.Pretty> :exec putPretty `(Show a => (val : a) -> String)
 
   IPi.  (MW AutoImplicit : IApp. IVar Show $ IVar a)
@@ -111,7 +111,7 @@ Language.Reflection.Pretty> :exec putPretty `(Show a => (val : a) -> String)
 
 ```
 
-```
+```repl
 Language.Reflection.Pretty> :exec putPretty `(\x,y => x ++ reverse y)
 
   ILam.  (MW ExplicitArg x : IImplicit False)
@@ -128,7 +128,7 @@ syntactic sugar dissections.
 
 Case expressions:
 
-```
+```repl
 Language.Reflection.Pretty> :exec putPretty `(case x of { EQ => "eq"; LT => "lt"; GT => "gt" })
 
   ICase (IVar x)
@@ -141,7 +141,7 @@ Language.Reflection.Pretty> :exec putPretty `(case x of { EQ => "eq"; LT => "lt"
 
 Let expressions:
 
-```
+```repl
 Language.Reflection.Pretty> :exec putPretty `(let val = show x in val == reverse val)
 
   ILet MW
@@ -154,7 +154,7 @@ Language.Reflection.Pretty> :exec putPretty `(let val = show x in val == reverse
 
 If-then-else:
 
-```
+```repl
 Language.Reflection.Pretty> :exec putPretty `(if x then y else z)
 
   ICase (IVar x)
@@ -165,7 +165,7 @@ Language.Reflection.Pretty> :exec putPretty `(if x then y else z)
 
 Idiom brackets:
 
-```
+```repl
 Language.Reflection.Pretty> :exec putPretty `([| fun x y |])
 
   IApp. IVar <*>
@@ -177,7 +177,7 @@ Language.Reflection.Pretty> :exec putPretty `([| fun x y |])
 
 Do notation:
 
-```
+```repl
 Language.Reflection.Pretty> :exec putPretty `(do x <- run; action x; pure x)
 
 App. IVar >>=
@@ -192,7 +192,7 @@ App. IVar >>=
 
 Monad comprehensions:
 
-```
+```repl
 Language.Reflection.Pretty> :exec putPretty `([x * x | x <- xs, even x])
 
   IApp. IVar >>=
@@ -231,7 +231,7 @@ testDecl = `[ export %inline
 
 In the REPL, we have to separate lines by using semicolons:
 
-```
+```repl
 ...> :exec putPretty `[export %inline test : Int -> Int; test n = n + n]
 
   [ IClaim MW
@@ -249,7 +249,7 @@ As can be seen, a top-level function consists of an `IClaim`
 
 Inspecting quoted data declarations is also possible:
 
-```
+```repl
 ...> :exec putPretty `[ data Foo t = A t | B ]
 
   [ IData Private

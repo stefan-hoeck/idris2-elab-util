@@ -39,7 +39,7 @@ elaboration reflection. Needless to say, we get a type error
 if the types do not match. The following, for instance, does not
 compile:
 
-```
+```repl
 mkEq' : (eq : a -> a -> Bool) -> Eq a
 mkEq' = %runElab check (var $ singleCon "Eq")
 ```

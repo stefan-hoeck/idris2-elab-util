@@ -25,7 +25,7 @@ implementing corresponding toplevel functions instead.
 Again, we will first make use of our pretty printers to
 inspect the structure of the function we want to implement:
 
-```
+```repl
 ...> :exec putPretty `[eq : T -> T -> Bool; eq A A = True; eq B B = True; eq _ _ = False]
 
 
@@ -102,7 +102,7 @@ the implementation of an interface directly. The following
 quote results in an error message from Idris
 (*Can't reflect a pragma*).
 
-```
+```repl
 eqInterfaceDecl : List Decl
 eqInterfaceDecl = `[ Eq Gender ]
 ```
@@ -124,7 +124,7 @@ eqInfo = getInfo "Eq"
 
 Pretty printing the above `TypeInfo` yields the following:
 
-```
+```repl
 Doc.Enum2> :exec putPretty eqInfo
 
   MkTypeInfo Prelude.EqOrd.Eq [(MW ExplicitArg ty : IHole _)]
@@ -187,7 +187,7 @@ eqImpl enumName cons =
 We will break this down in a moment. First, we check whether
 it actually works:
 
-```
+```idris
 export
 mkEqImpl : String -> List String -> Elab ()
 mkEqImpl enumName cons = declare (eqImpl enumName cons)

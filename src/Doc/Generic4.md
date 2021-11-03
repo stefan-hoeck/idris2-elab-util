@@ -146,7 +146,7 @@ and `Ord`, we have must be able to prefix instance
 declarations with the required auto implicits. For instance,
 the `Eq` instance of `Maybe` has the following type:
 
-```
+```repl
 {0 a: _} -> Eq a => Eq (Maybe a)
 ```
 

@@ -39,7 +39,7 @@ enumDecl1 : (name : String) -> (cons : List String) -> Decl
 Before we can implement `enumDecl`, we will inspect the
 structure of a typical enum type at the REPL:
 
-```
+```repl
 ...> :exec putPretty `[data Enum = A | B | C]
 
   [ IData Private

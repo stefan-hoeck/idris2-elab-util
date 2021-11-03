@@ -28,7 +28,7 @@ First, we look at `Maybe`. It has a single type parameter `ty`, which
 appears as an explicit argument to `Maybe`s type constructor
 and as an implicit argument to every data constructor.
 
-```
+```repl
 ...> :exec putPretty maybeInfo
 
   MkTypeInfo Prelude.Types.Maybe [(MW ExplicitArg ty : IType)]
@@ -51,7 +51,7 @@ Next comes `Either`. As can be seen below, the order
 of type parameters stays (of course) the same throughout
 data constructors.
 
-```
+```repl
 ...> :exec putPretty eitherInfo
 
 
@@ -79,7 +79,7 @@ vectInfo : TypeInfo
 vectInfo = getInfo "Vect"
 ```
 
-```
+```repl
 ...> :exec putPretty vectInfo
 
   MkTypeInfo Data.Vect.Vect
@@ -180,7 +180,7 @@ sumInfo = getInfo "ASum"
 
 Idris faithfully uses the same parameter names:
 
-```
+```repl
 ..> :exec putPretty sumInfo
 
   MkTypeInfo Doc.Generic2.ASum
@@ -229,7 +229,7 @@ sumParamInfo : ParamTypeInfo
 sumParamInfo = getParamInfo "ASum"
 ```
 
-```
+```repl
 ..> :exec putPretty sumParamInfo
 
   MkParamTypeInfo Doc.Generic2.ASum [(a, IType), (b, IType)]
