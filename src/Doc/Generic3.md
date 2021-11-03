@@ -1,4 +1,4 @@
-## Deriving `Generic` for Parameterized Data Types
+# Deriving `Generic` for Parameterized Data Types
 
 After our analysis in [part 2](Generic2.md), we should now have
 the ingredients to derive `Generic` instances for parameterized
@@ -127,7 +127,7 @@ crazyTest2 : (the (Crazy 2 Int List) CrazyC == CrazyB [[12]]) = False
 crazyTest2 = Refl
 ```
 
-### What's next
+## What's next
 
 This was pretty straight forward. In the [next post](Generic4.md) I'll
 have a look at

@@ -23,4 +23,3 @@ refineSo :  {f : a -> Bool}
 refineSo make val = case maybeSo (f val) of
                          Just oh => Just $ make val oh
                          Nothing => Nothing
-

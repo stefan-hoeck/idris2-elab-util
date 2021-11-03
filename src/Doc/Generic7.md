@@ -1,4 +1,4 @@
-## Verified Interfaces Part 2
+# Verified Interfaces Part 2
 
 With all the preparations from [part 1](Generic6.md) behind us,
 we will derive provably correct implementations for `Eq`
@@ -14,7 +14,7 @@ import Language.Reflection.Derive
 %language ElabReflection
 ```
 
-### A lawful version of `Generic`
+## A lawful version of `Generic`
 
 First, we should make sure that implementations of `Generic`
 themselves are well behaved. We expect that a data type
@@ -147,7 +147,7 @@ We have seen most of this before. The only new parts are
 the clauses and implementations for `fromToId` and `toFromId`, both
 of which are mostly identical to `toId` and `fromId`.
 
-### Generic Equality
+## Generic Equality
 
 As before, we can implement `genEq`.
 
@@ -238,7 +238,7 @@ data AnotherSum : Type where
 %runElab derive "AnotherSum" [Generic', Eq', EqV']
 ```
 
-### Limitations
+## Limitations
 
 Quite a few of the limitations listed here in earlier
 versions of this post could be resolved by now. I'll
@@ -257,7 +257,7 @@ for writing correctness proofs for interface implementations.
 With this, we'd not have to write additional interface
 hierarchies.
 
-### What's next
+## What's next
 
 I consider the part about generics to be mostly finished for the time
 being. Yet, there are some things still to be addressed: Support

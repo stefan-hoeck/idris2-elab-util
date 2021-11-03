@@ -1,4 +1,4 @@
-## Generic Deriving of Interface Implementations
+# Generic Deriving of Interface Implementations
 
 We would now like to clean up the syntax for deriving
 generic instances a bit. There is quite a bit of redundant
@@ -20,7 +20,7 @@ import Doc.Generic3
 Note: Some of the types and utility functions described
 here have been added to module `Language.Reflection.Derive`.
 
-### An Intermediary Utility Type for Generic Deriving
+## An Intermediary Utility Type for Generic Deriving
 
 First, we write a utility data type holding additional
 precalculated values of parameterized data types that
@@ -113,7 +113,7 @@ derive name fs = do decls <- deriveDecls name fs
                     declare $ map snd decls
 ```
 
-### Instances for `Generic`, `Eq`, and `Ord`
+## Instances for `Generic`, `Eq`, and `Ord`
 
 We can now write `MkImplementation` values for `Generic`,
 cleaning up parts of our code while we're at it.
@@ -146,7 +146,7 @@ and `Ord`, we have must be able to prefix instance
 declarations with the required auto implicits. For instance,
 the `Eq` instance of `Maybe` has the following type:
 
-```
+```repl
 {0 a: _} -> Eq a => Eq (Maybe a)
 ```
 
@@ -195,7 +195,7 @@ Ord' g = let impl = appAll "MkOrd" ordFunctions
           in MkInterfaceImpl "Ord" impl (implementationType `(Ord) g)
 ```
 
-### Interface Implementations for `TTImp` and Friends
+## Interface Implementations for `TTImp` and Friends
 
 Finally, lets put our new utilities to work. Below, we derive
 `Generic`, `Eq` and `Ord` implementations for all types
@@ -256,7 +256,7 @@ deriveMutual pairs = do declss <- traverse (uncurry deriveDecls) pairs
                       ]
 ```
 
-### Compiler Performance
+## Compiler Performance
 
 On my machine, compiling this literate source file takes about
 eight seconds. This doesn't seem too bad, considering that
@@ -273,7 +273,7 @@ results in additional layer of `S` constructors.
 Considering all of the above, I am pretty happy with the
 performance of the Idris compiler.
 
-### What's next
+## What's next
 
 Now that we have the means to derive some of the core interface
 implementations with pretty clean syntax, let us look into
