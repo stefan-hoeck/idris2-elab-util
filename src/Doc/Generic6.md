@@ -1,4 +1,4 @@
-## Verified Interfaces Part 1
+# Verified Interfaces Part 1
 
 I've been planning to write this part of the tutorial
 about generics for quite some time, but the writing
@@ -18,7 +18,7 @@ elaborator reflection as on Idris2 itself and some of its quirks.
 module Doc.Generic6
 ```
 
-### Verified `Eq`
+## Verified `Eq`
 
 When we are deriving interface implementations via `Generic`,
 we do so in a deterministic, predictable manner. It should therefore
@@ -202,7 +202,7 @@ EqV a => EqV b => EqV (Either a b) where
 Great, we should be able to do exactly the same thing
 for `NP` and `SOP`.
 
-### Verifying `Eq` for `NP` and `SOP`: Take One
+## Verifying `Eq` for `NP` and `SOP`: Take One
 
 Our first approach might be the following (the same
 technique was used for the `Ord` instances
@@ -247,7 +247,7 @@ and Idris was not. So here's the take home message for
 my future self: If Idris refuses to accept a proof it is almost
 always right, so stop forcing it to believe otherwise.
 
-### Verifying `Eq` for `NP` and `SOP`: Take Two
+## Verifying `Eq` for `NP` and `SOP`: Take Two
 
 The solution seems clear: We must drop our fancy single instance
 definitions using `All` and do it the classical way
@@ -278,7 +278,7 @@ Eventually, this led to a major rewrite of *idris2-sop*, which
 is why also in this post I will have to come up with new versions
 of `NP` and `SOP`.
 
-### Adding some Flexibility to `NP`
+## Adding some Flexibility to `NP`
 
 Before we can write *Verifying Eq for NP: Take Three*, we will
 need some more flexibility from `NP` itself: It is time
@@ -366,7 +366,7 @@ to be fine.
 With that out of the way, we are ready to proof the correctness
 of `NP`'s `Eq` implementation.
 
-### Verifying `Eq` for `NP`: Take Three
+## Verifying `Eq` for `NP`: Take Three
 
 And here it is:
 
@@ -396,7 +396,7 @@ export
 This is very similar to the `EqV` implementation
 for pairs, of course.
 
-### Verifying `Eq` for `SOP`
+## Verifying `Eq` for `SOP`
 
 It is now straight forward to write an implementation of `EqV`
 for `SOP`. However, we need another data structure for
@@ -491,7 +491,7 @@ export
   neqNotEq _ _      = Refl
 ```
 
-### Why not the orginial version of `All`?
+## Why not the orginial version of `All`?
 
 Now, that we arrived at our goal of having a performant
 and provably correct implementation of `Eq` for `SOP`,
@@ -532,7 +532,7 @@ on `allOrdToEq` with the following error message:
 *Can only add hints for concrete return types*.
 Going via a well-structured data type resolved all these issues.
 
-### What's next
+## What's next
 
 And that's it for this first part. We are now ready to automatically
 derive provably correct interface implementations. That second part will

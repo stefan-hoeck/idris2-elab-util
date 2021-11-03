@@ -1,4 +1,4 @@
-## Sums of Products: A Generic Representation for Algebraic Data Types
+# Sums of Products: A Generic Representation for Algebraic Data Types
 
 In Haskell, there are numerous libraries dealing with the
 concept of *Generics*: Canonical representations of algebraic
@@ -11,7 +11,7 @@ of representations of increasing complexity to the world
 of Idris and derive these generic representations through
 elaborator reflection.
 
-### Generic Codes: A List of Lists of Types
+## Generic Codes: A List of Lists of Types
 
 In [generic-sop](https://hackage.haskell.org/package/generics-sop)
 regular algebraic data types are represented as sums of products,
@@ -360,7 +360,7 @@ reqTest2 : Logout > Login "" "" = True
 reqTest2 = Refl
 ```
 
-### What's next
+## What's next
 
 The above implementation is very basic and error prone.
 We can not deal with parameterized or indexed types, nor

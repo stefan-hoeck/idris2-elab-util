@@ -1,4 +1,4 @@
-## A First Metaprogram: Defining Enumerations
+# A First Metaprogram: Defining Enumerations
 
 This tutorial is set up as a literate Idris file. We
 therefore need some module noise to get started.
@@ -12,7 +12,7 @@ import Language.Reflection.Syntax
 %language ElabReflection
 ```
 
-### Enums
+## Enums
 
 We often use sum types like `Weekday` below to define
 well-typed choices of constant values.
@@ -30,7 +30,7 @@ data Weekday = Monday
 We will now write a metaprogram that generates similar
 structures from a list of strings.
 
-### First Implementation
+## First Implementation
 
 ```idris
 enumDecl1 : (name : String) -> (cons : List String) -> Decl
@@ -66,7 +66,7 @@ enumDecl1 name cons = IData EmptyFC Public dat
         dat = MkData EmptyFC enumName (IType EmptyFC) [] (map mkCon cons)
 ```
 
-### Second Implementation
+## Second Implementation
 
 While it is typical for hand-written metaprograms to be
 quite verbose, this library provides a selection of
@@ -92,7 +92,7 @@ enumDecl name = simpleData Public (UN $ Basic name) . map mkCon
 Here, we used functions `simpleData`, `mkTy`, and `varStr`
 from `Language.Reflection.Syntax`.
 
-### Generating Enum Definitions
+## Generating Enum Definitions
 
 In order to use `enumDecl` to define an actual enum type,
 we need function `declare` from `Language.Reflection`:
@@ -132,7 +132,7 @@ data type `Gender` and will accept our `Eq` implementation.
 Note, that we needed to enable `%language ElabReflection` to
 get access to `%runElab`.
 
-### What's next
+## What's next
 
 We have not gained much in terms of saved code from our
 first metaprogram. However, the implementation of `Eq Gender`

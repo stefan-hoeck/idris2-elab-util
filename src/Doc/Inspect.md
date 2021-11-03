@@ -1,4 +1,4 @@
-## Inspecting the Structure of Idris Expressions
+# Inspecting the Structure of Idris Expressions
 
 In this section of the tutorial we will learn how
 to look at the underlying structure of Idris expressions.
@@ -20,13 +20,13 @@ command sets up our REPL for the experiments in this section:
 $ rlwrap idris2 --find-ipkg src/Language/Reflection/Pretty.idr
 ```
 
-### Quotes
+## Quotes
 
 We start by looking at the three types of quotes available
 in Idris. All of them start with a backtick (\`) followed
 by some expression wrapped in different types of parentheses.
 
-#### Names
+### Names
 Names (`Language.Reflection.TT.Name`)
 represent identifiers in Idris expressions: Names of data types,
 constructors, functions, parameters, and variables.
@@ -60,7 +60,7 @@ will use the `UN` constructor most of the time. In addition,
 module `Language.Reflection.Syntax` provides a `FromString`
 instance for `Name`.
 
-#### Expressions
+### Expressions
 
 Probably the most important quoting facility
 is the ability to quote expressions. This
@@ -212,7 +212,7 @@ but not when building syntax trees manually using the constructors
 of `Language.Reflection.TTImp`. It can be quite useful to visualize
 how these constructs are desugared by Idris.
 
-#### Declarations
+### Declarations
 
 Finally, it is possible to quote whole multiline declarations
 by putting them in quoted bracktes. In syntax files, multiline
@@ -263,7 +263,7 @@ Inspecting quoted data declarations is also possible:
 
 ```
 
-### What's next
+## What's next
 
 Now that we now how Idris expressions can be defined
 by means of `TTImp` and `Decl`, we can start

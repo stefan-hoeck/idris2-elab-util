@@ -1,4 +1,4 @@
-## Interface Implementations for Enumerations
+# Interface Implementations for Enumerations
 
 First, again, some module setup stuff.
 
@@ -18,7 +18,7 @@ for enumerations. This will be quite a bit more involved
 than generating the data types themselves, so we will break
 it down into several parts.
 
-### Toplevel Equality Functions
+## Toplevel Equality Functions
 
 We skip the interface part for now and focus on
 implementing corresponding toplevel functions instead.
@@ -95,7 +95,7 @@ eqTest = Refl
 
 Great, everything seems to work as expected.
 
-### Interface Implementation, Part 1
+## Interface Implementation, Part 1
 
 Unfortunately, it seems not to be possible to emulate
 the implementation of an interface directly. The following
@@ -140,7 +140,7 @@ Doc.Enum2> :exec putPretty eqInfo
 
 ```
 
-### Interface Implementation, Part 2
+## Interface Implementation, Part 2
 
 The above output shows the general structure we are heading towards.
 We need to define local implementations for
@@ -208,7 +208,7 @@ in a `where` block and pass it to `Eq`s constructor,
 together with its complement `neq`, which was
 defined cleanly via a quoted lambda.
 
-### Other Interfaces
+## Other Interfaces
 
 Nothing stops us from implementing additional
 interfaces. For completeness, we provide implementations
@@ -322,7 +322,7 @@ weekdayTest5 : show Thursday = "Thursday"
 weekdayTest5 = Refl
 ```
 
-### What's next
+## What's next
 
 Now that we got a first taste of automatic interface derivation, wouldn't
 it be nice, if we could not only do this for enums but for

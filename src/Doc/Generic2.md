@@ -1,4 +1,4 @@
-## The Challenges of Parameterized Data Types
+# The Challenges of Parameterized Data Types
 
 We will now try to generalize our `Generic` deriving
 to at the very least support parameterized types.
@@ -6,7 +6,7 @@ In order to do so, we will analyze the structure
 of several examples of parameterized and indexed
 types, to figure out a normalization strategy.
 
-### Parameters and Indices
+## Parameters and Indices
 
 ```idris
 module Doc.Generic2
@@ -114,7 +114,7 @@ record ParamNat (n : Nat) where
 Here, `n` is a parameter (of type `Nat`): We can not learn anything
 about it by pattern matching on `ParamNat`.
 
-### Parameters and Indices in `Generic`
+## Parameters and Indices in `Generic`
 
 We needed to make the above distinction between type parameters
 and indices, since they affect whether we can provide a single
@@ -161,7 +161,7 @@ Indeed, it seems like parameterized types are exactly those
 types, for which we can come up with a single implementation
 of `Generic`.
 
-### Normalizing Parameter Names
+## Normalizing Parameter Names
 
 Let's have a look at another example. `ASum` takes
 two type parameters but uses different names for
@@ -218,7 +218,7 @@ parameters but no indices, and we either need to introduce consistent
 naming of parameters or reject data types with inconsistently named
 parameters.
 
-### `ParamTypeInfo`
+## `ParamTypeInfo`
 
 Module `Language.Reflection.Types` provides a data type for
 properly normalized information about parameterized types:
@@ -240,7 +240,7 @@ sumParamInfo = getParamInfo "ASum"
 
 ```
 
-### What's next
+## What's next
 
 Now we should be ready to derive `Generic` instances
 for arbitrary parameterized types. [Let's go](Generic3.md).

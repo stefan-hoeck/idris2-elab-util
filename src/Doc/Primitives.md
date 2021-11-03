@@ -1,4 +1,4 @@
-## Refined Primitives
+# Refined Primitives
 
 The other day I came upon a nice and simple use case for some
 very straightforward elaborator reflection to avoid
@@ -17,7 +17,7 @@ import Language.Reflection.Derive
 %default total
 ```
 
-### Primitive Wrapper Types
+## Primitive Wrapper Types
 
 In real world applications, it is often necessary to write
 wrapper types for (refined) primitives, either out of
@@ -123,7 +123,7 @@ Neat. But of course, almost all the code we wrote above is completely
 uninteresting and would look almost exactly the same for other
 refined wrappers. This calls for metaprogramming, doesn't it?
 
-### Using Elaborator Reflection to cut the Boilerplate
+## Using Elaborator Reflection to cut the Boilerplate
 
 Before we start implementing a very simple elaborator script,
 we first agree on certain conventions, which will make the elaborator
@@ -212,7 +212,7 @@ c14 : Isotope
 c14 = MkIsotope 6 14
 ```
 
-### Conclusion
+## Conclusion
 
 This concludes this tutorial post. As can be seen, if we know the structure
 of data types in advance coming up with simple elaborator

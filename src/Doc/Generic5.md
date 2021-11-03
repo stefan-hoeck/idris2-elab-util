@@ -1,4 +1,4 @@
-## Type checked Elaborator Scripts
+# Type checked Elaborator Scripts
 
 In this part of the tutorial we try out a new technique to get back
 some of our beloved type safety when writing elaborator scripts.
@@ -15,7 +15,7 @@ import Doc.Generic1
 %language ElabReflection
 ```
 
-### Properly Typed Default Implementations
+## Properly Typed Default Implementations
 
 When we look back at [Generics Part 4](Generic4.md),
 we find that the writing of `Eq'` and `Ord'` forced us to implement these
@@ -154,7 +154,7 @@ maxTest : max (the (Test Int) (Foo 2)) (Foo 3) = Foo 3
 maxTest = Refl
 ```
 
-### Conclusion
+## Conclusion
 
 In this very short tutorial we learned that
 function `check` is useful whenever we try to implement
