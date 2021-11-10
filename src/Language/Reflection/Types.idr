@@ -52,7 +52,7 @@ record Con where
 
 ||| Tries to lookup a constructor by name.
 export
-getCon : Name -> Elab Con
+getCon : Elaboration m => Name -> m Con
 getCon n = do (n',tt)    <- lookupName n
               (args,tpe) <- unPiNamed tt
               pure $ MkCon n' args tpe
@@ -89,7 +89,7 @@ Pretty TypeInfo where
 ||| by name. The name need not be fully qualified, but
 ||| needs to be unambiguous.
 export
-getInfo' : Name -> Elab TypeInfo
+getInfo' : Elaboration m => Name -> m TypeInfo
 getInfo' n =
   do (n',tt)        <- lookupName n
      (args,IType _) <- unPiNamed tt
@@ -383,7 +383,7 @@ toParamTypeInfo (MkTypeInfo n as cs) =
 ||| type parameters in the constructors have been given
 ||| the same names as occurences in the type declaration.
 export
-getParamInfo' : Name -> Elab ParamTypeInfo
+getParamInfo' : Elaboration m => Name -> m ParamTypeInfo
 getParamInfo' n = do ti         <- getInfo' n
                      (Right pt) <- pure (toParamTypeInfo ti)
                                 | (Left err) => fail err

@@ -183,7 +183,7 @@ NamedArg : Type
 NamedArg = Arg True
 
 export
-namedArg : Arg False -> Elab NamedArg
+namedArg : Elaboration m => Arg False -> m NamedArg
 namedArg (MkArg c p m t) =
   map (\n => MkArg c p n t) $ maybe (genSym "x") pure m
 
@@ -214,7 +214,7 @@ unPi tpe                 = ([],tpe)
 
 ||| Extracts properly named arguments from a function type.
 export
-unPiNamed : TTImp -> Elab (List NamedArg, TTImp)
+unPiNamed : Elaboration m => TTImp -> m (List NamedArg, TTImp)
 unPiNamed v = let (args,rt') = unPi v
                in (, rt') <$> traverse namedArg args
 
@@ -226,7 +226,7 @@ unLambda tpe                  = ([],tpe)
 
 ||| Extracts properly named arguments from a lambda.
 export
-unLambdaNamed : TTImp -> Elab (List NamedArg, TTImp)
+unLambdaNamed : Elaboration m => TTImp -> m (List NamedArg, TTImp)
 unLambdaNamed v = let (args,rt') = unLambda v
                   in (, rt') <$> traverse namedArg args
 
@@ -453,7 +453,7 @@ errMsg n xs = let rest = concat $ intersperse ", " $ map (show . fst) xs
 
 ||| Looks up a name in the current namespace.
 export
-lookupName : Name -> Elab (Name, TTImp)
+lookupName : Elaboration m => Name -> m (Name, TTImp)
 lookupName n = do pairs <- getType n
                   case (pairs,n) of
                        ([p],_)     => pure p
