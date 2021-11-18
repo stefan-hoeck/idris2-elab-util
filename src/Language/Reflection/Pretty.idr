@@ -304,6 +304,7 @@ mutual
     prettyPrec _ NoInline       = "NoInline"
     prettyPrec p (NoMangle x)   = apply p "NoMangle" [x]
     prettyPrec _ TCInline       = "TCInline"
+    prettyPrec _ Deprecate      = "Deprecate"
     prettyPrec p (Hint x)       = apply p "Hint" [x]
     prettyPrec p (GlobalHint x) = apply p "GlobalHint" [x]
     prettyPrec _ ExternFn       = "ExternFn"
