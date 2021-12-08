@@ -342,10 +342,10 @@ mutual
     prettyPrec p (IBuiltin _ b n) = applyH p "IBuiltin" [b,n]
     prettyPrec p (IRunElabDecl _ t) = applyH p "IRunElabDecl" [t]
     prettyPrec p (IClaim _ c v o t) = applyH p "IClaim" [c,v,o,t]
-    prettyPrec p (IData _ v d) = applyH p "IData" [v,d]
+    prettyPrec p (IData _ v d t) = applyH p "IData" [v,d,t]
     prettyPrec p (IDef _ n cs) = applyH p "IDef" [n,cs]
     prettyPrec p (IParameters _ ps decs) = applyH p "IParameters" [ps,decs]
-    prettyPrec p (IRecord _ n v r) = applyH p "IRecord" [n, v, r]
+    prettyPrec p (IRecord _ n v t r) = applyH p "IRecord" [n, v, t, r]
     prettyPrec p (INamespace _ (MkNS ns) ds) =
       indentLines (applyDoc p "INamespace" [dotted ns]) (map pretty ds)
 
