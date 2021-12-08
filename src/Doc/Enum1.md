@@ -55,7 +55,7 @@ structure of a typical enum type at the REPL:
 This leads to the following implementation:
 
 ```idris
-enumDecl1 name cons = IData EmptyFC Public dat
+enumDecl1 name cons = IData EmptyFC Public Nothing dat
   where enumName : Name
         enumName = UN $ Basic name
 
