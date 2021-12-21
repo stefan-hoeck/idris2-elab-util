@@ -160,7 +160,7 @@ In this very short tutorial we learned that
 function `check` is useful whenever we try to implement
 a function using elaborator reflection whose type is already known at compile time.
 This was not the case for automatically derived interface implementations
-whose full type had to be put together from the correspoding
+whose full type had to be put together from the corresponding
 data type's name and type parameters.
 It was, however, possible for record constructors
 whose types we already knew but whose names we had

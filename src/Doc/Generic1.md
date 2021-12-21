@@ -6,7 +6,7 @@ data types. Different libraries differ in how they represent
 data types generically and what kinds of data types
 can be represented by generics.
 
-In this series of posts I'll try to adabt several types
+In this series of posts I'll try to adapt several types
 of representations of increasing complexity to the world
 of Idris and derive these generic representations through
 elaborator reflection.
@@ -290,7 +290,7 @@ The actual implementation consists of functions `from`
 and `to`, both implemented as anonymous functions
 with a pattern clause for each data constructor.
 Finally, we return the type declaration of
-the implementation function together with the acutal
+the implementation function together with the actual
 function definition consisting of a single pattern clause.
 
 The only thing still missing is an `Elab` function
@@ -371,5 +371,5 @@ Additionally, since we already have the necessary information
 available, it would be great to use constructor and
 argument names to derive instances for `Show` or JSON
 marshallers. In the [next part](Generic2.md), we will
-first analzye the challenges coming with parameterized
+first analyze the challenges coming with parameterized
 and indexed types.

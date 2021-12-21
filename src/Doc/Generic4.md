@@ -64,7 +64,7 @@ We make function `implName` for generating the name of the
 implementation function available, to allow interface
 implementations depending on other implementations
 to access this name. This is, for instance, required in
-the implemenation of `Ord'` (see below).
+the implementation of `Ord'` (see below).
 
 Since interface declarations always have the same
 structure, we gather the distinct parts in a separate
@@ -230,7 +230,7 @@ block. Therefore, we have to write a tiny bit
 of boilerplate for `Eq` and `Ord` instances
 for the data types from `Language.Reflection.TTImp`~~.
 
-I finally figured out how to derive mutally dependant implementations.
+I finally figured out how to derive mutually dependant implementations.
 The core idea was to declare all implementation types first,
 before actually declaring implementations. This separation has
 to occur in the `Elab` monad, as can be seen in the implementation
