@@ -12,7 +12,7 @@ data types in modules `Language.Reflection.TT` and
 
 Since the Idris REPL does not yet support scrolling
 through its command history, I suggest using the
-command line utility [rlwrap](https://github.com/hanslub42/rlwrap)
+command-line utility [rlwrap](https://github.com/hanslub42/rlwrap)
 to provide this functionality. The following
 command sets up our REPL for the experiments in this section:
 
@@ -39,7 +39,7 @@ UN "Just" : Name
 ```
 
 Here, Idris not only shows us the types but also the
-data stucture of the interpreted value. We can also
+data structure of the interpreted value. We can also
 prefix names with a namespace:
 
 ```repl
@@ -88,7 +88,7 @@ As can be seen, source locations have been removed and `Name`s
 are rendered without constructors. Function application is
 treated specially: The `TTImp` constructor `IApp` is shown to
 tell users which constructor was used, but nested calls to `IApp`
-are then replaced with an infix operater (`$`) to enhance readability
+are then replaced with an infix operator (`$`) to enhance readability
 and reduce the amount of parentheses. While this somewhat obfuscates
 how cascades of function application result in nested calls
 to `IApp`, it helps when verifying the correct structure of our own
@@ -215,7 +215,7 @@ how these constructs are desugared by Idris.
 ### Declarations
 
 Finally, it is possible to quote whole multiline declarations
-by putting them in quoted bracktes. In syntax files, multiline
+by putting them in quoted brackets. In syntax files, multiline
 quotes are supported:
 
 ```idris

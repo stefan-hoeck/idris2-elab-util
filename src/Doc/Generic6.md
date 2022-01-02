@@ -162,7 +162,7 @@ toAnd : a = True -> b = True -> a && Delay b = True
 toAnd ra rb = cong2 (&&) ra (cong delay rb)
 ```
 
-We are now ready to proof the correctnes of `Eq` for
+We are now ready to proof the correctness of `Eq` for
 `Pair` and `Either`:
 
 ```idris
@@ -222,7 +222,7 @@ from `All EqV ts`. Luckily, Idris realized that the two tuples
 of interface instances might be completely unrelated:
 It refused to accept any implementation for `EqV`'s
 propositions. The problem: `EqV` should only be able
-to proof the correctnes about the `Eq` instance
+to proof the correctness about the `Eq` instance
 that comes with itself. That's why we write
 `Eq a => EqV a` in our definition of `EqV`. And it should of course
 not be able to proof stuff about different, unrelated implementations
@@ -491,7 +491,7 @@ export
   neqNotEq _ _      = Refl
 ```
 
-## Why not the orginial version of `All`?
+## Why not the original version of `All`?
 
 Now, that we arrived at our goal of having a performant
 and provably correct implementation of `Eq` for `SOP`,
