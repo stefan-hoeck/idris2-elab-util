@@ -201,11 +201,10 @@ export
 Pretty Constant where
   pretty (I x)       = pretty x
   pretty (BI x)      = pretty x
-  -- TODO : use `pretty` directly, once #1648 is merged
-  pretty (I8 x)      = pretty $ show x
-  pretty (I16 x)     = pretty $ show x
-  pretty (I32 x)     = pretty $ show x
-  pretty (I64 x)     = pretty $ show x
+  pretty (I8 x)      = pretty x
+  pretty (I16 x)     = pretty x
+  pretty (I32 x)     = pretty x
+  pretty (I64 x)     = pretty x
   pretty (B8 x)      = pretty x
   pretty (B16 x)     = pretty x
   pretty (B32 x)     = pretty x
