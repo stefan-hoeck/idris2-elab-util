@@ -334,7 +334,7 @@ mutual
   Pretty Clause where
     prettyPrec p (PatClause _ l r) = applyH p "PatClause" [l, r]
     prettyPrec p (ImpossibleClause _ l) = applyH p "Impossible" [l]
-    prettyPrec p (WithClause _ l w prf fs cs) = applyH p "WithClause" [l,w,prf,fs,cs]
+    prettyPrec p (WithClause _ l r w prf fs cs) = applyH p "WithClause" [l,r,w,prf,fs,cs]
 
   export
   Pretty Decl where
