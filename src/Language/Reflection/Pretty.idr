@@ -198,21 +198,7 @@ Pretty Name where
   pretty = pretty . show
 
 export
-Pretty Constant where
-  pretty (I x)       = pretty x
-  pretty (BI x)      = pretty x
-  pretty (I8 x)      = pretty x
-  pretty (I16 x)     = pretty x
-  pretty (I32 x)     = pretty x
-  pretty (I64 x)     = pretty x
-  pretty (B8 x)      = pretty x
-  pretty (B16 x)     = pretty x
-  pretty (B32 x)     = pretty x
-  pretty (B64 x)     = pretty x
-  pretty (Str x)     = pretty x
-  pretty (Ch x)      = pretty x
-  pretty (Db x)      = pretty x
-  pretty WorldVal    = "%World"
+Pretty PrimType where
   pretty IntType     = "Int"
   pretty IntegerType = "Integer"
   pretty Int8Type    = "Int8"
@@ -228,6 +214,23 @@ Pretty Constant where
   pretty DoubleType  = "Double"
   pretty WorldType   = "World"
 
+export
+Pretty Constant where
+  pretty (I x)       = pretty x
+  pretty (BI x)      = pretty x
+  pretty (I8 x)      = pretty x
+  pretty (I16 x)     = pretty x
+  pretty (I32 x)     = pretty x
+  pretty (I64 x)     = pretty x
+  pretty (B8 x)      = pretty x
+  pretty (B16 x)     = pretty x
+  pretty (B32 x)     = pretty x
+  pretty (B64 x)     = pretty x
+  pretty (Str x)     = pretty x
+  pretty (Ch x)      = pretty x
+  pretty (Db x)      = pretty x
+  pretty (PrT t)     = pretty t
+  pretty WorldVal    = "%World"
 
 --------------------------------------------------------------------------------
 --          Pretty instance for TTImp

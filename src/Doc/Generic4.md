@@ -207,6 +207,7 @@ from `Language.Reflection.TT` and `Language.Reflection.TTImp`.
 %runElab (derive "OriginDesc"  [Generic', Eq', Ord'])
 %runElab (derive "FC"          [Generic', Eq', Ord'])
 %runElab (derive "NameType"    [Generic', Eq', Ord'])
+%runElab (derive "PrimType"    [Generic', Eq', Ord'])
 %runElab (derive "Constant"    [Generic', Eq', Ord'])
 %runElab (derive "Namespace"   [Generic', Eq', Ord'])
 %runElab (derive "UserName"    [Generic', Eq', Ord'])
