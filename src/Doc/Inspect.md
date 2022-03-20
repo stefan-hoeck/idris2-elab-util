@@ -30,12 +30,11 @@ by some expression wrapped in different types of parentheses.
 Names (`Language.Reflection.TT.Name`)
 represent identifiers in Idris expressions: Names of data types,
 constructors, functions, parameters, and variables.
-They can be quoted by putting an identifier in double
-curly braces:
+They can be quoted by putting an identifier in curly braces:
 
 ```repl
-Language.Reflection.Pretty> :t `{{ Just }}
-UN "Just" : Name
+Language.Reflection.Pretty> :t `{ Just }
+UN (Basic "Just") : Name
 ```
 
 Here, Idris not only shows us the types but also the
@@ -43,8 +42,8 @@ data structure of the interpreted value. We can also
 prefix names with a namespace:
 
 ```repl
-Language.Reflection.Pretty> `{{ Prelude.Types.Either }}
-NS (MkNS ["Types", "Prelude"]) (UN "Either") : Name
+Language.Reflection.Pretty> `{ Prelude.Types.Either }
+NS (MkNS ["Types", "Prelude"]) (UN (Basic "Either"))
 ```
 
 Note, that quoted names as well as other quoted expressions
