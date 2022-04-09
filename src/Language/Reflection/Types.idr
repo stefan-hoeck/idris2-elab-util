@@ -2,10 +2,9 @@ module Language.Reflection.Types
 
 -- inspired by https://github.com/MarcelineVQ/idris2-elab-deriving/
 
-import public Language.Reflection.Pretty
 import public Language.Reflection.Syntax
 import public Language.Reflection
-import Text.PrettyPrint.Prettyprinter
+import public Data.Vect
 
 %language ElabReflection
 
@@ -57,12 +56,6 @@ getCon n = do (n',tt)    <- lookupName n
               (args,tpe) <- unPiNamed tt
               pure $ MkCon n' args tpe
 
-export
-covering
-Pretty Con where
-  prettyPrec p (MkCon n args tpe) = applyH p "MkCon" [n, args, tpe]
-
-
 ||| Information about a data type
 |||
 ||| @name : Name of the data type
@@ -76,14 +69,6 @@ record TypeInfo where
   name : Name
   args : List NamedArg
   cons : List Con
-
-export
-covering
-Pretty TypeInfo where
-  pretty (MkTypeInfo name args cons) =
-    let head = applyH Open "MkTypeInfo" [name, args]
-        cons = indent 2 $ vsep (map pretty cons)
-     in vsep [head,cons]
 
 ||| Tries to get information about the data type specified
 ||| by name. The name need not be fully qualified, but
@@ -152,12 +137,6 @@ record ExplicitArg where
   ||| makes an appearance in `tpe`
   isRecursive : Bool
 
-export
-covering
-Pretty ExplicitArg where
-  prettyPrec p (MkExplicitArg n tpe paramTypes isRecursive) =
-    applyH p "MkExplicitArg" [n, tpe, paramTypes, isRecursive]
-
 ||| Constructor of a parameterized data type.
 |||
 ||| We only accept two types of arguments for
@@ -172,12 +151,6 @@ record ParamCon where
   constructor MkParamCon
   name         : Name
   explicitArgs : List ExplicitArg
-
-export
-covering
-Pretty ParamCon where
-  prettyPrec p (MkParamCon n explicitArgs) =
-    applyH p "MkParamCon" [n, explicitArgs]
 
 ||| Information about a parameterized data type.
 |||
@@ -230,15 +203,6 @@ record ParamTypeInfo where
   name   : Name
   params : List (Name,TTImp)
   cons   : List ParamCon
-
-export
-covering
-Pretty ParamTypeInfo where
-  pretty (MkParamTypeInfo name params cons) =
-    let head = applyH Open "MkParamTypeInfo" [name, toList params]
-        cons = indent 2 $ vsep (map pretty cons)
-     in vsep [head,cons]
-
 
 ||| Given the constructor arguments of a data type, returns
 ||| the list of those argument types, in which at least one

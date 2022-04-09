@@ -20,6 +20,8 @@ import Data.String
 import public Language.Reflection
 import public Text.PrettyPrint.Prettyprinter
 import Text.PrettyPrint.Prettyprinter.Render.String
+import Language.Reflection.Syntax
+import Language.Reflection.Types
 
 %default total
 
@@ -435,3 +437,40 @@ mutual
     prettyPrec p (IHole _ y)        = apply p "IHole" [y]
     prettyPrec p (Implicit _ y)     = apply p "Implicit" [y]
     prettyPrec p (IWithUnambigNames _ xs y) = applyH p "IWithUnabigNames" [xs,y]
+
+--------------------------------------------------------------------------------
+--          Pretty instances for library types
+--------------------------------------------------------------------------------
+
+export covering
+Pretty NamedArg where
+  pretty (MkArg count piInfo name type) =
+    parens $ hsepH [count, piInfo, name, ":", type]
+
+export covering
+Pretty Con where
+  prettyPrec p (MkCon n args tpe) = applyH p "MkCon" [n, args, tpe]
+
+export covering
+Pretty TypeInfo where
+  pretty (MkTypeInfo name args cons) =
+    let head = applyH Open "MkTypeInfo" [name, args]
+        cons = indent 2 $ vsep (map pretty cons)
+     in vsep [head,cons]
+
+export covering
+Pretty ExplicitArg where
+  prettyPrec p (MkExplicitArg n tpe paramTypes isRecursive) =
+    applyH p "MkExplicitArg" [n, tpe, paramTypes, isRecursive]
+
+export covering
+Pretty ParamCon where
+  prettyPrec p (MkParamCon n explicitArgs) =
+    applyH p "MkParamCon" [n, explicitArgs]
+
+export covering
+Pretty ParamTypeInfo where
+  pretty (MkParamTypeInfo name params cons) =
+    let head = applyH Open "MkParamTypeInfo" [name, toList params]
+        cons = indent 2 $ vsep (map pretty cons)
+     in vsep [head,cons]

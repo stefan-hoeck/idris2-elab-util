@@ -12,7 +12,6 @@ module Language.Reflection.Syntax
 import public Data.String
 import public Data.List1
 import public Language.Reflection
-import Language.Reflection.Pretty
 
 %default total
 
@@ -199,12 +198,6 @@ export
 isExplicit : Arg b -> Bool
 isExplicit (MkArg _ ExplicitArg _ _) = True
 isExplicit (MkArg _ _           _ _) = False
-
-export
-covering
-Pretty NamedArg where
-  pretty (MkArg count piInfo name type) =
-    parens $ hsepH [count, piInfo, name, ":", type]
 
 ||| Extracts the arguments from a function type.
 export
