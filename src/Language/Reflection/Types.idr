@@ -18,25 +18,6 @@ public export
 Res : Type -> Type
 Res = Either String
 
-Eq Namespace where
-  (MkNS xs) == (MkNS ys) = xs == ys
-
-Eq UserName where
-  Basic x    == Basic y    = x == y
-  Field x    == Field y    = x == y
-  Underscore == Underscore = True
-  _          == _          = False
-
-Eq Name where
-  (UN a)        == (UN x)        = a == x
-  (MN a b)      == (MN x y)      = a == x && b == y
-  (NS a b)      == (NS x y)      = a == x && b == y
-  (DN a b)      == (DN x y)      = a == x && b == y
-  Nested a b    == Nested x y    = a == x && b == y
-  CaseBlock a b == CaseBlock x y = a == x && b == y
-  WithBlock a b == WithBlock x y = a == x && b == y
-  _             == _             = False
-
 --------------------------------------------------------------------------------
 --          General Types
 --------------------------------------------------------------------------------

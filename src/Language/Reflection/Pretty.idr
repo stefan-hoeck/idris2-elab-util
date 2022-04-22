@@ -436,7 +436,7 @@ mutual
     prettyPrec _ (IType _)          = "IType"
     prettyPrec p (IHole _ y)        = apply p "IHole" [y]
     prettyPrec p (Implicit _ y)     = apply p "Implicit" [y]
-    prettyPrec p (IWithUnambigNames _ xs y) = applyH p "IWithUnabigNames" [xs,y]
+    prettyPrec p (IWithUnambigNames _ xs y) = applyH p "IWithUnabigNames" [map snd xs,y]
 
 --------------------------------------------------------------------------------
 --          Pretty instances for library types
