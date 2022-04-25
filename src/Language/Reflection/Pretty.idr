@@ -313,6 +313,7 @@ mutual
     prettyPrec p (GlobalHint x) = apply p "GlobalHint" [x]
     prettyPrec _ ExternFn       = "ExternFn"
     prettyPrec p (ForeignFn xs) = apply p "ForeignFn" xs
+    prettyPrec p (ForeignExport xs) = apply p "ForeignExport" xs
     prettyPrec _ Invertible     = "Invertible"
     prettyPrec p (Totality x)   = apply p "Totality" [x]
     prettyPrec _ Macro          = "Macro"
