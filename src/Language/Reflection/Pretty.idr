@@ -380,7 +380,7 @@ mutual
     prettyPrec p (ILet _ _ cnt name nTy nVal scope) =
       applyH p "ILet" [cnt,name,nTy,nVal,scope]
 
-    prettyPrec p (ICase _ arg ty cs) = applyH p "ICase" [arg,ty,cs]
+    prettyPrec p (ICase _ mrig arg ty cs) = applyH p "ICase" [mrig,arg,ty,cs]
 
     prettyPrec p (ILocal _ decls tt) =
       indentLines (apply p "ILocal" [tt]) (map pretty decls)

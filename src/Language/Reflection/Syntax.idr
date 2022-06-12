@@ -307,7 +307,7 @@ export
 ||| This is an alias for `ICase EmptyFC`.
 export
 iCase : TTImp -> (ty : TTImp) -> List Clause -> TTImp
-iCase = ICase EmptyFC
+iCase = ICase EmptyFC MW -- Should probably be `Nothing`
 
 ||| "as"-pattern.
 |||
