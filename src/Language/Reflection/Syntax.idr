@@ -12,6 +12,7 @@ module Language.Reflection.Syntax
 import public Data.String
 import public Data.List1
 import public Language.Reflection
+import public Data.Maybe
 
 %default total
 
@@ -306,8 +307,9 @@ export
 |||
 ||| This is an alias for `ICase EmptyFC`.
 export
-iCase : TTImp -> (ty : TTImp) -> List Clause -> TTImp
-iCase = ICase EmptyFC MW -- Should probably be `Nothing`
+iCase : Maybe Count -> TTImp -> (ty : TTImp) -> List Clause -> TTImp
+iCase = ICase EmptyFC . (fromMaybe MW) -- If `ICase` changes to take a
+                                       -- Maybe, remove pre-composed fragment
 
 ||| "as"-pattern.
 |||
