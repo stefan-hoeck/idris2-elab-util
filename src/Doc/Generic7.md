@@ -120,8 +120,8 @@ conNames (MkParamCon con args) = let ns   = map (nameStr . name) args
 ||| Derives a `Generic` implementation for the given data type
 ||| and visibility.
 export
-GenericVis : Visibility -> DeriveUtil -> InterfaceImpl
-GenericVis vis g =
+GenericVis : Visibility -> DeriveUtil -> Elab InterfaceImpl
+GenericVis vis g = pure $
   let names    = zipWithIndex (map conNames g.typeInfo.cons)
       genType  = `(Generic) .$ g.appliedType .$ mkCode g.typeInfo
       funType  = piAllImplicit  genType g.paramNames
@@ -139,7 +139,7 @@ GenericVis vis g =
 
 ||| Alias for `GenericVis Public`.
 export
-Generic' : DeriveUtil -> InterfaceImpl
+Generic' : DeriveUtil -> Elab InterfaceImpl
 Generic' = GenericVis Public
 ```
 
@@ -220,15 +220,15 @@ mkEqV :  Eq a
       -> EqV a
 mkEqV = %runElab check (var $ singleCon "EqV")
 
-Eq' : DeriveUtil -> InterfaceImpl
-Eq' g = MkInterfaceImpl "Eq" Public []
-          `(mkEq genEq)
-          (implementationType `(Eq) g)
+Eq' : DeriveUtil -> Elab InterfaceImpl
+Eq' g = pure $ MkInterfaceImpl "Eq" Public []
+                 `(mkEq genEq)
+                 (implementationType `(Eq) g)
 
-EqV' : DeriveUtil -> InterfaceImpl
-EqV' g = MkInterfaceImpl "EqV" Public []
-        `(mkEqV genEqRefl genEqSym genEqTrans (\_,_ => Refl))
-        (implementationType `(EqV) g)
+EqV' : DeriveUtil -> Elab InterfaceImpl
+EqV' g = pure $ MkInterfaceImpl "EqV" Public []
+                  `(mkEqV genEqRefl genEqSym genEqTrans (\_,_ => Refl))
+                  (implementationType `(EqV) g)
 
 data AnotherSum : Type where
   Var   : (v : String) -> AnotherSum

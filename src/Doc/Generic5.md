@@ -51,8 +51,8 @@ of type safety back:
 mkEq : (eq : a -> a -> Bool) -> Eq a
 mkEq eq = mkEq' eq (\a,b => not $ eq a b)
 
-Eq' : DeriveUtil -> InterfaceImpl
-Eq' g = MkInterfaceImpl "Eq" Public [] `(mkEq genEq) (implementationType `(Eq) g)
+Eq' : DeriveUtil -> Elab InterfaceImpl
+Eq' g = pure $ MkInterfaceImpl "Eq" Public [] `(mkEq genEq) (implementationType `(Eq) g)
 ```
 
 This time, we used utilities from `Language.Reflection.Derive`.
@@ -84,9 +84,9 @@ mkOrd comp = mkOrd' comp
                     (\a,b => if comp a b == GT then a else b)
                     (\a,b => if comp a b == LT then a else b)
 
-Ord' : DeriveUtil -> InterfaceImpl
-Ord' g = MkInterfaceImpl "Ord" Public [] `(mkOrd genCompare)
-                                         (implementationType `(Ord) g)
+Ord' : DeriveUtil -> Elab InterfaceImpl
+Ord' g = pure $ MkInterfaceImpl "Ord" Public [] `(mkOrd genCompare)
+                                                (implementationType `(Ord) g)
 ```
 
 We quickly test if it works:

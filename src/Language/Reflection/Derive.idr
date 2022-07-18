@@ -115,12 +115,12 @@ record InterfaceImpl where
 
 -- pair of type and implementation
 private
-implDecl : DeriveUtil -> (DeriveUtil -> InterfaceImpl) ->  (Decl,Decl)
-implDecl g f = let (MkInterfaceImpl iname vis opts impl type) = f g
-                   function = implName g iname
+implDecl : DeriveUtil -> (DeriveUtil -> Elab InterfaceImpl) -> Elab (Decl,Decl)
+implDecl g f = do (MkInterfaceImpl iname vis opts impl type) <- f g
+                  let function = implName g iname
 
-                in ( interfaceHintOpts vis opts function type
-                   , def function [var function .= impl] )
+                  pure $ ( interfaceHintOpts vis opts function type
+                         , def function [var function .= impl] )
 
 ||| Generates a list of pairs of declarations for the
 ||| implementations of the interfaces specified.
@@ -133,11 +133,12 @@ implDecl g f = let (MkInterfaceImpl iname vis opts impl type) = f g
 ||| the actual implementations. This is essential in the
 ||| implementation of `deriveMutual`.
 export
-deriveDecls : Name -> List (DeriveUtil -> InterfaceImpl) -> Elab $ List (Decl,Decl)
-deriveDecls name fs = mkDecls <$> getParamInfo' name
-  where mkDecls : ParamTypeInfo -> List (Decl,Decl)
+deriveDecls : Name -> List (DeriveUtil -> Elab InterfaceImpl) -> Elab $ List (Decl,Decl)
+deriveDecls name fs = do p <- getParamInfo' name -- using >>= here instead causes script failures?
+                         mkDecls p
+  where mkDecls : ParamTypeInfo -> Elab (List (Decl,Decl))
         mkDecls pi = let g = genericUtil pi
-                      in map (implDecl g) fs
+                     in  traverse (implDecl g) fs
 
 ||| Given a name of a data type plus a list of interfaces, tries
 ||| to implement these interfaces automatically using
@@ -146,7 +147,7 @@ deriveDecls name fs = mkDecls <$> getParamInfo' name
 ||| Again, see Doc.Generic4 for a tutorial and examples how
 ||| to use this.
 export
-derive : Name -> List (DeriveUtil -> InterfaceImpl) -> Elab ()
+derive : Name -> List (DeriveUtil -> Elab InterfaceImpl) -> Elab ()
 derive name fs = do decls <- deriveDecls name fs
                     -- Declare types first. Then declare implementations.
                     declare $ map fst decls
@@ -158,7 +159,7 @@ derive name fs = do decls <- deriveDecls name fs
 |||
 ||| Note: There is no need to call this from withi a `mutual` block.
 export
-deriveMutual : List (Name, List (DeriveUtil -> InterfaceImpl)) -> Elab()
+deriveMutual : List (Name, List (DeriveUtil -> Elab InterfaceImpl)) -> Elab ()
 deriveMutual pairs = do declss <- traverse (uncurry deriveDecls) pairs
                         -- Declare types first. Then declare implementations.
                         traverse_ (declare . map fst) declss
