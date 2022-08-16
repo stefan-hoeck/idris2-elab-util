@@ -212,7 +212,6 @@ from `Language.Reflection.TT` and `Language.Reflection.TTImp`.
 %runElab (derive "Namespace"   [Generic', Eq', Ord'])
 %runElab (derive "UserName"    [Generic', Eq', Ord'])
 %runElab (derive "Name"        [Generic', Eq', Ord'])
-%runElab (derive "NoMangleDirective"    [Generic', Eq', Ord'])
 %runElab (derive "Count"       [Generic', Eq', Ord'])
 %runElab (derive "LazyReason"  [Generic', Eq', Ord'])
 %runElab (derive "PiInfo"      [Generic', Eq', Ord'])
