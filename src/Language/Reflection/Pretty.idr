@@ -298,15 +298,9 @@ mutual
     prettyPrec p (UniqueDefault x) = apply p "UniqueDefault" [x]
 
   export
-  Pretty NoMangleDirective where
-    prettyPrec p (CommonName x)   = apply p "CommonName" [x]
-    prettyPrec p (BackendNames x) = apply p "BackendNames" [x]
-
-  export
   Pretty FnOpt where
     prettyPrec _ Inline         = "Inline"
     prettyPrec _ NoInline       = "NoInline"
-    prettyPrec p (NoMangle x)   = apply p "NoMangle" [x]
     prettyPrec _ TCInline       = "TCInline"
     prettyPrec _ Deprecate      = "Deprecate"
     prettyPrec p (Hint x)       = apply p "Hint" [x]
