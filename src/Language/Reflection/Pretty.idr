@@ -328,7 +328,7 @@ mutual
 
   export
   Pretty Record where
-    prettyPrec p (MkRecord _ n ps c fs) = applyH p "MkRecord" [n,ps,c,fs]
+    prettyPrec p (MkRecord _ n ps opts c fs) = applyH p "MkRecord" [n,ps,opts,c,fs]
 
   export
   Pretty Clause where
