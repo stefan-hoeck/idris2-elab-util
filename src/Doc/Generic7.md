@@ -128,10 +128,10 @@ GenericVis vis g =
       x        = lambdaArg "x"
       varX     = var "x"
 
-      from     = x .=> iCase varX implicitFalse (map fromClause names)
-      to       = x .=> iCase varX implicitFalse (map toClause names)
-      fromToId = x .=> iCase varX implicitFalse (map fromToIdClause names)
-      toFromId = x .=> iCase varX implicitFalse (map toFromIdClause names)
+      from     = x .=> iCase Nothing varX implicitFalse (map fromClause names)
+      to       = x .=> iCase Nothing varX implicitFalse (map toClause names)
+      fromToId = x .=> iCase Nothing varX implicitFalse (map fromToIdClause names)
+      toFromId = x .=> iCase Nothing varX implicitFalse (map toFromIdClause names)
 
       impl     = appAll mkGeneric [from,to,fromToId,toFromId]
 
