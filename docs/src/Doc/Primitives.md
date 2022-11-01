@@ -57,7 +57,7 @@ record AtomicNr where
   0 inBounds : So (1 <= value && value <= 118)
 ```
 
-Here, the proof of validity is builtin, which
+Here, the proof of validity is built-in, which
 allows us to publicly export `AtomicNr` without
 fear of invalid values being wrapped up in client code:
 
