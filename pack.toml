@@ -5,5 +5,5 @@ ipkg = "elab-util.ipkg"
 
 [custom.all.elab-util-docs]
 type = "local"
-path = "docs"
-ipkg = "docs.ipkg"
+path = "."
+ipkg = "elab-util-docs.ipkg"
