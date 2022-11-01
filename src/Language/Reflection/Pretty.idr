@@ -387,17 +387,9 @@ mutual
             args (IApp _ f t) = prettyBacktick t :: args f
             args t            = [prettyBacktick t]
 
-    prettyPrec p x@(IAutoApp _ _ _) =
-      backtickParens p (alignInfix "IAutoApp" "$" $ reverse (args x))
-      where args : TTImp -> List (Doc ann)
-            args (IAutoApp _ f t) = prettyBacktick t :: args f
-            args t                = [prettyBacktick t]
+    prettyPrec p x@(IAutoApp _ f t) = applyH p "IAutoApp" [f,t]
 
-    prettyPrec p x@(INamedApp _ _ _ _) =
-      backtickParens p (alignInfix "INamedApp" "$" $ reverse (args x))
-      where args : TTImp -> List (Doc ann)
-            args (INamedApp _ f n t) = prettyBacktick t :: args f
-            args t                   = [prettyBacktick t]
+    prettyPrec p (INamedApp _ f n t) = applyH p "INamedApp" [f,n,t]
 
 --    prettyPrec p x@(IImplicitApp _ _ _ _) =
 --      backtickParens p (alignInfix "IImplicitApp" "$" $ reverse (args x))

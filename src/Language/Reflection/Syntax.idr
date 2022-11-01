@@ -157,10 +157,22 @@ export
 bindAll : (fun : Name) -> (args : List String) -> TTImp
 bindAll fun = appAll fun . map bindVar
 
+||| Applying an auto-implicit.
+|||
+||| This is an alias for `IAutoApp EmptyFC`.
+|||
+||| Example: ```autoApp (var "traverse") (var "MyApp")```
+|||          is equivalent to `(traverse @{MyApp})
 export
 autoApp : TTImp -> TTImp -> TTImp
 autoApp = IAutoApp EmptyFC
 
+||| Named function application.
+|||
+||| This is an alias for `INamedApp EmptyFC`.
+|||
+||| Example: ```namedApp (var "traverse") "f" (var "MyApp")```
+|||          is equivalent to `(traverse {f = MyApp})
 export
 namedApp : TTImp -> Name -> TTImp -> TTImp
 namedApp = INamedApp EmptyFC
@@ -189,6 +201,10 @@ namedArg (MkArg c p m t) =
 export
 arg : TTImp -> Arg False
 arg = MkArg MW ExplicitArg Nothing
+
+export
+erasedArg : TTImp -> Arg False
+erasedArg = MkArg M0 ExplicitArg Nothing
 
 export
 lambdaArg : Name -> Arg False
@@ -259,19 +275,20 @@ export
 (.->) : Arg False -> TTImp -> TTImp
 (.->) = pi
 
-||| Extracts the arguments from a function type.
+||| Defines a function type taking the given arguments.
 export
 piAll : TTImp -> List (Arg False) -> TTImp
 piAll res = foldr (.->) res
 
-||| Extracts the arguments from a function type.
+||| Defines a function type taking implicit arguments of the
+||| given names.
 export
 piAllImplicit : TTImp -> List Name -> TTImp
 piAllImplicit res = piAll res . map toArg
   where toArg : Name -> Arg False
         toArg n = MkArg M0 ImplicitArg (Just n) implicitFalse
 
-||| Extracts the arguments from a function type.
+||| Defines a function type taking the given auto-implicit arguments.
 export
 piAllAuto : TTImp -> List TTImp -> TTImp
 piAllAuto res = piAll res . map (MkArg MW AutoImplicit Nothing)
