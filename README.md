@@ -1,7 +1,7 @@
 # Idris 2 Elaborator Reflection : Utilities and Documentation
 
 Utilities and documentation for exploring Idris 2 elaborator reflection.
-For a tutorial-ish introduction, [start here](/src/Doc/Index.md).
+For a tutorial-ish introduction, [start here](/docs/src/Doc/Index.md).
 
 Part of the utilities in this package as well as some of my understanding
 of elaborator reflection in Idris came from
@@ -28,9 +28,8 @@ Starting from Idris2 version 0.5.1, tagged releases of the same
 minor version number (e.g. 0.5.x) will be made available, while the main
 branch keeps following the Idris2 main branch
 
-The latest commit is daily tested to build against the current
-HEAD of the Idris compiler. Since Idris2 releases are happening
-rather infrequently at the moment, it is suggested to use
+Since Idris2 releases are happening rather infrequently at the moment,
+it is suggested to use
 a package manager like [pack](https://github.com/stefan-hoeck/idris2-pack)
 to install and maintain matching versions of the Idris compiler
 and this library.

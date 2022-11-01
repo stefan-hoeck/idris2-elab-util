@@ -1,13 +1,14 @@
 package elab-util
 
 authors    = "stefan-hoeck"
-version    = 0.5.0
+brief      = "Utilities and documentation for working with elaborator reflection"
+version    = 0.6.0
 readme     = "README.md"
 license    = "BSD-2 Clause"
 
 sourcedir  = "src"
-depends    = base    >= 0.5.1
-           , contrib >= 0.5.1
+depends    = base    >= 0.6.0
+           , contrib >= 0.6.0
 
 modules = Language.Reflection.Derive
         , Language.Reflection.Pretty
