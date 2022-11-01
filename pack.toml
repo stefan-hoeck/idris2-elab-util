@@ -1,0 +1,9 @@
+[custom.all.elab-util]
+type = "local"
+path = "."
+ipkg = "elab-util.ipkg"
+
+[custom.all.elab-util-docs]
+type = "local"
+path = "docs"
+ipkg = "docs.ipkg"
