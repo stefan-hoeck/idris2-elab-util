@@ -1,7 +1,7 @@
 # Idris 2 Elaborator Reflection : Utilities and Documentation
 
 Utilities and documentation for exploring Idris 2 elaborator reflection.
-For a tutorial-ish introduction, [start here](/docs/src/Doc/Index.md).
+For a tutorial-ish introduction, [start here](/src/Doc/Index.md).
 
 Part of the utilities in this package as well as some of my understanding
 of elaborator reflection in Idris came from
