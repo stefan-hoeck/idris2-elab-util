@@ -1,0 +1,13 @@
+package elab-util-test
+
+authors    = "stefan-hoeck"
+version    = 0.6.0
+readme     = "README.md"
+license    = "BSD-2 Clause"
+
+sourcedir  = "src"
+depends    = contrib
+
+main       = Test.Main
+
+executable = elab-util-test

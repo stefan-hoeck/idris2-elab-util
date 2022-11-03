@@ -2,8 +2,14 @@
 type = "local"
 path = "."
 ipkg = "elab-util.ipkg"
+test = "elab-util-test.ipkg"
 
 [custom.all.elab-util-docs]
 type = "local"
 path = "."
 ipkg = "elab-util-docs.ipkg"
+
+[custom.all.elab-util-test]
+type = "local"
+path = "."
+ipkg = "elab-util-test.ipkg"
