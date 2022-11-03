@@ -1,6 +1,6 @@
 module Test.Main
 
-%default total
+import Test.NameLookup
 
 main : IO ()
-main = putStrLn "Elab-util test"
+main = putStrLn "All tests passed"
