@@ -24,18 +24,30 @@ Res = Either String
 
 ||| Constructor of a data type
 public export
-record Con where
+record Con n where
   constructor MkCon
-  name : Name
-  args : List NamedArg
-  type : TTImp
+  name     : Name
+  args     : List NamedArg
+  typeArgs : Vect n TTImp
+
+||| True if the given constructor has only erased arguments.
+public export
+isConstant : Con n -> Bool
+isConstant = all isErased . args
+
+tcArgs : Elaboration m => Name -> (n : Nat) -> TTImp -> m (Vect n TTImp)
+tcArgs _  0     t@(IVar _ _) = pure []
+tcArgs nm (S k) (IApp _ s t) = (t ::) <$> tcArgs nm k s
+tcArgs nm _    _             = fail "Unexpected type for constructor \{nm}"
 
 ||| Tries to lookup a constructor by name.
 export
-getCon : Elaboration m => Name -> m Con
-getCon n = do (n',tt)    <- lookupName n
-              (args,tpe) <- unPiNamed tt
-              pure $ MkCon n' args tpe
+getCon : Elaboration m => (n : Nat) -> Name -> m (Con n)
+getCon n nm = do
+  (nm',tt)   <- lookupName nm
+  (args,tpe) <- unPiNamed tt
+  as         <- tcArgs nm' n tpe
+  pure $ MkCon nm' args (reverse as)
 
 ||| Information about a data type
 |||
@@ -48,8 +60,29 @@ public export
 record TypeInfo where
   constructor MkTypeInfo
   name : Name
-  args : List NamedArg
-  cons : List Con
+  arty : Nat
+  args : Vect arty NamedArg
+  cons : List (Con arty)
+
+||| True if the given type has only constant constructors and
+||| is therefore represented by a single unsigned integer at runtime.
+public export
+isEnum : TypeInfo -> Bool
+isEnum ti = all isConstant $ ti.cons
+
+||| True if the given type has a single constructor with a single
+||| unerased argument.
+public export
+isNewtype : TypeInfo -> Bool
+isNewtype (MkTypeInfo _ _ _ [c]) = count (not . isErased) c.args == 1
+isNewtype _                      = False
+
+||| True if the given type has a single constructor with only erased
+||| arguments. Such a value will have a trivial runtime representation.
+public export
+isErased : TypeInfo -> Bool
+isErased (MkTypeInfo _ _ _ [c]) = isConstant c
+isErased _                      = False
 
 ||| Tries to get information about the data type specified
 ||| by name. The name need not be fully qualified, but
@@ -60,9 +93,12 @@ getInfo' n =
   do (n',tt)        <- lookupName n
      (args,IType _) <- unPiNamed tt
                     | (_,_) => fail "Type declaration does not end in IType"
+
+     let (arty ** argsv) := (length args ** Vect.fromList args)
+
      conNames       <- getCons n'
-     cons           <- traverse getCon conNames
-     pure (MkTypeInfo n' args cons)
+     cons           <- traverse (getCon arty) conNames
+     pure (MkTypeInfo n' arty argsv cons)
 
 ||| macro version of `getInfo'`
 export %macro
@@ -75,7 +111,7 @@ getInfo = getInfo'
 ||| in question has not exactly one constructor.
 export %macro
 singleCon : Name -> Elab Name
-singleCon n = do (MkTypeInfo _ _ cs) <- getInfo' n
+singleCon n = do (MkTypeInfo _ _ _ cs) <- getInfo' n
                  (c::Nil) <- pure cs | _ => fail "not a single constructor"
                  pure $ name c
 
@@ -206,21 +242,13 @@ calcArgTypesWithParams = nubBy sameType . concatMap types . cons
         sameType _ _                       = False
 
 
--- Given a Vect of type parameters (from the surrounding
--- data type), tries to extract a list of type parameter names
--- from the type declaration of a constructor.
+-- tries to extract the type parameter names
+-- from a constructor's type args
 private
-conParams : (con : Name) -> Vect n a -> TTImp -> Res $ Vect n Name
-conParams con as t = run as (snd $ unApp t)
-  where err : String
-        err = show con
-            ++ ": Constructor type arguments do not match "
-            ++ "data type type arguments."
-
-        run : Vect k a -> List TTImp -> Res $ Vect k Name
-        run [] []                        = Right []
-        run (_ :: as) ((IVar _ n) :: ts) = (n ::) <$> run as ts
-        run _         _                  = Left err
+conParams : (con : Name) -> Vect n TTImp -> Res $ Vect n Name
+conParams con ts = maybe err Right $ traverse unVar ts
+  where err : Res a
+        err = Left "\{con} has non parameter type arguments"
 
 private
 sameArgName : (dataType : Name) -> (arg : Name) -> Bool
@@ -270,7 +298,7 @@ indicesErr : (con : Name) -> (ns : Vect k Name) -> Res a
 indicesErr con ns = Left $ show con ++ ": Type indices found: " ++ show ns
 
 -- For a constructor, takes a list of type parameter
--- names and tries to remove the corresponding implicit
+-- names and tries to remove the corresponding erased implicit
 -- arguments from the head of the given argument list.
 -- Extracts explicit argument names and types from the rest of
 -- the list.
@@ -304,18 +332,19 @@ argPairs dt con names = run names
 
 
 private
-paramCon : (dt : Name) -> Vect n Name -> Con -> Res $ ParamCon
-paramCon dt ns (MkCon n as t) = do params <- conParams n ns t
-                                   args   <- argPairs dt n (zip params ns) as
-                                   pure $ MkParamCon n args
+paramCon : (dt : Name) -> Vect n Name -> Con n -> Res $ ParamCon
+paramCon dt ns (MkCon nm as t) = do
+  params <- conParams nm t
+  args   <- argPairs dt nm (zip params ns) as
+  pure $ MkParamCon nm args
 
 private
 toParamTypeInfo : TypeInfo -> Res ParamTypeInfo
-toParamTypeInfo (MkTypeInfo n as cs) =
+toParamTypeInfo (MkTypeInfo n arty as cs) =
   do ps  <- traverse expPair as
-     let ns = map fst $ fromList ps
+     let ns := map fst ps
      cs' <- traverse (paramCon n ns) cs
-     pure $ MkParamTypeInfo n ps cs'
+     pure $ MkParamTypeInfo n (toList ps) cs'
   where expPair : NamedArg -> Res (Name,TTImp)
         expPair  (MkArg _ ExplicitArg n t) = Right (n,t)
         expPair _ = Left $  show n

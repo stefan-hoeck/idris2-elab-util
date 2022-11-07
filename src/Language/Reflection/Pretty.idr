@@ -430,18 +430,22 @@ mutual
 --------------------------------------------------------------------------------
 
 export covering
+Pretty a => Pretty (Vect n a) where
+  prettyPrec p vs = prettyPrec p (toList vs)
+
+export covering
 Pretty NamedArg where
   pretty (MkArg count piInfo name type) =
     parens $ hsepH [count, piInfo, name, ":", type]
 
 export covering
-Pretty Con where
+Pretty (Con n) where
   prettyPrec p (MkCon n args tpe) = applyH p "MkCon" [n, args, tpe]
 
 export covering
 Pretty TypeInfo where
-  pretty (MkTypeInfo name args cons) =
-    let head = applyH Open "MkTypeInfo" [name, args]
+  pretty (MkTypeInfo name arty rgs cons) =
+    let head = applyH Open "MkTypeInfo" [name, arty, rgs]
         cons = indent 2 $ vsep (map pretty cons)
      in vsep [head,cons]
 

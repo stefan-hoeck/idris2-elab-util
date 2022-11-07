@@ -27,6 +27,10 @@ FromString Name where
           run (h ::: []) ns        = NS (MkNS ns) (UN $ Basic h)
           run ll@(h ::: (y :: ys)) xs = run (assert_smaller ll $ y ::: ys) (h :: xs)
 
+export
+Interpolation Name where
+  interpolate = show
+
 ||| Takes a (probably fully qualified name) and generates a
 ||| identifier from this without the dots.
 |||
@@ -102,6 +106,14 @@ primVal = IPrimVal EmptyFC
 export
 type :  TTImp
 type = IType EmptyFC
+
+||| Tries to extract a variable name from a `TTImp`.
+|||
+||| Returns `Nothing` if not an `IVar`.
+export
+unVar : TTImp -> Maybe Name
+unVar (IVar _ n) = Just n
+unVar _          = Nothing
 
 --------------------------------------------------------------------------------
 --          Application
@@ -210,10 +222,17 @@ export
 lambdaArg : Name -> Arg False
 lambdaArg n = MkArg MW ExplicitArg (Just n) implicitFalse
 
-export
+||| True if the given argument is an explicit argument.
+public export
 isExplicit : Arg b -> Bool
 isExplicit (MkArg _ ExplicitArg _ _) = True
 isExplicit (MkArg _ _           _ _) = False
+
+||| True if the given argument has quantity zero.
+public export
+isErased : Arg b -> Bool
+isErased (MkArg M0 _ _ _) = True
+isErased _                = False
 
 ||| Extracts the arguments from a function type.
 export

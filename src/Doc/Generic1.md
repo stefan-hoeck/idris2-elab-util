@@ -189,7 +189,7 @@ applies the passed list of arguments to `(::)` and ends it with `Nil`.
 -- Creates the `List (List Type)` code for a data type.
 private
 mkCode : TypeInfo -> TTImp
-mkCode = listOf . map (listOf . map type . args) . cons
+mkCode ti = listOf . map (listOf . map type . args) $ ti.cons
 ```
 
 For the pattern clauses in the implementation of `from`
@@ -232,7 +232,7 @@ ConNames : Type
 ConNames = (Name, List String, List TTImp)
 
 private
-conNames : Con -> ConNames
+conNames : Con n -> ConNames
 conNames (MkCon con args _) = let ns   = map (nameStr . name) args
                                   vars = map varStr ns
                                in (con, ns, vars)
