@@ -34,7 +34,7 @@ mkCode = listOf . map (listOf . map tpe . explicitArgs) . cons
 The implementation of `genericDecl`, however, requires an
 additional step: In the definition of the function type,
 we must include the type parameters as implicit arguments.
-Utility function `piAllImplicit` helps with this part.
+The utility function `piAllImplicit` helps with this part.
 
 ```idris
 export

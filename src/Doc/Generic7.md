@@ -268,6 +268,6 @@ yet possible. Of course I will write about these things if
 I find working solutions.
 
 There will of course also be other use cases for elaborator
-reflection. I'm looking forward to learn something about
+reflection. I'm looking forward to learning something about
 using the technique for proof searching, for instance.
 Interesting results will be posted here, promise. :-)

@@ -150,7 +150,7 @@ the `Eq` instance of `Maybe` has the following type:
 {0 a: _} -> Eq a => Eq (Maybe a)
 ```
 
-We define function `implementationType` to set up this type
+We define the function `implementationType` to set up this type
 for us:
 
 ```idris
@@ -204,25 +204,25 @@ from `Language.Reflection.TT` and `Language.Reflection.TTImp`.
 ```idris
 %runElab (derive "ModuleIdent"  [Generic', Eq', Ord'])
 %runElab (derive "VirtualIdent" [Generic', Eq', Ord'])
-%runElab (derive "OriginDesc"  [Generic', Eq', Ord'])
-%runElab (derive "FC"          [Generic', Eq', Ord'])
-%runElab (derive "NameType"    [Generic', Eq', Ord'])
-%runElab (derive "PrimType"    [Generic', Eq', Ord'])
-%runElab (derive "Constant"    [Generic', Eq', Ord'])
-%runElab (derive "Namespace"   [Generic', Eq', Ord'])
-%runElab (derive "UserName"    [Generic', Eq', Ord'])
-%runElab (derive "Name"        [Generic', Eq', Ord'])
-%runElab (derive "Count"       [Generic', Eq', Ord'])
-%runElab (derive "LazyReason"  [Generic', Eq', Ord'])
-%runElab (derive "PiInfo"      [Generic', Eq', Ord'])
-%runElab (derive "BindMode"    [Generic', Eq', Ord'])
-%runElab (derive "UseSide"     [Generic', Eq', Ord'])
-%runElab (derive "DotReason"   [Generic', Eq', Ord'])
-%runElab (derive "Visibility"  [Generic', Eq', Ord'])
-%runElab (derive "TotalReq"    [Generic', Eq', Ord'])
-%runElab (derive "DataOpt"     [Generic', Eq', Ord'])
-%runElab (derive "WithFlag"    [Generic', Eq', Ord'])
-%runElab (derive "BuiltinType" [Generic', Eq', Ord'])
+%runElab (derive "OriginDesc"   [Generic', Eq', Ord'])
+%runElab (derive "FC"           [Generic', Eq', Ord'])
+%runElab (derive "NameType"     [Generic', Eq', Ord'])
+%runElab (derive "PrimType"     [Generic', Eq', Ord'])
+%runElab (derive "Constant"     [Generic', Eq', Ord'])
+%runElab (derive "Namespace"    [Generic', Eq', Ord'])
+%runElab (derive "UserName"     [Generic', Eq', Ord'])
+%runElab (derive "Name"         [Generic', Eq', Ord'])
+%runElab (derive "Count"        [Generic', Eq', Ord'])
+%runElab (derive "LazyReason"   [Generic', Eq', Ord'])
+%runElab (derive "PiInfo"       [Generic', Eq', Ord'])
+%runElab (derive "BindMode"     [Generic', Eq', Ord'])
+%runElab (derive "UseSide"      [Generic', Eq', Ord'])
+%runElab (derive "DotReason"    [Generic', Eq', Ord'])
+%runElab (derive "Visibility"   [Generic', Eq', Ord'])
+%runElab (derive "TotalReq"     [Generic', Eq', Ord'])
+%runElab (derive "DataOpt"      [Generic', Eq', Ord'])
+%runElab (derive "WithFlag"     [Generic', Eq', Ord'])
+%runElab (derive "BuiltinType"  [Generic', Eq', Ord'])
 ```
 
 ~~It seems not yet to be possible, to use this method in a mutual
@@ -231,8 +231,8 @@ of boilerplate for `Eq` and `Ord` instances
 for the data types from `Language.Reflection.TTImp`~~.
 
 I finally figured out how to derive mutually dependant implementations.
-The core idea was to declare all implementation types first,
-before actually declaring implementations. This separation has
+The core idea was to declare all the implementation types first,
+before actually declaring the implementations. This separation has
 to occur in the `Elab` monad, as can be seen in the implementation
 of `deriveMutual`:
 
