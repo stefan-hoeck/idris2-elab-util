@@ -2,10 +2,12 @@ export IDRIS2 ?= idris2
 
 lib_pkg = elab-util.ipkg
 
-docs_pkg = docs/elab-util-docs.ipkg
+docs_pkg = elab-util-docs.ipkg
+
+test_pkg = elab-util-test.ipkg
 
 .PHONY: all
-all: lib docs
+all: lib docs test
 
 .PHONY: clean-install
 clean-install: clean install
@@ -18,8 +20,13 @@ lib:
 	${IDRIS2} --build ${lib_pkg}
 
 .PHONY: docs
-docs: install
+docs:
 	${IDRIS2} --build ${docs_pkg}
+
+.PHONY: test
+test:
+	${IDRIS2} --build ${test_pkg}
+	build/exec/elab-util-test
 
 .PHONY: install
 install:
