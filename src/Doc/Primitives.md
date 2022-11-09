@@ -137,7 +137,7 @@ script much simpler:
 
 This allows us to generate the necessary declarations without much
 hassle. First, we generate declarations for the interface implementations.
-We can use functions `mkEq`, `mkOrd`, and `mkShow`
+We can use the functions `mkEq`, `mkOrd`, and `mkShow`
 from `Language.Reflection.Derive` and some utilities from
 `Language.Reflection.Syntax` here. The implementations themselves
 are just quoted versions of what we wrote above:
@@ -215,6 +215,6 @@ c14 = MkIsotope 6 14
 ## Conclusion
 
 This concludes this tutorial post. As can be seen, if we know the structure
-of data types in advance coming up with simple elaborator
+of data types in advance, coming up with simple elaborator
 scripts is very easy. The syntax to do so is lightweight,
 especially in cases where we can quote most of the code directly.

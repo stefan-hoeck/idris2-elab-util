@@ -256,7 +256,7 @@ toClauses cs = map toClause cs ++
 
 A quick note about function `nameStr`: Idris does not accept
 the machine-generated names of unnamed arguments in pattern matches.
-Function `nameStr` converts such names to similar user-defined names.
+The function `nameStr` converts such names to similar user-defined names.
 
 ```idris
 private

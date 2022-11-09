@@ -2,8 +2,8 @@
 
 I've been planning to write this part of the tutorial
 about generics for quite some time, but the writing
-went not as smoothly as I thought it would. In the end I had
-to change how interfaces for `NP` and `SOP` are defined, experience
+didn't go as smoothly as I thought it would. In the end I had
+to change how interfaces for `NP` and `SOP` were defined, experience
 some unexpectedly long compilation times on the run, and change
 implementations once again, before I arrived at the solution
 presented in this post.
@@ -22,7 +22,7 @@ module Doc.Generic6
 
 When we are deriving interface implementations via `Generic`,
 we do so in a deterministic, predictable manner. It should therefore
-be possible - and desirable! - to at the same time proof
+be possible - and desirable! - to at the same time prove
 that our implementations adhere to the common laws expected
 for these interfaces. As an example, let's come up with some laws
 for `Eq`:
@@ -103,8 +103,8 @@ EqV a => EqV (Maybe a) where
   neqNotEq _ _ = Refl
 ```
 
-Great. A bit verbose, but we have to write these proofs
-only once. We might want to sprinkle in some implementations
+Great. A bit verbose, but we only have to write these proofs
+once. We might want to sprinkle in some implementations
 for primitives for good measure. For those, we have to
 convince Idris that we actually know what we are doing
 (I typically don't know what I'm doing, so if somebody
@@ -162,7 +162,7 @@ toAnd : a = True -> b = True -> a && Delay b = True
 toAnd ra rb = cong2 (&&) ra (cong delay rb)
 ```
 
-We are now ready to proof the correctness of `Eq` for
+We are now ready to prove the correctness of `Eq` for
 `Pair` and `Either`:
 
 ```idris
@@ -222,10 +222,10 @@ from `All EqV ts`. Luckily, Idris realized that the two tuples
 of interface instances might be completely unrelated:
 It refused to accept any implementation for `EqV`'s
 propositions. The problem: `EqV` should only be able
-to proof the correctness about the `Eq` instance
+to prove the correctness about the `Eq` instance
 that comes with itself. That's why we write
 `Eq a => EqV a` in our definition of `EqV`. And it should of course
-not be able to proof stuff about different, unrelated implementations
+not be able to prove stuff about different, unrelated implementations
 of `Eq` without somehow holding a reference to those implementations.
 But that is what we are trying to do with the above
 type declaration: The `Eq` implementation for `NP`
@@ -266,16 +266,16 @@ EqV t => EqV (NP ts) => EqV (NP (t :: ts)) where
 This works, and `EqV` instances can be implemented almost exactly
 the same way as for tuples above. However, since I'm using
 a similar design in [idris2-sop](https://github.com/stefan-hoeck/idris2-sop)
-I changed implementations there as well and soon realized that
+I changed implementations there as well and soon realized that the
 derived `Ord` implementations of some of my example data types
 suddenly took ages to typecheck. I quickly verified that
-the same is the case for `Data.HVect` from *contrib*, so I opened an
+the same was the case for `Data.HVect` from *contrib*, opened an
 [issue on idris-lang](https://github.com/idris-lang/Idris2/issues/783) about
 this and started looking for a way to get the original fast
 compilation times back while at the same time getting rid of the hacky
 (and wrong!) way to write interface implementations using `All`.
 Eventually, this led to a major rewrite of *idris2-sop*, which
-is why also in this post I will have to come up with new versions
+is also why in this post I will have to come up with new versions
 of `NP` and `SOP`.
 
 ## Adding some Flexibility to `NP`
@@ -363,7 +363,7 @@ testComp = compare
 
 This typechecks very quickly on my machine, so all seems
 to be fine.
-With that out of the way, we are ready to proof the correctness
+With that out of the way, we are ready to prove the correctness
 of `NP`'s `Eq` implementation.
 
 ## Verifying `Eq` for `NP`: Take Three
@@ -398,7 +398,7 @@ for pairs, of course.
 
 ## Verifying `Eq` for `SOP`
 
-It is now straight forward to write an implementation of `EqV`
+It is now straightforward to write an implementation of `EqV`
 for `SOP`. However, we need another data structure for
 wrapping our interface instances in:
 
@@ -467,7 +467,7 @@ public export
   compare {all = _::_} (S _)  (Z _)  = GT
 ```
 
-We now have the ingredients to proof the correctness of
+We now have the ingredients to prove the correctness of
 `SOP`'s `Eq` implementation:
 
 ```idris
@@ -506,7 +506,7 @@ All f [] = ()
 All f (t::ts) = (f t, All f ts)
 ```
 
-The advantage of this representation as nested pairs is that
+The advantage of this representation as nested pairs was that
 there was no need to explicitly pattern match on the pair's
 structure when implementing `Eq` and `Ord` for `NP` and `SOP`.
 However, it was also not possible to implement the following
@@ -518,7 +518,7 @@ allOrdToEq : All Ord ts -> All Eq ts
 
 without a way to pattern match on `ts` to get an idea
 about the underlying structure of `All Ord ts`.
-For this, we would have had to included `ts`
+For this, we would have had to include `ts`
 as a non-erased argument:
 
 ```repl
@@ -530,7 +530,7 @@ argument to our interface implementations (ugly!)
 but even then Idris refuses to accept a `%hint` annotation
 on `allOrdToEq` with the following error message:
 *Can only add hints for concrete return types*.
-Going via a well-structured data type resolved all these issues.
+Going via a well-structured data type resolves all these issues.
 
 ## What's next
 

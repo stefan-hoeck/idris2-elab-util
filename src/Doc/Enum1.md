@@ -78,7 +78,7 @@ constants. In addition, it comes with infix operators
 similar to the ones shown in the pretty printer for
 defining function application, type declarations and
 anonymous functions. Finally, a handy `FromString`
-instance for `Name` is provided, which determins from
+instance for `Name` is provided, which determines from
 the string passed whether the name is fully qualified or not.
 
 ```idris

@@ -111,9 +111,9 @@ From the [implementation notes](https://idris2.readthedocs.io/en/latest/implemen
 we learn that interfaces are translated to records and
 implementations to search hints, so we might try to create
 such a record value manually. All interfaces in `prelude`
-and `base` have been given properly named constructor recently,
+and `base` have been given properly named constructors recently,
 so creating an `Eq` value manually is very easy.
-For interfaces without explicit constructor we can use
+For interfaces without an explicit constructor we can use
 `getInfo` to inspect the type at hand:
 
 ```idris

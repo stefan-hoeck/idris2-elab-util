@@ -60,7 +60,7 @@ They are very similar in functionality to the ones we developed in
 [Generics Part 4](Generic4.md). This
 approach is even more useful when deriving `Ord`: In our previous
 version we had to manually pass the `Eq` instance to the `Ord`
-constructor forcing us to get access to its implementation function
+constructor, forcing us to get access to its implementation function
 by means of `implName`. This is no longer necessary:
 
 ```idris
@@ -156,7 +156,7 @@ maxTest = Refl
 
 ## Conclusion
 
-In this very short tutorial we learned that
+In this very short tutorial we learned that the
 function `check` is useful whenever we try to implement
 a function using elaborator reflection whose type is already known at compile time.
 This was not the case for automatically derived interface implementations
