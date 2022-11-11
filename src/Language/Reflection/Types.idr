@@ -35,20 +35,6 @@ public export
 isConstant : Con n -> Bool
 isConstant = all isErased . args
 
-tcArgs :
-     Elaboration m
-  => Name
-  -> Vect k TTImp
-  -> (n : Nat)
-  -> TTImp
-  -> m (Vect (k + n) TTImp)
-tcArgs _  ts 0     t@(IVar _ _) =
-  pure (rewrite plusZeroRightNeutral k  in ts)
-tcArgs nm ts (S x) (IApp _ s t) =
-  rewrite sym $ plusSuccRightSucc k x in tcArgs nm (t :: ts) x s
-tcArgs nm _  _    _             =
-  fail "Unexpected type for constructor \{nm}"
-
 ||| Tries to lookup a data constructor by name, returning it together
 ||| with the arity of the corresponding type constructor.
 export
@@ -60,15 +46,20 @@ getCon nm = do
     (IVar _ _, as) => pure $ (_ ** MkCon nm' args (Vect.fromList as))
     _              => fail "Unexpected type for constructor \{nm}"
 
+vectN : (k : Nat) -> Vect n a -> Maybe (Vect k a)
+vectN 0     []        = Just []
+vectN (S k) (x :: xs) = (x ::) <$> vectN k xs
+vectN _     _         = Nothing
+
 ||| Tries to lookup a data constructor for a type constructor of
 ||| the given arity.
 export
 getConN : Elaboration m => (n : Nat) -> Name -> m (Con n)
 getConN n nm = do
-  (nm',tt)   <- lookupName nm
-  (args,tpe) <- unPiNamed tt
-  as         <- tcArgs nm' [] n tpe
-  pure $ MkCon nm' args (reverse as)
+  (_ ** MkCon nm' args as) <- getCon nm
+  case vectN n as of
+    Just as' => pure $ MkCon nm' args as'
+    Nothing  => fail "Unexpected type for constructor \{nm}"
 
 ||| Information about a data type
 |||
