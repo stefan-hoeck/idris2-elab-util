@@ -35,18 +35,39 @@ public export
 isConstant : Con n -> Bool
 isConstant = all isErased . args
 
-tcArgs : Elaboration m => Name -> (n : Nat) -> TTImp -> m (Vect n TTImp)
-tcArgs _  0     t@(IVar _ _) = pure []
-tcArgs nm (S k) (IApp _ s t) = (t ::) <$> tcArgs nm k s
-tcArgs nm _    _             = fail "Unexpected type for constructor \{nm}"
+tcArgs :
+     Elaboration m
+  => Name
+  -> Vect k TTImp
+  -> (n : Nat)
+  -> TTImp
+  -> m (Vect (k + n) TTImp)
+tcArgs _  ts 0     t@(IVar _ _) =
+  pure (rewrite plusZeroRightNeutral k  in ts)
+tcArgs nm ts (S x) (IApp _ s t) =
+  rewrite sym $ plusSuccRightSucc k x in tcArgs nm (t :: ts) x s
+tcArgs nm _  _    _             =
+  fail "Unexpected type for constructor \{nm}"
 
-||| Tries to lookup a constructor by name.
+||| Tries to lookup a data constructor by name, returning it together
+||| with the arity of the corresponding type constructor.
 export
-getCon : Elaboration m => (n : Nat) -> Name -> m (Con n)
-getCon n nm = do
+getCon : Elaboration m => Name -> m (n ** Con n)
+getCon nm = do
+  (nm',tt)       <- lookupName nm
+  (args,tpe)     <- unPiNamed tt
+  case unApp tpe of
+    (IVar _ _, as) => pure $ (_ ** MkCon nm' args (Vect.fromList as))
+    _              => fail "Unexpected type for constructor \{nm}"
+
+||| Tries to lookup a data constructor for a type constructor of
+||| the given arity.
+export
+getConN : Elaboration m => (n : Nat) -> Name -> m (Con n)
+getConN n nm = do
   (nm',tt)   <- lookupName nm
   (args,tpe) <- unPiNamed tt
-  as         <- tcArgs nm' n tpe
+  as         <- tcArgs nm' [] n tpe
   pure $ MkCon nm' args (reverse as)
 
 ||| Information about a data type
@@ -97,7 +118,7 @@ getInfo' n =
      let (arty ** argsv) := (length args ** Vect.fromList args)
 
      conNames       <- getCons n'
-     cons           <- traverse (getCon arty) conNames
+     cons           <- traverse (getConN arty) conNames
      pure (MkTypeInfo n' arty argsv cons)
 
 ||| macro version of `getInfo'`
