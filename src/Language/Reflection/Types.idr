@@ -30,6 +30,10 @@ record Con n where
   args     : List NamedArg
   typeArgs : Vect n TTImp
 
+public export %inline
+Named (Con n) where
+  c.getName = c.name
+
 ||| True if the given constructor has only erased arguments.
 public export
 isConstant : Con n -> Bool
@@ -75,6 +79,10 @@ record TypeInfo where
   arty : Nat
   args : Vect arty NamedArg
   cons : List (Con arty)
+
+public export %inline
+Named TypeInfo where
+  t.getName = t.name
 
 ||| True if the given type has only constant constructors and
 ||| is therefore represented by a single unsigned integer at runtime.
@@ -166,6 +174,10 @@ record ExplicitArg where
   ||| makes an appearance in `tpe`
   isRecursive : Bool
 
+public export %inline
+Named ExplicitArg where
+  t.getName = t.name
+
 ||| Constructor of a parameterized data type.
 |||
 ||| We only accept two types of arguments for
@@ -180,6 +192,10 @@ record ParamCon where
   constructor MkParamCon
   name         : Name
   explicitArgs : List ExplicitArg
+
+public export %inline
+Named ParamCon where
+  t.getName = t.name
 
 ||| Information about a parameterized data type.
 |||
@@ -232,6 +248,10 @@ record ParamTypeInfo where
   name   : Name
   params : List (Name,TTImp)
   cons   : List ParamCon
+
+public export %inline
+Named ParamTypeInfo where
+  t.getName = t.name
 
 ||| Given the constructor arguments of a data type, returns
 ||| the list of those argument types, in which at least one
