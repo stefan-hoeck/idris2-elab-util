@@ -39,6 +39,11 @@ export
 camelCase : Name -> String
 camelCase = concat . split ('.' ==) . show
 
+||| Convert a `Name` to a simple string dropping some of its context
+||| like its namespace (if any).
+|||
+||| Use this to get access to a simple variable name or to print the
+||| un-prefixed name of a data- or type constructor.
 export
 nameStr : Name -> String
 nameStr (UN $ Basic x)  = x
@@ -51,20 +56,48 @@ nameStr (Nested (x,y) n) = #"nested_\#{nameStr n}_\#{show x}_\#{show y}"#
 nameStr (CaseBlock x n) = #"case_n_\#{show x}"#
 nameStr (WithBlock x n) = #"with_n_\#{show x}"#
 
+||| An interface for things with a `Name`.
+|||
+||| This comes with several utility function strewn across this module
+||| for creating variables from names and printing a name as a string.
+||| All these make use of dot syntax, so they can be used like record
+||| projections.
+public export
+interface Named a where
+  ||| Extract the `Name` from a value.
+  |||
+  ||| We call this `(.getName)` instead
+  ||| of just `(.name)`, because `name` is a commonly used record field name.
+  (.getName) : a -> Name
+
+public export %inline
+Named Name where
+  n.getName = n
+
+||| Use `nameStr` to convert the name of a value to a simple string.
+export %inline
+(.nameStr) : Named a => a -> String
+x.nameStr = nameStr x.getName
+
 --------------------------------------------------------------------------------
 --          Vars
 --------------------------------------------------------------------------------
 
 ||| Creates a variable from the given name
 |||
-||| Names are best created using quotes: `{{ AName }},
-||| `{{ In.Namespacs.Name }}.
+||| Names are best created using quotes: `{ AName },
+||| `{ In.Namespacs.Name }.
 |||
 ||| Likewise, if the name is already known at the time of
 ||| writing, use quotes for defining variables directly: `(AName)
 export
 var : Name -> TTImp
 var = IVar EmptyFC
+
+||| Creates a variable with the name of the given value.
+export %inline
+(.nameVar) : Named a => a -> TTImp
+n.nameVar = var n.getName
 
 ||| Alias for `var . fromString`
 export
@@ -77,6 +110,12 @@ varStr = var . fromString
 export
 bindVar : String -> TTImp
 bindVar = IBindVar EmptyFC
+
+||| Bind a named value to a variable. This uses `nameStr` for
+||| the variable's name.
+export %inline
+(.bindVar) : Named a => a -> TTImp
+x.bindVar = bindVar x.nameStr
 
 ||| Implicit value bound if unsolved
 |||
@@ -98,6 +137,12 @@ implicitFalse = Implicit EmptyFC False
 export
 primVal : (c : Constant) -> TTImp
 primVal = IPrimVal EmptyFC
+
+||| Creates a string constant from a named value. Uses
+||| `nameStr` to convert the name to a string.
+export %inline
+(.namePrim) : Named a => a -> TTImp
+x.namePrim = primVal $ Str x.nameStr
 
 
 ||| The type `Type`.
@@ -204,6 +249,10 @@ record Arg (nameMandatory : Bool) where
 public export
 NamedArg : Type
 NamedArg = Arg True
+
+public export %inline
+Named NamedArg where
+  (.getName) (MkArg _ _ n _) = n
 
 export
 namedArg : Elaboration m => Arg False -> m NamedArg
