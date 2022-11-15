@@ -39,6 +39,34 @@ public export
 isConstant : Con n -> Bool
 isConstant = all isErased . args
 
+||| Makes use of `renameArgs` to provide the arguments of a data constructor
+||| with a set of fresh names.
+export %inline
+renameConArgs : String -> Con n -> Con n
+renameConArgs s = { args $= renameArgs s }
+
+||| Creates bindings for the non-erased arguments of a data constructor.
+|||
+||| This is useful for implementing functions which pattern match on a
+||| data constructor.
+export
+bindCon : Con n -> TTImp
+bindCon x = go x.nameVar x.args
+  where go : TTImp -> List NamedArg -> TTImp
+        go t []                               = t
+        go t (MkArg M0 ImplicitArg _ _ :: xs) = go t xs
+        go t (MkArg _  _           n _ :: xs) = go (t .$ n.bindVar) xs
+
+||| Returns the explicit arguments of a data constructor.
+export %inline
+(.explicitArgs) : Con n -> List NamedArg
+c.explicitArgs = filter isExplicit c.args
+
+||| Returns the explicit unerased arguments of a data constructor.
+export %inline
+(.explicitUnerasedArgs) : Con n -> List NamedArg
+c.explicitUnerasedArgs = filter isExplicitUnerased c.args
+
 ||| Tries to lookup a data constructor by name, returning it together
 ||| with the arity of the corresponding type constructor.
 export

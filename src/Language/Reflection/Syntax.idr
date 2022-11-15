@@ -283,6 +283,14 @@ isErased : Arg b -> Bool
 isErased (MkArg M0 _ _ _) = True
 isErased _                = False
 
+||| True if the given argument is explicit and does not have
+||| quantity zero.
+public export
+isExplicitUnerased : Arg b -> Bool
+isExplicitUnerased (MkArg M1 ExplicitArg _ _) = True
+isExplicitUnerased (MkArg MW ExplicitArg _ _) = True
+isExplicitUnerased _                          = False
+
 ||| Extracts the arguments from a function type.
 export
 unPi : TTImp -> (List $ Arg False, TTImp)
@@ -306,6 +314,24 @@ export
 unLambdaNamed : Elaboration m => TTImp -> m (List NamedArg, TTImp)
 unLambdaNamed v = let (args,rt') = unLambda v
                   in (, rt') <$> traverse namedArg args
+
+
+||| Renames a list of arguments, using the given string as a prefix
+||| and appending each argument's index in the list.
+|||
+||| It is at times necessary to provide a set of fresh names to
+||| a list of named arguments, for instance, when pattern matching
+||| on a data constructor making sure to not shadow already existing
+||| names. This function provides a pure way to do so without having
+||| to run this in the `Elab` monad.
+export
+renameArgs : String -> List NamedArg -> List NamedArg
+renameArgs s = go 0
+  where go : Nat -> List NamedArg -> List NamedArg
+        go k []        = []
+        go k (x :: xs) =
+          let n := UN $ Basic $ s ++ show k
+           in {name := n} x :: go (S k) xs
 
 --------------------------------------------------------------------------------
 --          Lambdas
