@@ -1,6 +1,6 @@
 # Inspecting the Structure of Idris Expressions
 
-In this section of the tutorial we will learn how
+In this section of the tutorial, we will learn how
 to look at the underlying structure of Idris expressions.
 Most of the examples can be run from the REPL.
 
@@ -244,7 +244,7 @@ In the REPL, we have to separate lines by using semicolons:
 ```
 
 As can be seen, a top-level function consists of an `IClaim`
-(the function's type) and and `IDef` (the implementation).
+(the function's type) and an `IDef` (the implementation).
 
 Inspecting quoted data declarations is also possible:
 
