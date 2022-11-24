@@ -434,13 +434,27 @@ Pretty a => Pretty (Vect n a) where
   prettyPrec p vs = prettyPrec p (toList vs)
 
 export covering
-Pretty NamedArg where
+Pretty Arg where
   pretty (MkArg count piInfo name type) =
     parens $ hsepH [count, piInfo, name, ":", type]
 
 export covering
-Pretty (Con n) where
-  prettyPrec p (MkCon n args tpe) = applyH p "MkCon" [n, args, tpe]
+Pretty (AppArg a) where
+  prettyPrec _ (NamedApp n s) = braces $ pretty n <++> ":" <++> pretty s
+  prettyPrec _ (AutoApp s)    = "@" <+> braces (pretty s)
+  prettyPrec p (Regular s)    = prettyPrec p s
+  prettyPrec p (Missing x)    = "<implicit>"
+
+export covering
+Pretty (All AppArg vs) where
+  pretty vs = list $ go vs
+    where go : All AppArg bs -> List (Doc ann)
+          go []       = []
+          go (x :: y) = pretty x :: go y
+
+export covering
+Pretty (Con n vs) where
+  prettyPrec p (MkCon n arty args tpe) = applyH p "MkCon" [n, arty, args, tpe]
 
 export covering
 Pretty TypeInfo where
@@ -449,19 +463,51 @@ Pretty TypeInfo where
         cons = indent 2 $ vsep (map pretty cons)
      in vsep [head,cons]
 
-export covering
-Pretty ExplicitArg where
-  prettyPrec p (MkExplicitArg n tpe paramTypes isRecursive) =
-    applyH p "MkExplicitArg" [n, tpe, paramTypes, isRecursive]
+export
+Pretty (Tpe t) where
+  prettyPrec p Ty       = "Type"
+  prettyPrec p (Pi x y) = appParens p (prettyPrec App x <++> "->" <++> pretty y)
+  prettyPrec p Hol      = "_?"
+
+export
+Pretty (Param a) where
+  prettyPrec p (IsParam t) = prettyPrec p t
+
+export
+Pretty (Params vs) where
+  pretty vs = list $ go vs
+    where go : Params bs -> List (Doc ann)
+          go []       = []
+          go (x :: y) = pretty x :: go y
+
+export
+Pretty (PArg n) where
+  prettyPrec p (PPar fc x)  = angles (pretty $ finToNat x)
+  prettyPrec p (PVar fc nm) = pretty nm
+  prettyPrec p (PApp fc x y) =
+    backtickParens p (alignInfix "PApp" "$" $ reverse (args x))
+      where args : PArg n -> List (Doc ann)
+            args (PApp _ f t) = prettyBacktick t :: args f
+            args t            = [prettyBacktick t]
+  prettyPrec p (PPrim fc c) = apply p "PPrim" [c]
+  prettyPrec p (PDelayed fc lr x) = applyH p "PDelayed" [lr, x]
+  prettyPrec p (PType fc) = "Type"
+
+export
+Pretty (ConArg n) where
+  prettyPrec p (ParamArg x s)         = angles (pretty $ finToNat x)
+  prettyPrec p (CArg mnm rig pinfo x) =
+    parens $ hsepH [rig, pinfo, mnm, ":", x]
 
 export covering
-Pretty ParamCon where
-  prettyPrec p (MkParamCon n explicitArgs) =
-    applyH p "MkParamCon" [n, explicitArgs]
+Pretty (ParamCon n) where
+  prettyPrec p (MkParamCon n arty args) =
+    applyH p "MkParamCon" [n, arty, args]
 
 export covering
 Pretty ParamTypeInfo where
-  pretty (MkParamTypeInfo name params cons) =
-    let head = applyH Open "MkParamTypeInfo" [name, toList params]
+  pretty (MkParamTypeInfo info params cons pargs) =
+    let head = applyH Open "MkParamTypeInfo" [info.name, params]
         cons = indent 2 $ vsep (map pretty cons)
-     in vsep [head,cons]
+        args = indent 2 $ vsep (map pretty pargs)
+     in vsep [head,"Constructors",cons,"Param args",args]
