@@ -17,19 +17,30 @@ import Doc.Generic1
 ```
 
 Most of the utility functions are almost the same as
-in module `Doc.Generic1`.
+in module `Doc.Generic1`. However, we must make sure we are only
+going to bind explicit constructor arguments.
 
 ```idris
 export
-paramConNames : ParamCon -> ConNames
-paramConNames (MkParamCon con args) = let ns   = map (nameStr . name) args
-                                          vars = map varStr ns
-                                       in (con, ns, vars)
+paramConNames : ParamCon n -> ConNames
+paramConNames c =
+  let ns   := toList $ freshNames "x" (count isExplicit c.args)
+      vars := map var ns
+   in (c.name, map nameStr ns, vars)
 
 export
-mkCode : ParamTypeInfo -> TTImp
-mkCode = listOf . map (listOf . map tpe . explicitArgs) . cons
+mkCode : (p : ParamTypeInfo) -> PNames p -> TTImp
+mkCode p ns = listOf $ map (\c => listOf $ explicits c.args) p.cons
+  where explicits : Vect n (ConArg p.info.arty) -> List TTImp
+        explicits [] = []
+        explicits (CArg _ _ ExplicitArg t :: as) = ttimp ns t :: explicits as
+        explicits (_ :: as) = explicits as
 ```
+
+Note, that in order to convert the argument types back to `TTImp`,
+we need a vector of parameter names of the correct length. This is to make
+sure we use the same parameter names throughout the generation of the
+desired declarations.
 
 The implementation of `genericDecl`, however, requires an
 additional step: In the definition of the function type,
@@ -38,22 +49,21 @@ The utility function `piAllImplicit` helps with this part.
 
 ```idris
 export
-genericDecl : ParamTypeInfo -> List Decl
-genericDecl ti =
-  let names    = zipWithIndex (map paramConNames ti.cons)
-      function   = UN . Basic $ "implGeneric" ++ camelCase (name ti)
-      paramNames = map fst $ params ti
+genericDecl : (p : ParamTypeInfo) -> PNames p -> List Decl
+genericDecl p ns =
+  let names    = zipWithIndex (map paramConNames p.cons)
+      function   = UN . Basic $ "implGeneric" ++ camelCase p.info.name
 
       -- Applies parameters to type constructor, i.e. `Either a b`
-      appType   = appNames (name ti) paramNames
-      genType  = `(Generic) .$ appType .$ mkCode ti
+      appType   = applied p ns
+      genType  = `(Generic) .$ appType .$ mkCode p ns
 
       -- Prefixes function type with implicit arguments for
       -- type parameters:
       -- `{0 a : _} -> {0 b : _} -> Generic (Either a b) [[a],[b]]`
-      funType  = piAllImplicit genType paramNames
+      funType  = piAllImplicit genType (toList ns)
 
-      x       = lambdaArg "x"
+      x       = lambdaArg {a = Name} "x"
       varX    = var "x"
       from    = x .=> iCase varX implicitFalse (map fromClause names)
       to      = x .=> iCase varX implicitFalse (toClauses names)
@@ -63,7 +73,9 @@ genericDecl ti =
 
 export
 deriveGeneric : Name -> Elab ()
-deriveGeneric name = getParamInfo' name >>= declare . genericDecl
+deriveGeneric name = do
+  p <- getParamInfo' name
+  declare $ genericDecl p (freshNames "par" p.info.arty)
 ```
 
 OK, let's give this a spin:
@@ -99,32 +111,6 @@ treeTest4 = Refl
 private
 treeTest5 : (Leaf "foo" > Leaf "foo") = False
 treeTest5 = Refl
-```
-
-And something a bit more involved:
-
-```idris
-private
-data Crazy : (n : Nat) -> (a : Type) -> (f : Type -> Type) -> Type where
-  CrazyA : Vect n a -> f a -> Crazy n a f
-  CrazyB : List (g b) -> Crazy n b g
-  CrazyC : Crazy foo bar baz
-
-%runElab (deriveGeneric "Crazy")
-
-private
-(Eq a, Eq (f a)) => Eq (Crazy n a f) where (==) = genEq
-
-private
-(Ord a, Ord (f a)) => Ord (Crazy n a f) where compare = genCompare
-
-private
-crazyTest1 : (CrazyA {f = Maybe} [1] (Just 7) == CrazyA [1] (Just 7)) = True
-crazyTest1 = Refl
-
-private
-crazyTest2 : (the (Crazy 2 Int List) CrazyC == CrazyB [[12]]) = False
-crazyTest2 = Refl
 ```
 
 ## What's next

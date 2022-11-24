@@ -401,6 +401,11 @@ data ConArg : (n : Nat) -> Type where
   CArg     : Maybe Name -> Count -> PiInfo TTImp -> PArg n -> ConArg n
 
 public export
+isExplicit : ConArg n -> Bool
+isExplicit (CArg mnm rig ExplicitArg x) = True
+isExplicit _                            = False
+
+public export
 conArg : Vect n Name -> Arg -> Res (ConArg n)
 conArg ns (MkArg M0 ImplicitArg (Just nm) t) = case findIndex (nm ==) ns of
   Just ix => Right $ ParamArg ix t
