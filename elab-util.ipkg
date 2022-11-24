@@ -10,7 +10,12 @@ sourcedir  = "src"
 depends    = base    >= 0.6.0
            , contrib >= 0.6.0
 
-modules = Language.Reflection.Derive
+modules = Derive.Enum
+        , Derive.Eq
+        , Derive.Ord
+        , Derive.Prelude
+        , Derive.Show
+        , Language.Reflection.Derive
         , Language.Reflection.Pretty
         , Language.Reflection.Refined
         , Language.Reflection.Refined.Util
