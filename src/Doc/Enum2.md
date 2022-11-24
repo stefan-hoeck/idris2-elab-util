@@ -13,7 +13,7 @@ import public Language.Reflection.Types
 %language ElabReflection
 ```
 
-In this section we try to automatically define `Eq` instances
+In this section, we try to automatically define `Eq` instances
 for enumerations. This will be quite a bit more involved
 than generating the data types themselves, so we will break
 it down into several parts.
@@ -21,7 +21,7 @@ it down into several parts.
 ## Toplevel Equality Functions
 
 We skip the interface part for now and focus on
-implementing corresponding toplevel functions instead.
+implementing suitable toplevel functions instead.
 Again, we will first make use of our pretty printers to
 inspect the structure of the function we want to implement:
 
