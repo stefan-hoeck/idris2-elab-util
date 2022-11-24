@@ -1,5 +1,6 @@
 module Test.Main
 
+import Test.Derive
 import Test.NameLookup
 import Test.TypeInfo
 
