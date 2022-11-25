@@ -13,46 +13,27 @@ public export
 (.eqName) : Named a => a -> Name
 v.eqName = UN $ Basic "eq\{v.nameStr}"
 
-||| General type of an equality test with the given list
-||| of implicit and auto-implicit arguments, plus the given argument type
-||| to be tested for equality.
-export
-generalEqType : (implicits : List Arg) -> (arg : TTImp) -> TTImp
-generalEqType is arg = piAll `(~(arg) -> ~(arg) -> Bool) is
-
-||| Implicit and auto-implicit arguments required to implement
-||| an equality test for the given parameterized type.
-export
-eqImplicits : (p : ParamTypeInfo) -> PNames p -> List Arg
-eqImplicits p ns = implicits ns ++ constraints p ns "Eq"
-
-||| Type of the top-level function implementing the derived equality test.
-export
-eqType : (p : ParamTypeInfo) -> PNames p -> TTImp
-eqType p ns = generalEqType (eqImplicits p ns) (applied p ns)
-
 ||| Top-level function declaration implementing the equality test for
 ||| the given data type.
 export
-eqClaim : (p : ParamTypeInfo) -> PNames p -> Decl
-eqClaim p ns = public' p.eqName (eqType p ns)
+eqClaim : (p : ParamTypeInfo) -> Decl
+eqClaim p =
+  let arg := p.applied
+      tpe := piAll `(~(arg) -> ~(arg) -> Bool) (allImplicits p "Eq")
+   in public' p.eqName tpe
 
 ||| Name of the derived interface implementation.
 public export
 (.eqImplName) : Named a => a -> Name
 v.eqImplName = UN $ Basic "eqImpl\{v.nameStr}"
 
-||| Type of the top-level function providing the `Eq` interface
-||| for the given data type.
-export
-eqImplType : (p : ParamTypeInfo) -> PNames p -> TTImp
-eqImplType p ns = piAll (var "Eq" .$ applied p ns) (eqImplicits p ns)
-
 ||| Top-level declaration implementing the `Eq` interface for
 ||| the given data type.
 export
-eqImplClaim : (p : ParamTypeInfo) -> PNames p -> Decl
-eqImplClaim p ns = implClaim p.eqImplName (eqImplType p ns)
+eqImplClaim : (p : ParamTypeInfo) -> Decl
+eqImplClaim p =
+  let tpe := piAll (var "Eq" .$ p.applied) (allImplicits p "Eq")
+   in implClaim p.eqImplName tpe
 
 --------------------------------------------------------------------------------
 --          Definitions
@@ -133,7 +114,6 @@ deriveEq = do
 export
 Eq : List Name -> ParamTypeInfo -> List TopLevel
 Eq nms p =
-  let ns := freshNames "par" p.info.arty
-   in [ TL (eqClaim p ns) (eqDef nms p.eqName p.info)
-      , TL (eqImplClaim p ns) (eqImplDef p)
-      ]
+  [ TL (eqClaim p) (eqDef nms p.eqName p.info)
+  , TL (eqImplClaim p) (eqImplDef p)
+  ]

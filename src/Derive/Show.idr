@@ -20,39 +20,25 @@ export
 generalShowType : (implicits : List Arg) -> (arg : TTImp) -> TTImp
 generalShowType is arg = piAll `(Prec -> ~(arg) -> String) is
 
-||| Implicit and auto-implicit arguments required to implement
-||| a string conversion function for the given parameterized type.
-export
-showImplicits : (p : ParamTypeInfo) -> PNames p -> List Arg
-showImplicits p ns = implicits ns ++ constraints p ns "Show"
-
-||| Type of the top-level function implementing the derived `showPrec`
-||| function.
-export
-showType : (p : ParamTypeInfo) -> PNames p -> TTImp
-showType p ns = generalShowType (showImplicits p ns) (applied p ns)
-
 ||| Top-level function declaration implementing the `showPrec` function for
 ||| the given data type.
 export
-showClaim : (p : ParamTypeInfo) -> PNames p -> Decl
-showClaim p ns = public' p.showName (showType p ns)
+showClaim : (p : ParamTypeInfo) -> Decl
+showClaim p =
+  let tpe := generalShowType (allImplicits p "Show") p.applied
+   in public' p.showName tpe
 
 ||| Name of the derived interface implementation.
 public export
 (.showImplName) : Named a => a -> Name
 v.showImplName = UN $ Basic "showImpl\{v.nameStr}"
 
-||| Type of the top-level function providing the `Show` interface
-||| for the given data type.
-export
-showImplType : (p : ParamTypeInfo) -> PNames p -> TTImp
-showImplType p ns = piAll (var "Show" .$ applied p ns) (showImplicits p ns)
-
 ||| Top-level declaration of the `Show` implementation for the given data type.
 export
-showImplClaim : (p : ParamTypeInfo) -> PNames p -> Decl
-showImplClaim p ns = implClaim p.showImplName (showImplType p ns)
+showImplClaim : (p : ParamTypeInfo) -> Decl
+showImplClaim p =
+  let tpe := piAll (var "Show" .$ p.applied) (allImplicits p "Show")
+   in implClaim p.showImplName tpe
 
 --------------------------------------------------------------------------------
 --          Definitions
@@ -127,7 +113,6 @@ deriveShow = do
 export
 Show : List Name -> ParamTypeInfo -> List TopLevel
 Show nms p =
-  let ns := freshNames "par" p.info.arty
-   in [ TL (showClaim p ns) (showDef nms p.showName p.info)
-      , TL (showImplClaim p ns) (showImplDef p)
-      ]
+  [ TL (showClaim p) (showDef nms p.showName p.info)
+  , TL (showImplClaim p) (showImplDef p)
+  ]

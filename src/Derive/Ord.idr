@@ -86,46 +86,27 @@ public export
 (.ordName) : Named a => a -> Name
 v.ordName = UN $ Basic "ord\{v.nameStr}"
 
-||| General type of an ordering test with the given list
-||| of implicit and auto-implicit arguments, plus the given argument type
-||| to be tested for their ordering.
-export
-generalOrdType : (implicits : List Arg) -> (arg : TTImp) -> TTImp
-generalOrdType is arg = piAll `(~(arg) -> ~(arg) -> Ordering) is
-
-||| Implicit and auto-implicit arguments required to implement
-||| an ordering test for the given parameterized type.
-export
-ordImplicits : (p : ParamTypeInfo) -> PNames p -> List Arg
-ordImplicits p ns = implicits ns ++ constraints p ns "Ord"
-
-||| Type of the top-level function implementing the derived ordering test.
-export
-ordType : (p : ParamTypeInfo) -> PNames p -> TTImp
-ordType p ns = generalOrdType (ordImplicits p ns) (applied p ns)
-
 ||| Top-level function declaration implementing the ordering test for
 ||| the given data type.
 export
-ordClaim : (p : ParamTypeInfo) -> PNames p -> Decl
-ordClaim p ns = public' p.ordName (ordType p ns)
+ordClaim : (p : ParamTypeInfo) -> Decl
+ordClaim p =
+  let arg := p.applied
+      tpe := piAll `(~(arg) -> ~(arg) -> Ordering) (allImplicits p "Ord")
+   in public' p.ordName tpe
 
 ||| Name of the derived interface implementation.
 public export
 (.ordImplName) : Named a => a -> Name
 v.ordImplName = UN $ Basic "ordImpl\{v.nameStr}"
 
-||| Type of the top-level function providing the `Ord` interface
-||| for the given data type.
-export
-ordImplType : (p : ParamTypeInfo) -> PNames p -> TTImp
-ordImplType p ns = piAll (var "Ord" .$ applied p ns) (ordImplicits p ns)
-
 ||| Top-level declaration implementing the `Ord` interface for
 ||| the given data type.
 export
-ordImplClaim : (p : ParamTypeInfo) -> PNames p -> Decl
-ordImplClaim p ns = implClaim p.ordImplName (ordImplType p ns)
+ordImplClaim : (p : ParamTypeInfo) -> Decl
+ordImplClaim p =
+  let tpe := piAll (var "Ord" .$ p.applied) (allImplicits p "Ord")
+   in implClaim p.ordImplName tpe
 
 --------------------------------------------------------------------------------
 --          Definitions
@@ -213,8 +194,7 @@ export
 Ord : List Name -> ParamTypeInfo -> List TopLevel
 Ord nms p =
   let pre := if length p.cons > 1 then ConIndex nms p.info else []
-      ns  := freshNames "par" p.info.arty
    in pre ++
-      [ TL (ordClaim p ns) (ordDef nms p.ordName p.info)
-      , TL (ordImplClaim p ns) (ordImplDef p)
+      [ TL (ordClaim p) (ordDef nms p.ordName p.info)
+      , TL (ordImplClaim p) (ordImplDef p)
       ]

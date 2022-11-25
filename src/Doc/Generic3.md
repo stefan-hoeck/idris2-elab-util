@@ -29,11 +29,12 @@ paramConNames c =
    in (c.name, map nameStr ns, vars)
 
 export
-mkCode : (p : ParamTypeInfo) -> PNames p -> TTImp
-mkCode p ns = listOf $ map (\c => listOf $ explicits c.args) p.cons
+mkCode : (p : ParamTypeInfo) -> TTImp
+mkCode p = listOf $ map (\c => listOf $ explicits c.args) p.cons
   where explicits : Vect n (ConArg p.info.arty) -> List TTImp
         explicits [] = []
-        explicits (CArg _ _ ExplicitArg t :: as) = ttimp ns t :: explicits as
+        explicits (CArg _ _ ExplicitArg t :: as) =
+          ttimp p.defltNames t :: explicits as
         explicits (_ :: as) = explicits as
 ```
 
@@ -49,19 +50,19 @@ The utility function `piAllImplicit` helps with this part.
 
 ```idris
 export
-genericDecl : (p : ParamTypeInfo) -> PNames p -> List Decl
-genericDecl p ns =
+genericDecl : (p : ParamTypeInfo) -> List Decl
+genericDecl p =
   let names    = zipWithIndex (map paramConNames p.cons)
       function   = UN . Basic $ "implGeneric" ++ camelCase p.info.name
 
       -- Applies parameters to type constructor, i.e. `Either a b`
-      appType   = applied p ns
-      genType  = `(Generic) .$ appType .$ mkCode p ns
+      appType  = p.applied
+      genType  = `(Generic) .$ appType .$ mkCode p
 
       -- Prefixes function type with implicit arguments for
       -- type parameters:
       -- `{0 a : _} -> {0 b : _} -> Generic (Either a b) [[a],[b]]`
-      funType  = piAllImplicit genType (toList ns)
+      funType  = piAllImplicit genType (toList p.defltNames)
 
       x       = lambdaArg {a = Name} "x"
       varX    = var "x"
@@ -75,7 +76,7 @@ export
 deriveGeneric : Name -> Elab ()
 deriveGeneric name = do
   p <- getParamInfo' name
-  declare $ genericDecl p (freshNames "par" p.info.arty)
+  declare $ genericDecl p
 ```
 
 OK, let's give this a spin:

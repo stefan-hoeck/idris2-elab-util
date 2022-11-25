@@ -421,9 +421,10 @@ namespace ConArg
 public export
 record ParamCon (n : Nat) where
   constructor MkParamCon
-  name : Name
-  arty : Nat
-  args : Vect arty (ConArg n)
+  name       : Name
+  arty       : Nat
+  args       : Vect arty (ConArg n)
+  paramNames : Vect n Name
 
 namespace ParamCon
   public export
@@ -439,14 +440,35 @@ paramCon : Params vs -> Con n vs -> Res (ParamCon n)
 paramCon ps (MkCon name arty args typeArgs) = do
   params  <- paramNames ps typeArgs
   conArgs <- traverse (conArg params) args
-  pure $ MkParamCon name arty conArgs
+  pure $ MkParamCon name arty conArgs params
 
 public export
 record ParamTypeInfo where
   constructor MkParamTypeInfo
+  ||| Underlying type info
   info       : TypeInfo
+
+  ||| Witness that all type arguments of the type constructor
+  ||| are basic type-level functions as defined in `Tpe t`.
   params     : Params info.args
+
+  ||| Default parameter names. These are either the explicitly
+  ||| given names or the names used in the first data constructor
+  ||| for unnamed parameters. Generated names are used for
+  ||| the rare zero-constructor data types with unnamed parameters.
+  defltNames : Vect info.arty Name
+
+  ||| List of data constructors
   cons       : List (ParamCon info.arty)
+
+  ||| List of types appearing in constructor arguments, where the
+  ||| the outermost applied type is one of the parameters. We use this
+  ||| to generate the constraints necessary to implement interfaces such
+  ||| as `Eq` or `Ord`.
+  |||
+  ||| For instance, in case of a constructor argument `Either (f a) (b, f Nat)`
+  ||| with `f`, `a`, and `b` being parameters, this list will contain
+  ||| the encoded forms of `f a`, `f Nat`, and `b`.
   pargs      : List (PArg info.arty)
 
 public export
@@ -458,33 +480,42 @@ paramType : TypeInfo -> Res ParamTypeInfo
 paramType ti@(MkTypeInfo nm n vs cs) = do
   ps     <- params vs
   cons   <- traverse (paramCon ps) cs
-  pure $ MkParamTypeInfo ti ps cons (nub $ cons >>= paramArgs)
 
-||| Parameter names for the given parameterized data type.
-||| These are used to generate the necessary implicit and
-||| auto-implicit arguments (typically, interface implementations)
-||| required for working with the data type.
-public export
-0 PNames : ParamTypeInfo -> Type
-PNames p = Vect p.info.arty Name
+  let names := case cons of
+                 h :: _ => h.paramNames
+                 Nil    => freshNames "par" n
+
+      pns   := zipWith (\a,n => fromMaybe n a.name) vs names
+
+  pure $ MkParamTypeInfo ti ps pns cons (nub $ cons >>= paramArgs)
 
 ||| Returns the constraints required to implement the given interface
 ||| for the given parameterized data types.
 |||
 ||| The interface must be of type `Type -> Type`.
 export
-constraints :
-     (p      : ParamTypeInfo)
-  -> (ns     : PNames p)
-  -> (iname  : Name)
-  -> List Arg
-constraints p ns iname = map toCon p.pargs
+constraints : ParamTypeInfo -> (iname  : Name) -> List Arg
+constraints p iname = map toCon p.pargs
   where toCon : PArg p.info.arty -> Arg
-        toCon pa = MkArg MW AutoImplicit Nothing . (var iname .$) $ ttimp ns pa
+        toCon pa = MkArg MW AutoImplicit Nothing . (var iname .$) $
+                   ttimp p.defltNames pa
 
+||| Returns the type constructor of a parameterized
+||| data type applied to its parameters
 public export
-applied : (p : ParamTypeInfo) -> (ns : PNames p) -> TTImp
-applied p ns = appArgs p.getName ns
+(.applied) : ParamTypeInfo -> TTImp
+(.applied) p = appArgs p.getName p.defltNames
+
+||| Returns a list of implicit arguments corresponding
+||| to the data type's parameters.
+public export %inline
+(.implicits) : ParamTypeInfo -> List Arg
+(.implicits) p = implicits p.defltNames
+
+||| Short-hand for `p.implicits ++ constraints iname p`.
+public export %inline
+allImplicits : (p : ParamTypeInfo) -> (iname : Name) -> List Arg
+allImplicits p iname = p.implicits ++ constraints p iname
 
 ||| Returns information about a parameterized data type
 ||| specified by the given (probably not fully qualified) name.

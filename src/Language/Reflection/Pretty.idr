@@ -501,13 +501,13 @@ Pretty (ConArg n) where
 
 export covering
 Pretty (ParamCon n) where
-  prettyPrec p (MkParamCon n arty args) =
-    applyH p "MkParamCon" [n, arty, args]
+  prettyPrec p (MkParamCon n arty args ns) =
+    applyH p "MkParamCon" [n, arty, args, ns]
 
 export covering
 Pretty ParamTypeInfo where
-  pretty (MkParamTypeInfo info params cons pargs) =
-    let head = applyH Open "MkParamTypeInfo" [info.name, params]
+  pretty (MkParamTypeInfo info params dnames cons pargs) =
+    let head = applyH Open "MkParamTypeInfo" [info.name, params, dnames]
         cons = indent 2 $ vsep (map pretty cons)
         args = indent 2 $ vsep (map pretty pargs)
      in vsep [head,"Constructors",cons,"Param args",args]
