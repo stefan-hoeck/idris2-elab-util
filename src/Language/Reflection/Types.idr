@@ -38,6 +38,19 @@ public export
 implicits : Foldable t => t Name -> List Arg
 implicits = map erasedImplicit . toList
 
+||| Tries to generate the given proofs for all values in the
+||| given vector over an applicative functor.
+public export
+tryAll :
+     {0 a : Type}
+  -> {0 p : a -> Type}
+  -> Applicative f
+  => ((v : a) -> f (p v))
+  -> (vs : Vect n a)
+  -> f (All p vs)
+tryAll g []        = pure []
+tryAll g (x :: xs) = [| g x :: tryAll g xs |]
+
 --------------------------------------------------------------------------------
 --          Applied Arguments
 --------------------------------------------------------------------------------
@@ -311,12 +324,6 @@ param (MkArg _ _           nm t) =
   let str := maybe "_" show nm
    in Left "\{str} is not an explicit type argument"
 
-||| Tries to proof that the type arguments are plain types or type function.
-public export
-params : (vs : Vect n Arg) -> Res (Params vs)
-params []        = Right []
-params (x :: xs) = [| param x :: params xs |]
-
 ||| Constructor argument type in a parameterized data type
 ||| with `n` parameters.
 public export
@@ -478,7 +485,7 @@ Named ParamTypeInfo where
 public export
 paramType : TypeInfo -> Res ParamTypeInfo
 paramType ti@(MkTypeInfo nm n vs cs) = do
-  ps     <- params vs
+  ps     <- tryAll param vs
   cons   <- traverse (paramCon ps) cs
 
   let names := case cons of

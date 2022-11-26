@@ -5,6 +5,32 @@ import public Language.Reflection.Derive
 %default total
 
 --------------------------------------------------------------------------------
+--          Named Constructors
+--------------------------------------------------------------------------------
+
+||| Witness that an explicit argument in a Pi type has an explicit
+||| name.
+public export
+data NamedArg : Arg -> Type where
+  NaExplicit : NamedArg (MkArg c ExplicitArg (Just n) t)
+  NaImplicit : NamedArg (MkArg c ImplicitArg n t)
+  NaAuto     : NamedArg (MkArg c AutoImplicit n t)
+  NaDeflt    : NamedArg (MkArg c (DefImplicit q) n t)
+
+||| Checks, if the given argument is properly named.
+public export
+namedArg : (a : Arg) -> Bool
+namedArg (MkArg _ ExplicitArg (Just $ UN _) _) = True
+namedArg (MkArg _ ExplicitArg _ _)             = False
+namedArg (MkArg _ ImplicitArg _ _)             = True
+namedArg (MkArg _ AutoImplicit _ _)            = True
+namedArg (MkArg _ (DefImplicit _) _ _)         = True
+
+public export
+namedType : TypeInfo -> Bool
+namedType ti = all (\c => all namedArg c.args) ti.cons
+
+--------------------------------------------------------------------------------
 --          Claims
 --------------------------------------------------------------------------------
 
@@ -53,31 +79,58 @@ pvar = var "p"
 
 parameters (nms : List Name)
 
+  namedRHS :
+       Name
+    -> SnocList TTImp
+    -> (as : Vect n Arg)
+    -> (ns : Vect n Name)
+    -> TTImp
+  namedRHS n st (MkArg M0 ExplicitArg (Just nm) _ :: xs) (y :: ys) =
+    let t := primVal (Str "\{nameStr nm} = _")
+     in namedRHS n (st :< t) xs ys
+  namedRHS n st (MkArg _  ExplicitArg (Just nm) t :: xs) (y :: ys) =
+    let shown := assertIfRec nms t `(show ~(var y))
+        str   := primVal (Str "\{nameStr nm} = ")
+        t     := `(~(str) ++ ~(shown))
+     in namedRHS n (st :< t) xs ys
+  namedRHS n st (_ :: xs) (_ :: ys) = namedRHS n st xs ys
+  namedRHS n Lin      [] [] = n.namePrim
+  namedRHS n (h :< t) [] [] =
+    let sx   := map (\x => `(~(x) ++ ", ")) h :< t
+        args := foldr (\e,acc => `(~(e) :: ~(acc))) `(Prelude.Nil) sx
+     in var "showCon" .$ pvar .$ n.namePrim .$
+        `(" {" ++ concat ~(args) ++ "}")
+
+  -- Right-hand side of a single show clause.
   -- String conversion for a set of constructor arguments.
   -- Checks if the argument types are safely recursive, that is, contains
   -- one of the data type names listed in `nms`. If so, prefixes
   -- the generated function call with `assert_total`.
-  showRHS : Name -> SnocList TTImp -> Vect n Arg -> Vect n Name -> TTImp
-  showRHS n st (x :: xs) (y :: ys) = case isExplicit x of
+  rhs : Name -> SnocList TTImp -> Vect n Arg -> Vect n Name -> TTImp
+  rhs n st (x :: xs) (y :: ys) = case isExplicit x of
     True  => case x.count of
       M0 => primVal (Str " _")
       _  => let t := assertIfRec nms x.type `(showArg ~(var y))
-             in showRHS n (st :< t) xs ys
-    False => showRHS n st xs ys
-  showRHS n Lin []        [] = n.namePrim
-  showRHS n sx  []        [] =
+             in rhs n (st :< t) xs ys
+    False => rhs n st xs ys
+  rhs n Lin []        [] = n.namePrim
+  rhs n sx  []        [] =
     let args := foldr (\e,acc => `(~(e) :: ~(acc))) `(Prelude.Nil) sx
      in var "showCon" .$ pvar .$ n.namePrim .$ `(concat ~(args))
 
   export
   showClauses : (fun : Maybe Name) -> TypeInfo -> List Clause
-  showClauses fun ti = map clause ti.cons
-    where clause : Con ti.arty ti.args -> Clause
-          clause c =
+  showClauses fun ti =
+    let b := namedType ti
+     in map (clause b) ti.cons
+    where clause : Bool -> Con ti.arty ti.args -> Clause
+          clause b c =
             let ns  := freshNames "x" c.arty
                 bc  := bindCon c ns
                 lhs := maybe bc ((.$ pvar .$ bc) . var) fun
-             in lhs .= showRHS c.name Lin c.args ns
+             in lhs .=
+                  if b then namedRHS c.name Lin c.args ns
+                       else rhs c.name Lin c.args ns
 
   export
   showDef : Name -> TypeInfo -> Decl
