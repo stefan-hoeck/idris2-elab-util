@@ -104,9 +104,7 @@ v.ordImplName = UN $ Basic "ordImpl\{v.nameStr}"
 ||| the given data type.
 export
 ordImplClaim : (p : ParamTypeInfo) -> Decl
-ordImplClaim p =
-  let tpe := piAll (var "Ord" .$ p.applied) (allImplicits p "Ord")
-   in implClaim p.ordImplName tpe
+ordImplClaim p = implClaim p.ordImplName (implType "Ord" p)
 
 --------------------------------------------------------------------------------
 --          Definitions

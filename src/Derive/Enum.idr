@@ -85,7 +85,7 @@ eqTL t ns =
   let nm  := t.eqName
       ci  := var $ t.conIndexName
    in TL
-        (interfaceHintOpts Public [Inline] nm (ifaceClaimType "Eq" t ns))
+        (implClaim nm (ifaceClaimType "Eq" t ns))
         (def nm [var nm .= `(mkEq $ \x,y => ~(ci) x == ~(ci) y)])
 
 export
@@ -95,11 +95,10 @@ ordTL :
   -> {auto 0 _ : RuntimeEnum t}
   -> TopLevel
 ordTL t ns =
-  let nm  := t.ordName
-      ci  := var $ t.conIndexName
-   in TL
-        (interfaceHintOpts Public [Inline] nm (ifaceClaimType "Ord" t ns))
-        (def nm [var nm .= `(mkOrd $ \x,y => compare (~(ci) x) (~(ci) y))])
+  let nm := t.ordName
+      ci := var $ t.conIndexName
+      cl := var nm .= `(mkOrd $ \x,y => compare (~(ci) x) (~(ci) y))
+   in TL (implClaim nm (ifaceClaimType "Ord" t ns)) (def nm [cl])
 
 export
 showTL :
@@ -109,10 +108,10 @@ showTL :
   -> List TopLevel
 showTL t ns =
   let nm  := t.showImplName
-   in [ TL (public' t.showName $ generalShowType (implicits ns) $ appArgs t.name ns)
-           (showDef [] t.showName t)
-      , TL (interfaceHintOpts Public [Inline] nm (ifaceClaimType "Show" t ns))
-           (showImplDef t)
+      tpe := generalShowType (implicits ns) $ appArgs t.name ns
+      clm := public' t.showName tpe
+   in [ TL clm (showDef [] t.showName t)
+      , TL (implClaim nm (ifaceClaimType "Show" t ns)) (showImplDef t)
       ]
 
 export

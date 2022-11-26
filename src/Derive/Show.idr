@@ -36,9 +36,7 @@ v.showImplName = UN $ Basic "showImpl\{v.nameStr}"
 ||| Top-level declaration of the `Show` implementation for the given data type.
 export
 showImplClaim : (p : ParamTypeInfo) -> Decl
-showImplClaim p =
-  let tpe := piAll (var "Show" .$ p.applied) (allImplicits p "Show")
-   in implClaim p.showImplName tpe
+showImplClaim p = implClaim p.showImplName (implType "Show" p)
 
 --------------------------------------------------------------------------------
 --          Definitions

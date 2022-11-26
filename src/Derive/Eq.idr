@@ -31,9 +31,7 @@ v.eqImplName = UN $ Basic "eqImpl\{v.nameStr}"
 ||| the given data type.
 export
 eqImplClaim : (p : ParamTypeInfo) -> Decl
-eqImplClaim p =
-  let tpe := piAll (var "Eq" .$ p.applied) (allImplicits p "Eq")
-   in implClaim p.eqImplName tpe
+eqImplClaim p = implClaim p.eqImplName (implType "Eq" p)
 
 --------------------------------------------------------------------------------
 --          Definitions

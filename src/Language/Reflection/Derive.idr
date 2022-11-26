@@ -41,6 +41,10 @@ public export %inline
 Named a => Named (Subset a p) where
   (.getName) (Element v _) = v.getName
 
+--------------------------------------------------------------------------------
+--          Utilities
+--------------------------------------------------------------------------------
+
 ||| Tries to lookup and refine an elaboratable value based on the
 ||| given predicate.
 public export
@@ -73,9 +77,29 @@ export
 implName : Named a => a -> String -> Name
 implName n iface = UN $ Basic $ "impl" ++ iface ++ n.nameStr
 
+||| Creates a function declaration with a `%hint` and `%inline`
+||| annotation.
+|||
+||| This is what you want if you use separate top-level function
+||| for the interface's implementation and the actual implementation
+||| just adds those functions to the interface constructor.
 public export %inline
 implClaim : Name -> TTImp -> Decl
 implClaim = interfaceHintOpts Public [Inline]
+
+||| Creates the function type for an interface implementation including
+||| the required implicit and auto-implicit arguments.
+|||
+||| For instance, if `Name` is `"Eq"` and the data type in question is
+||| `Either` with parameter names `a` and `b`, the `TTImp` returned
+||| corresponds to
+|||
+||| ```idris
+||| {0 a : _} -> {0 b : _} -> Eq a => Eq b => Eq (Either a b)`
+||| ```
+export
+implType : Name -> ParamTypeInfo -> TTImp
+implType n p = piAll (var n .$ p.applied) (allImplicits p n)
 
 ||| Extracts the innermost target of a function application.
 ||| For instance, for `Foo @{bar} baz {n = 12}`, this will extract `Foo`.
