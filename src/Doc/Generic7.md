@@ -78,56 +78,67 @@ mkGeneric : Name
 mkGeneric = singleCon "Generic"
 
 private
-mkSOP : (k : Int) -> (args : List TTImp) -> TTImp
-mkSOP k args     = if k <= 0 then `(Z) .$ listOf args
-                             else `(S) .$ mkSOP (k-1) args
+mkSOP1 : (k : Nat) -> (arg : TTImp) -> TTImp
+mkSOP1 0     arg = `(Z) .$ arg
+mkSOP1 (S k) arg = `(S) .$ mkSOP1 k arg
+
+mkSOP : Foldable t => (k : Nat) -> (args : t TTImp) -> TTImp
+mkSOP k = mkSOP1 k . listOf
 
 ||| Creates the syntax tree for the code of the given data type.
 ||| We export this since it might be useful elsewhere.
 export
-mkCode : ParamTypeInfo -> TTImp
-mkCode = listOf . map (listOf . map tpe . explicitArgs) . cons
+mkCode : (p : ParamTypeInfo) -> TTImp
+mkCode p = listOf $ map (\c => listOf $ explicits c.args) p.cons
+  where explicits : Vect n (ConArg p.info.arty) -> List TTImp
+        explicits [] = []
+        explicits (CArg _ _ ExplicitArg t :: as) =
+          ttimp p.defltNames t :: explicits as
+        explicits (_ :: as) = explicits as
 
 private
-fromClause : (Int,ConNames) -> Clause
+fromClause : (Nat,ConNames) -> Clause
 fromClause (k,(con,ns,vars)) = bindAll con ns .= mkSOP k vars
 
 private
-fromToIdClause : (Int,ConNames) -> Clause
+fromToIdClause : (Nat,ConNames) -> Clause
 fromToIdClause (k,(con,ns,vars)) = bindAll con ns .= `(Refl)
 
 private
-toClause : (Int,ConNames) -> Clause
+toClause : (Nat,ConNames) -> Clause
 toClause (k,(con,ns,vars)) = mkSOP k (map bindVar ns) .= appAll con vars
 
 private
-toFromIdClause : (Int,ConNames) -> Clause
+toFromIdClause : (Nat,ConNames) -> Clause
 toFromIdClause (k,(con,ns,vars)) = mkSOP k (map bindVar ns) .= `(Refl)
 
 private
-zipWithIndex : List a -> List (Int,a)
+zipWithIndex : List a -> List (Nat,a)
 zipWithIndex as = run 0 as
-  where run : Int -> List a -> List (Int,a)
+  where run : Nat -> List a -> List (Nat,a)
         run _ []     = []
-        run k (h::t) = (k,h) :: run (k+1) t
+        run k (h::t) = (k,h) :: run (S k) t
 
-private
-conNames : ParamCon -> ConNames
-conNames (MkParamCon con args) = let ns   = map (nameStr . name) args
-                                     vars = map varStr ns
-                                  in (con, ns, vars)
+conNames : ParamCon n -> ConNames
+conNames c =
+  let ns   := toList $ freshNames "x" (count isExplicit c.args)
+      vars := map var ns
+   in (c.name, map nameStr ns, vars)
 
 ||| Derives a `Generic` implementation for the given data type
 ||| and visibility.
 export
-GenericVis : Visibility -> DeriveUtil -> InterfaceImpl
-GenericVis vis g =
-  let names    = zipWithIndex (map conNames g.typeInfo.cons)
-      genType  = `(Generic) .$ g.appliedType .$ mkCode g.typeInfo
-      funType  = piAllImplicit  genType g.paramNames
-      x        = lambdaArg "x"
-      varX     = var "x"
+GenericVis : Visibility -> List Name -> ParamTypeInfo -> List TopLevel
+GenericVis vis _ p =
+  let names    = zipWithIndex (map conNames p.cons)
+      fun      = UN . Basic $ "implGeneric" ++ camelCase p.info.name
 
+      appType  = p.applied
+      genType  = `(Generic) .$ appType .$ mkCode p
+      funType  = piAllImplicit genType (toList p.defltNames)
+
+      x        = lambdaArg {a = Name} "x"
+      varX     = var "x"
       from     = x .=> iCase varX implicitFalse (map fromClause names)
       to       = x .=> iCase varX implicitFalse (map toClause names)
       fromToId = x .=> iCase varX implicitFalse (map fromToIdClause names)
@@ -135,11 +146,11 @@ GenericVis vis g =
 
       impl     = appAll mkGeneric [from,to,fromToId,toFromId]
 
-   in MkInterfaceImpl "Generic" vis [] impl funType
+   in [ TL (interfaceHint vis fun funType) (def fun [var fun .= impl])]
 
 ||| Alias for `GenericVis Public`.
 export
-Generic' : DeriveUtil -> InterfaceImpl
+Generic' : List Name -> ParamTypeInfo -> List TopLevel
 Generic' = GenericVis Public
 ```
 
@@ -175,7 +186,6 @@ genEqSym :  Generic t code => EqV (SOP I code)
 genEqSym x y with (from x)
   genEqSym x y | gx with (from y)
     genEqSym x y | gx | gy = eqSym gx gy
-
 
 export total
 genEqTrans :  Generic t code => EqV (SOP I code)
@@ -220,15 +230,17 @@ mkEqV :  Eq a
       -> EqV a
 mkEqV = %runElab check (var $ singleCon "EqV")
 
-Eq' : DeriveUtil -> InterfaceImpl
-Eq' g = MkInterfaceImpl "Eq" Public []
-          `(mkEq genEq)
-          (implementationType `(Eq) g)
+Eq' : List Name -> ParamTypeInfo -> List TopLevel
+Eq' _ p =
+  let nm := implName p "Eq"
+      cl := var nm .= `(mkEq genEq)
+   in [TL (implClaim nm (implType "Eq" p)) (def nm [cl])]
 
-EqV' : DeriveUtil -> InterfaceImpl
-EqV' g = MkInterfaceImpl "EqV" Public []
-        `(mkEqV genEqRefl genEqSym genEqTrans (\_,_ => Refl))
-        (implementationType `(EqV) g)
+EqV' : List Name -> ParamTypeInfo -> List TopLevel
+EqV' _ p =
+  let nm := implName p "EqV"
+      cl := var nm .= `(mkEqV genEqRefl genEqSym genEqTrans (\_,_ => Refl))
+   in [TL (implClaim nm (implType "EqV" p)) (def nm [cl])]
 
 data AnotherSum : Type where
   Var   : (v : String) -> AnotherSum
