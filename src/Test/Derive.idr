@@ -185,6 +185,19 @@ showIVect : {m : Nat} -> Show a => Show (IVect {n = m} a)
 showIVect = deriveShow
 
 --------------------------------------------------------------------------------
+--          Semigroup
+--------------------------------------------------------------------------------
+
+record Semi where
+  constructor MkSemi
+  x : List Nat
+  y : String
+  z : Maybe Bits8
+
+%runElab derive "Semi" [Show,Eq]
+%runElab deriveRecord "Semi" [Semigroup,Monoid]
+
+--------------------------------------------------------------------------------
 --          elab-util types
 --------------------------------------------------------------------------------
 

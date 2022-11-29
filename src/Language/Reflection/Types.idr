@@ -234,12 +234,51 @@ public export
 isEnum : TypeInfo -> Bool
 isEnum ti = all isConstant $ ti.cons
 
+||| True if the given constructor has name `Nil` and no explicit arguments.
+public export
+isNil : Con n vs -> Bool
+isNil (MkCon n _ as _) = isNil n && all (not . isExplicit) as
+
+||| True if the given constructor has name `(::)` and
+||| exactly two explicit arguments.
+public export
+isCons : Con n vs -> Bool
+isCons (MkCon n _ as _) = isCons n && count isExplicit as == 2
+
+||| True if the given constructor has name `Lin` and no explicit arguments.
+public export
+isLin : Con n vs -> Bool
+isLin (MkCon n _ as _) = isLin n && all (not . isExplicit) as
+
+||| True if the given constructor has name `(:<)` and
+||| exactly two explicit arguments.
+public export
+isSnoc : Con n vs -> Bool
+isSnoc (MkCon n _ as _) = isSnoc n && count isExplicit as == 2
+
 ||| True if the given type has a single constructor with a single
 ||| unerased argument.
 public export
 isNewtype : TypeInfo -> Bool
 isNewtype (MkTypeInfo _ _ _ [c]) = count (not . isErased) c.args == 1
 isNewtype _                      = False
+
+||| True, if the given type has exactly one
+||| `Nil` constructor with no explicit
+||| argument and a `(::)` constructor with two explicit arguments.
+public export
+isListLike : TypeInfo -> Bool
+isListLike (MkTypeInfo _ _ _ [x,y]) = isNil x && isCons y || isCons x && isNil y
+isListLike _                        = False
+
+||| True, if the given type has exactly one
+||| `Lin` constructor with no explicit
+||| argument and a `(:<)` constructor with two explicit arguments.
+public export
+isSnocListLike : TypeInfo -> Bool
+isSnocListLike (MkTypeInfo _ _ _ [x,y]) =
+  isLin x && isSnoc y || isSnoc x && isLin y
+isSnocListLike _                        = False
 
 ||| True if the given type has a single constructor with only erased
 ||| arguments. Such a value will have a trivial runtime representation.
@@ -256,7 +295,7 @@ getInfo' : Elaboration m => Name -> m TypeInfo
 getInfo' n =
   do (n',tt)        <- lookupName n
      (args,IType _) <- pure $ unPi tt
-                    | (_,_) => fail "Type declaration does not end in IType"
+       | (_,_) => fail "Type declaration does not end in IType: \{show tt}"
 
      let (arty ** vargs) := (length args ** Vect.fromList args)
 

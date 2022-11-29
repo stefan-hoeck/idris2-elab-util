@@ -32,6 +32,34 @@ export
 Interpolation Name where
   interpolate = show
 
+||| True if the given name ends on (`Basic $ UN "Nil")
+public export
+isNil : Name -> Bool
+isNil (NS ns nm)         = isNil nm
+isNil (UN $ Basic "Nil") = True
+isNil _                  = False
+
+||| True if the given name ends on (`Basic $ UN "Lin")
+public export
+isLin : Name -> Bool
+isLin (NS ns nm)         = isLin nm
+isLin (UN $ Basic "Lin") = True
+isLin _                  = False
+
+||| True if the given name ends on (`Basic $ UN "::")
+public export
+isCons : Name -> Bool
+isCons (NS ns nm)        = isCons nm
+isCons (UN $ Basic "::") = True
+isCons _                 = False
+
+||| True if the given name ends on (`Basic $ UN ":<")
+public export
+isSnoc : Name -> Bool
+isSnoc (NS ns nm)        = isSnoc nm
+isSnoc (UN $ Basic ":<") = True
+isSnoc _                 = False
+
 ||| Takes a (probably fully qualified name) and generates a
 ||| identifier from this without the dots.
 |||
