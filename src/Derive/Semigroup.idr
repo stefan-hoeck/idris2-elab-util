@@ -31,7 +31,7 @@ semigroupImplDef : (fun, impl : Name) -> Decl
 semigroupImplDef f i = def i [var i .= var "MkSemigroup" .$ var f]
 
 parameters (nms : List Name)
-  ttimp : BoundArg 2 UnerasedExplicit -> TTImp
+  ttimp : BoundArg 2 Regular -> TTImp
   ttimp (BA arg [x,y] _) = assertIfRec nms arg.type `(~(var x) <+> ~(var y))
 
   ||| Generates pattern match clauses for the constructors of
@@ -47,7 +47,7 @@ parameters (nms : List Name)
   appClause fun (MkTypeInfo n k as [c]) {prf = IsRecord} =
     let nx := freshNames "x" c.arty
         ny := freshNames "y" c.arty
-        st := ttimp <$> boundArgs unerasedExplicit c.args [nx,ny]
+        st := ttimp <$> boundArgs regular c.args [nx,ny]
      in var fun .$ bindCon c nx .$ bindCon c ny .= appAll c.name (st <>> [])
 
   ||| Definition of a (local or top-level) function implementing

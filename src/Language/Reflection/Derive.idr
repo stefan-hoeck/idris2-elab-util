@@ -141,12 +141,20 @@ erased (MkArg M0 _ _ _) = Just IsErased
 erased _                = Nothing
 
 public export
-0 UnerasedExplicit : Arg -> Type
-UnerasedExplicit a = (Unerased a, Explicit a)
+0 Regular : Arg -> Type
+Regular a = (Unerased a, Explicit a)
 
 public export
-unerasedExplicit : (a : Arg) -> Maybe (UnerasedExplicit a)
-unerasedExplicit a = [| MkPair (unerased a) (explicit a) |]
+regular : (a : Arg) -> Maybe (Regular a)
+regular a = [| MkPair (unerased a) (explicit a) |]
+
+public export
+0 RegularNamed : Arg -> Type
+RegularNamed a = (NamedArg a, Regular a)
+
+public export
+regularNamed : (a : Arg) -> Maybe (RegularNamed a)
+regularNamed a = [| MkPair (named a) (regular a) |]
 
 public export
 0 NamedExplicit : Arg -> Type

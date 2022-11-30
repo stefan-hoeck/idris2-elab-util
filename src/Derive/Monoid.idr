@@ -30,12 +30,12 @@ export
 monoidImplDef : (fun, impl : Name) -> Decl
 monoidImplDef f i = def i [var i .= var "MkMonoid" .$ var f]
 
-ttimp : BoundArg 0 UnerasedExplicit -> TTImp
+ttimp : BoundArg 0 Regular -> TTImp
 ttimp _ = `(neutral)
 
 rhs : Con n vs -> TTImp
 rhs c =
-  let st := ttimp <$> boundArgs unerasedExplicit c.args []
+  let st := ttimp <$> boundArgs regular c.args []
    in appAll c.name (st <>> [])
 
 ||| Definition of a (local or top-level) function implementing
