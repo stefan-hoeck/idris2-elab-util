@@ -42,6 +42,121 @@ Named a => Named (Subset a p) where
   (.getName) (Element v _) = v.getName
 
 --------------------------------------------------------------------------------
+--          Names
+--------------------------------------------------------------------------------
+
+||| Generates the name of a function implementing some functionality
+||| for the given type.
+export
+funName : Named a => a -> String -> Name
+funName n fun = UN $ Basic $ fun ++ n.nameStr
+
+||| Generates the name of an interface's implementation function
+export
+implName : Named a => a -> String -> Name
+implName n iface = UN $ Basic $ "impl" ++ iface ++ n.nameStr
+
+--------------------------------------------------------------------------------
+--          Arguments
+--------------------------------------------------------------------------------
+
+||| A single constructor argument, for which we have `n` bound
+||| variables on the left hand side of a pattern match clause, and
+||| which is refined by predicate `p`.
+public export
+record BoundArg (n : Nat) (p : Arg -> Type) where
+  constructor BA
+  arg  : Arg
+  vars : Vect n Name
+  prf  : p arg
+
+public export
+split : Vect k (Vect (S n) a) -> (Vect k a, Vect k (Vect n a))
+split []                 = ([],[])
+split ((x :: xs) :: yss) =
+  let (zs,zss) := split yss
+   in (x :: zs, xs :: zss)
+
+||| Refine a list of constructor arguments with the given predicate
+||| and pair them with a number of bound variable names.
+export
+boundArgs :
+     {0 p : Arg -> Type}
+  -> (f : (a : Arg) -> Maybe (p a))
+  -> Vect n Arg
+  -> Vect k (Vect n Name)
+  -> SnocList (BoundArg k p)
+boundArgs f = go Lin
+  where go :  SnocList (BoundArg k p)
+           -> Vect m Arg
+           -> Vect k (Vect m Name)
+           -> SnocList (BoundArg k p)
+        go sx (x :: xs) ns =
+          let (y, ys) := split ns
+           in case f x of
+                Just prf => go (sx :< BA x y prf) xs ys
+                Nothing  => go sx xs ys
+        go sx []        _  = sx
+
+public export
+data Explicit : Arg -> Type where
+  IsExplicit : Explicit (MkArg c ExplicitArg n t)
+
+public export
+explicit : (a : Arg) -> Maybe (Explicit a)
+explicit (MkArg _ ExplicitArg _ _) = Just IsExplicit
+explicit _                         = Nothing
+
+public export
+data NamedArg : Arg -> Type where
+  IsNamed : NamedArg (MkArg c p (Just n) t)
+
+public export
+named : (a : Arg) -> Maybe (NamedArg a)
+named (MkArg _ _ (Just n) _) = Just IsNamed
+named _                      = Nothing
+
+public export
+argName : (a : Arg) -> {auto 0 prf : NamedArg a} -> Name
+argName (MkArg _ _ (Just n) _) {prf = IsNamed} = n
+
+public export
+data Unerased : Arg -> Type where
+  U1 : Unerased (MkArg M1 p n t)
+  UW : Unerased (MkArg MW p n t)
+
+public export
+unerased : (a : Arg) -> Maybe (Unerased a)
+unerased (MkArg M0 _ _ _) = Nothing
+unerased (MkArg M1 _ _ _) = Just U1
+unerased (MkArg MW _ _ _) = Just UW
+
+public export
+data Erased : Arg -> Type where
+  IsErased : Erased (MkArg M0 p n t)
+
+public export
+erased : (a : Arg) -> Maybe (Erased a)
+erased (MkArg M0 _ _ _) = Just IsErased
+erased _                = Nothing
+
+public export
+0 UnerasedExplicit : Arg -> Type
+UnerasedExplicit a = (Unerased a, Explicit a)
+
+public export
+unerasedExplicit : (a : Arg) -> Maybe (UnerasedExplicit a)
+unerasedExplicit a = [| MkPair (unerased a) (explicit a) |]
+
+public export
+0 NamedExplicit : Arg -> Type
+NamedExplicit a = (NamedArg a, Explicit a)
+
+public export
+namedExplicit : (a : Arg) -> Maybe (NamedExplicit a)
+namedExplicit a = [| MkPair (named a) (explicit a) |]
+
+--------------------------------------------------------------------------------
 --          Utilities
 --------------------------------------------------------------------------------
 
@@ -71,11 +186,6 @@ record TopLevel where
   constructor TL
   claim : Decl
   defn  : Decl
-
-||| Generates the name of an interface's implementation function
-export
-implName : Named a => a -> String -> Name
-implName n iface = UN $ Basic $ "impl" ++ iface ++ n.nameStr
 
 ||| Creates a function declaration with a `%hint` and `%inline`
 ||| annotation.

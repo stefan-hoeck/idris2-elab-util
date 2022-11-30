@@ -1,7 +1,10 @@
 module Derive.Record
 
-import public Data.DPair
+import Derive.Eq
+import Derive.Ord
+import Derive.Show
 import Language.Reflection.Derive
+import public Data.DPair
 
 ||| Proof that the given data type only has a single constructor.
 public export
@@ -26,11 +29,11 @@ Elaborateable (Subset TypeInfo Record) where
   find_ = refine isRecord
 
 public export
-0 ParamRecord : ParamTypeInfo -> Type
-ParamRecord t = Record t.info
+0 ParamRecord : Type
+ParamRecord = Subset ParamTypeInfo (Record . info)
 
 public export %inline
-Elaborateable (Subset ParamTypeInfo ParamRecord) where
+Elaborateable ParamRecord where
   find_ = refine (\t => isRecord t.info)
 
 ||| Given a name of a parameterized record type plus a list of
@@ -41,6 +44,21 @@ export %inline
 deriveRecord :
      Elaboration m
   => Name
-  -> List (List Name -> Subset ParamTypeInfo ParamRecord -> List TopLevel)
+  -> List (List Name -> ParamRecord -> List TopLevel)
   -> m ()
 deriveRecord n = deriveGeneral [n]
+
+||| Generate declarations and implementations for `Eq` for a given record type.
+export %inline
+Eq : List Name -> ParamRecord -> List TopLevel
+Eq nms = Eq nms . fst
+
+||| Generate declarations and implementations for `Ord` for a given record type.
+export %inline
+Ord : List Name -> ParamRecord -> List TopLevel
+Ord nms = Ord nms . fst
+
+||| Generate declarations and implementations for `Show` for a given record type.
+export %inline
+Show : List Name -> ParamRecord -> List TopLevel
+Show nms = Show nms . fst

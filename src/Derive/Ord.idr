@@ -26,27 +26,20 @@ conIndexClauses n ns = go 0 (fst $ conIndexTypes $ length ns) ns
         go _  _ []        = []
         go ix f (c :: cs) = (var n .$ bindAny c .= f ix) :: go (ix + 1) f cs
 
-||| Name of the function returning the constructor index.
-export
-(.conIndexName) : Named a => a -> Name
-v.conIndexName = UN $ Basic "conIndex\{v.nameStr}"
-
 ||| Declaration of a function returning the constructor index
 ||| for a value of the given data type.
 export
-conIndexClaim : (t : TypeInfo) -> Vect t.arty Name -> Decl
-conIndexClaim t ns =
+conIndexClaim : (fun : Name) -> (t : TypeInfo) -> Vect t.arty Name -> Decl
+conIndexClaim fun t ns =
   let tpe := snd (conIndexTypes $ length t.cons)
       arg := appArgs t.name ns
-   in public' t.conIndexName $ piAll `(~(arg) -> ~(tpe)) (implicits ns)
+   in public' fun $ piAll `(~(arg) -> ~(tpe)) (implicits ns)
 
 ||| Definition of a function returning the constructor index
 ||| for a value of the given data type.
 export
-conIndexDef : TypeInfo -> Decl
-conIndexDef t =
-  let nm := t.conIndexName
-   in def nm $ conIndexClauses nm t.cons
+conIndexDef : (fun : Name) -> TypeInfo -> Decl
+conIndexDef fun t = def fun $ conIndexClauses fun t.cons
 
 ||| For the given data type, creates a function for returning
 ||| a 0-based index for each constructor.
@@ -74,125 +67,90 @@ conIndexDef t =
 export
 ConIndex : List Name -> TypeInfo -> List TopLevel
 ConIndex _ t =
-  let ns := freshNames "par" t.arty
-   in [ TL (conIndexClaim t ns) (conIndexDef t) ]
+  let ns  := freshNames "par" t.arty
+      fun := funName t "conIndex"
+   in [ TL (conIndexClaim fun t ns) (conIndexDef fun t) ]
 
 --------------------------------------------------------------------------------
 --          Claims
 --------------------------------------------------------------------------------
 
-||| Name of the top-level function implementing the derived ordering test.
-public export
-(.ordName) : Named a => a -> Name
-v.ordName = UN $ Basic "ord\{v.nameStr}"
-
 ||| Top-level function declaration implementing the ordering test for
 ||| the given data type.
 export
-ordClaim : (p : ParamTypeInfo) -> Decl
-ordClaim p =
+ordClaim : (fun : Name) -> (p : ParamTypeInfo) -> Decl
+ordClaim fun p =
   let arg := p.applied
       tpe := piAll `(~(arg) -> ~(arg) -> Ordering) (allImplicits p "Ord")
-   in public' p.ordName tpe
-
-||| Name of the derived interface implementation.
-public export
-(.ordImplName) : Named a => a -> Name
-v.ordImplName = UN $ Basic "ordImpl\{v.nameStr}"
+   in public' fun tpe
 
 ||| Top-level declaration implementing the `Ord` interface for
 ||| the given data type.
 export
-ordImplClaim : (p : ParamTypeInfo) -> Decl
-ordImplClaim p = implClaim p.ordImplName (implType "Ord" p)
+ordImplClaim : (impl : Name) -> (p : ParamTypeInfo) -> Decl
+ordImplClaim impl p = implClaim impl (implType "Ord" p)
 
 --------------------------------------------------------------------------------
 --          Definitions
 --------------------------------------------------------------------------------
 
 export
-ordImplDef : ParamTypeInfo -> Decl
-ordImplDef p =
-  def p.ordImplName [var p.ordImplName .= var "mkOrd" .$ var p.ordName]
+ordImplDef : (fun, impl : Name) -> Decl
+ordImplDef fun impl = def impl [var impl .= var "mkOrd" .$ var fun]
 
 -- Generates the right-hand side of the ordering test on a single
 -- pair of (identical) data constructors based on the given list of
 -- comparisons.
-ordRHS : List TTImp -> TTImp
-ordRHS []        = `(EQ)
-ordRHS (x :: []) = x
-ordRHS (x :: xs) = `(case ~(x) of {EQ => ~(ordRHS xs); o => o})
+rhs : SnocList TTImp -> TTImp
+rhs [<]       = `(EQ)
+rhs (sx :< x) = foldr (\e,acc => `(case ~(e) of {EQ => ~(acc); o => o})) x sx
 
 -- catch-all pattern clause for data types with more than
 -- one data constructor
-catchAll : (fun : Name) -> TypeInfo -> List Clause
-catchAll fun ti =
-  let civ      := var ti.conIndexName
+catchAll : (ci : Name) -> (fun : Name) -> TypeInfo -> List Clause
+catchAll ci fun ti =
+  let civ      := var ci
   in if length ti.cons > 1
        then [`(~(var fun) x y) .= `(compare (~(civ) x) (~(civ) y))]
        else []
 
 parameters (nms : List Name)
-  -- Ordering test for a set of constructor arguments.
-  -- Checks if the argument types are safely recursive, that is, contains
-  -- one of the data type names listed in `nms`. If so, prefixes
-  -- the generated function call with `assert_total`.
-  ordArgs : Vect n Arg -> Vect n Name -> Vect n Name -> List TTImp
-  ordArgs []        []        []        = []
-  ordArgs (x :: xs) (y :: ys) (z :: zs) = case isExplicitUnerased x of
-    True  => assertIfRec nms x.type `(compare ~(var y) ~(var z)) :: ordArgs xs ys zs
-    False => ordArgs xs ys zs
+  ttimp : BoundArg 2 UnerasedExplicit -> TTImp
+  ttimp (BA arg [x,y] _) = assertIfRec nms arg.type `(compare ~(var x) ~(var y))
 
   ||| Generates pattern match clauses for the constructors of
   ||| the given data type. `fun` is the name of the function we implement.
   ||| This is either a local function definition in case of a
   ||| custom derivation, or the name of a top-level function.
   export
-  ordClauses : (fun : Name) -> (t : TypeInfo) -> List Clause
-  ordClauses fun ti = map clause ti.cons ++ catchAll fun ti
+  ordClauses : (ci, fun : Name) -> (t : TypeInfo) -> List Clause
+  ordClauses ci fun ti = map clause ti.cons ++ catchAll ci fun ti
     where clause : Con ti.arty ti.args -> Clause
           clause c =
             let nx := freshNames "x" c.arty
                 ny := freshNames "y" c.arty
-             in var fun .$ bindCon c nx .$ bindCon c ny .=
-                ordRHS (ordArgs c.args nx ny)
+                st := ttimp <$> boundArgs unerasedExplicit c.args [nx,ny]
+             in var fun .$ bindCon c nx .$ bindCon c ny .= rhs st
 
   ||| Definition of a (local or top-level) function implementing
   ||| the ordering check for the given data type.
   export
-  ordDef : Name -> TypeInfo -> Decl
-  ordDef fun ti = def fun (ordClauses fun ti)
+  ordDef : (ci, fun : Name) -> TypeInfo -> Decl
+  ordDef ci fun ti = def fun (ordClauses ci fun ti)
 
 --------------------------------------------------------------------------------
 --          Deriving
 --------------------------------------------------------------------------------
 
-||| Derive an implementation of `Ord a` for a custom data type `a`.
-|||
-||| Note: This is mainly to be used for indexed data types. Consider using
-|||       `derive` together with `Derive.Ord.Ord` for parameterized data types.
-export %macro
-deriveOrd : Elab (Ord f)
-deriveOrd = do
-  Just tpe <- goal
-    | Nothing => fail "Can't infer goal"
-  let Just (resTpe, nm) := extractResult tpe
-    | Nothing => fail "Invalid goal type: \{show tpe}"
-  ti <- getInfo' nm
-
-  let impl :=  lambdaArg {a = Name} "x"
-           .=> lambdaArg {a = Name} "y"
-           .=> iCase `(MkPair x y) implicitFalse (ordClauses [ti.name] "MkPair" ti)
-
-  logMsg "derive.definitions" 1 $ show impl
-  check $ var "mkOrd" .$ impl
-
 ||| Generate declarations and implementations for `Ord` for a given data type.
 export
 Ord : List Name -> ParamTypeInfo -> List TopLevel
 Ord nms p =
-  let pre := if length p.cons > 1 then ConIndex nms p.info else []
+  let ci   := funName p "conIndex"
+      pre  := if length p.cons > 1 then ConIndex nms p.info else []
+      fun  := funName p "ord"
+      impl := implName p "Ord"
    in pre ++
-      [ TL (ordClaim p) (ordDef nms p.ordName p.info)
-      , TL (ordImplClaim p) (ordImplDef p)
+      [ TL (ordClaim fun p) (ordDef nms ci fun p.info)
+      , TL (ordImplClaim impl p) (ordImplDef fun impl)
       ]

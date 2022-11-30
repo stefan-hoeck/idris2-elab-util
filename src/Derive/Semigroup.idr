@@ -7,59 +7,32 @@ import public Language.Reflection.Derive
 --          Claims
 --------------------------------------------------------------------------------
 
-||| Name of the top-level function implementing the append function
-public export
-(.appName) : Named a => a -> Name
-v.appName = UN $ Basic "app\{v.nameStr}"
-
 ||| Top-level function declaration implementing the append function for
 ||| the given data type.
 export
-appClaim : (p : ParamTypeInfo) -> Decl
-appClaim p =
+appClaim : (fun : Name) -> (p : ParamTypeInfo) -> Decl
+appClaim fun p =
   let arg := p.applied
       tpe := piAll `(~(arg) -> ~(arg) -> ~(arg)) (allImplicits p "Semigroup")
-   in public' p.appName tpe
-
-||| Name of the derived interface implementation.
-public export
-(.semigroupImplName) : Named a => a -> Name
-v.semigroupImplName = UN $ Basic "semigroupImpl\{v.nameStr}"
+   in public' fun tpe
 
 ||| Top-level declaration implementing the `Semigroup` interface for
 ||| the given data type.
 export
-semigroupImplClaim : (p : ParamTypeInfo) -> {auto 0 _ : ParamRecord p} -> Decl
-semigroupImplClaim p = implClaim p.semigroupImplName (implType "Semigroup" p)
+semigroupImplClaim : (impl : Name) -> (p : ParamTypeInfo) -> Decl
+semigroupImplClaim impl p = implClaim impl (implType "Semigroup" p)
 
 --------------------------------------------------------------------------------
 --          Definitions
 --------------------------------------------------------------------------------
 
 export
-semigroupImplDef : (p : ParamTypeInfo) -> Decl
-semigroupImplDef p =
-  let impl := p.semigroupImplName
-   in def impl [var impl .= var "MkSemigroup" .$ var p.appName]
+semigroupImplDef : (fun, impl : Name) -> Decl
+semigroupImplDef f i = def i [var i .= var "MkSemigroup" .$ var f]
 
 parameters (nms : List Name)
-  -- Append set of constructor arguments.
-  -- Checks if the argument types are safely recursive, that is, contains
-  -- one of the data type names listed in `nms`. If so, prefixes
-  -- the generated function call with `assert_total`.
-  appRHS :
-       Name
-    -> SnocList TTImp
-    -> Vect n Arg
-    -> Vect n Name
-    -> Vect n Name
-    -> TTImp
-  appRHS n st (x :: xs) (y :: ys) (z :: zs) = case isExplicit x of
-    True  =>
-      let t := assertIfRec nms x.type `(~(var y) <+> ~(var z))
-       in appRHS n (st :< t) xs ys zs
-    False => appRHS n st xs ys zs
-  appRHS n sx [] [] [] = appAll n (sx <>> [])
+  ttimp : BoundArg 2 UnerasedExplicit -> TTImp
+  ttimp (BA arg [x,y] _) = assertIfRec nms arg.type `(~(var x) <+> ~(var y))
 
   ||| Generates pattern match clauses for the constructors of
   ||| the given data type. `fun` is the name of the function we implement.
@@ -72,10 +45,10 @@ parameters (nms : List Name)
     -> {auto 0 prf : Record t}
     -> Clause
   appClause fun (MkTypeInfo n k as [c]) {prf = IsRecord} =
-    let nx    := freshNames "x" c.arty
-        ny    := freshNames "y" c.arty
-     in var fun .$ bindCon c nx .$ bindCon c ny .=
-        appRHS c.name Lin c.args nx ny
+    let nx := freshNames "x" c.arty
+        ny := freshNames "y" c.arty
+        st := ttimp <$> boundArgs unerasedExplicit c.args [nx,ny]
+     in var fun .$ bindCon c nx .$ bindCon c ny .= appAll c.name (st <>> [])
 
   ||| Definition of a (local or top-level) function implementing
   ||| the append operation.
@@ -108,8 +81,10 @@ deriveSemigroup = do
 
 ||| Generate declarations and implementations for `Semigroup` for a given data type.
 export
-Semigroup : List Name -> Subset ParamTypeInfo ParamRecord -> List TopLevel
+Semigroup : List Name -> ParamRecord -> List TopLevel
 Semigroup nms (Element p _) =
-  [ TL (appClaim p) (appDef nms p.appName p.info)
-  , TL (semigroupImplClaim p) (semigroupImplDef p)
-  ]
+  let fun  := funName p "append"
+      impl := implName p "Semigroup"
+   in [ TL (appClaim fun p) (appDef nms fun p.info)
+      , TL (semigroupImplClaim impl p) (semigroupImplDef fun impl)
+      ]

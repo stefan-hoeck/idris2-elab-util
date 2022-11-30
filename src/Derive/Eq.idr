@@ -8,39 +8,27 @@ import public Language.Reflection.Derive
 --          Claims
 --------------------------------------------------------------------------------
 
-||| Name of the top-level function implementing the derived equality test.
-public export
-(.eqName) : Named a => a -> Name
-v.eqName = UN $ Basic "eq\{v.nameStr}"
-
-||| Top-level function declaration implementing the equality test for
+||| Top-level declaration implementing the equality test for
 ||| the given data type.
 export
-eqClaim : (p : ParamTypeInfo) -> Decl
-eqClaim p =
+eqClaim : (fun : Name) -> (p : ParamTypeInfo) -> Decl
+eqClaim fun p =
   let arg := p.applied
       tpe := piAll `(~(arg) -> ~(arg) -> Bool) (allImplicits p "Eq")
-   in public' p.eqName tpe
-
-||| Name of the derived interface implementation.
-public export
-(.eqImplName) : Named a => a -> Name
-v.eqImplName = UN $ Basic "eqImpl\{v.nameStr}"
+   in public' fun tpe
 
 ||| Top-level declaration implementing the `Eq` interface for
 ||| the given data type.
 export
-eqImplClaim : (p : ParamTypeInfo) -> Decl
-eqImplClaim p = implClaim p.eqImplName (implType "Eq" p)
+eqImplClaim : (impl : Name) -> (p : ParamTypeInfo) -> Decl
+eqImplClaim impl p = implClaim impl (implType "Eq" p)
 
 --------------------------------------------------------------------------------
 --          Definitions
 --------------------------------------------------------------------------------
 
-export
-eqImplDef : (p : ParamTypeInfo) -> Decl
-eqImplDef p =
-  def p.eqImplName [var p.eqImplName .= var "mkEq" .$ var p.eqName]
+eqImplDef : (fun, impl : Name) -> Decl
+eqImplDef fun impl = def impl [var impl .= var "mkEq" .$ var fun]
 
 -- catch-all pattern clause for data types with more than
 -- one data constructor
@@ -50,19 +38,14 @@ catchAll fun ti =
      then [`(~(var fun) _ _) .= `(False)]
      else []
 
+-- accumulate right-hand side of a single pattern clause
+rhs : SnocList TTImp -> TTImp
+rhs Lin       = `(True)
+rhs (sx :< x) = foldr (\e,acc => `(~(e) && ~(acc))) x sx
+
 parameters (nms : List Name)
-  -- Equality test for a set of constructor arguments.
-  -- Checks if the argument types are safely recursive, that is, contains
-  -- one of the data type names listed in `nms`. If so, prefixes
-  -- the generated function call with `assert_total`.
-  eqRHS : SnocList TTImp -> Vect n Arg -> Vect n Name -> Vect n Name -> TTImp
-  eqRHS st (x :: xs) (y :: ys) (z :: zs) = case isExplicitUnerased x of
-    True  =>
-      let t := assertIfRec nms x.type `(~(var y) == ~(var z))
-       in eqRHS (st :< t) xs ys zs
-    False => eqRHS st xs ys zs
-  eqRHS Lin       [] [] [] = `(True)
-  eqRHS (sx :< x) [] [] [] = foldr (\e,acc => `(~(e) && ~(acc))) x sx
+  ttimp : BoundArg 2 UnerasedExplicit -> TTImp
+  ttimp (BA arg [x,y] _) = assertIfRec nms arg.type `(~(var x) == ~(var y))
 
   ||| Generates pattern match clauses for the constructors of
   ||| the given data type. `fun` is the name of the function we implement.
@@ -71,12 +54,12 @@ parameters (nms : List Name)
   export
   eqClauses : (fun : Name) -> TypeInfo -> List Clause
   eqClauses fun ti = map clause ti.cons ++ catchAll fun ti
-    where clause : Con ti.arty ti.args -> Clause
-          clause c =
-            let nx    := freshNames "x" c.arty
-                ny    := freshNames "y" c.arty
-             in var fun .$ bindCon c nx .$ bindCon c ny .=
-                eqRHS Lin c.args nx ny
+   where clause : Con ti.arty ti.args -> Clause
+         clause c =
+           let nx := freshNames "x" c.arty
+               ny := freshNames "y" c.arty
+               st := ttimp <$> boundArgs unerasedExplicit c.args [nx,ny]
+            in var fun .$ bindCon c nx .$ bindCon c ny .= rhs st
 
   ||| Definition of a (local or top-level) function implementing
   ||| the equality check for the given data type.
@@ -112,6 +95,8 @@ deriveEq = do
 export
 Eq : List Name -> ParamTypeInfo -> List TopLevel
 Eq nms p =
-  [ TL (eqClaim p) (eqDef nms p.eqName p.info)
-  , TL (eqImplClaim p) (eqImplDef p)
-  ]
+  let fun  := funName p "eq"
+      impl := implName p "Eq"
+   in [ TL (eqClaim fun p) (eqDef nms fun p.info)
+      , TL (eqImplClaim impl p) (eqImplDef fun impl)
+      ]

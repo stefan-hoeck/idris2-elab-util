@@ -26,7 +26,7 @@ data Elem =
             | Bk | Cf | Es | Fm | Md | No | Lr
                  | Rf | Db | Sg | Bh | Hs | Mt | Ds | Rg | Cn | Nh | Fl | Mc | Lv | Ts | Og
 
-%runElab deriveGeneral ["Elem"] [Enum]
+%runElab deriveEnum "Elem" [Show,Eq,Ord]
 
 --------------------------------------------------------------------------------
 --          Plain
@@ -48,7 +48,7 @@ record Test where
 
 --------------------------------------------------------------------------------
 --          Lazy
---------------------------------------------------------------------------------
+-- --------------------------------------------------------------------------------
 
 record LAZY (a : Type) where
   constructor MkLAZY
@@ -157,16 +157,12 @@ showMatrix = deriveShow
 eqMatrix : Eq a => Eq (Matrix m n a)
 eqMatrix = deriveEq
 
-%hint
-ordMatrix : Ord a => Ord (Matrix m n a)
-ordMatrix = deriveOrd
-
 public export
 data Op : (n : Nat) -> Type where
   Neg : Op 1
   Add : Op 2
 
-%runElab deriveGeneral ["Op"] [Enum]
+%runElab deriveEnum "Op" [Show,Eq,Ord]
 
 data TM : Type -> Type where
   Var : a -> TM a
@@ -194,8 +190,7 @@ record Semi where
   y : String
   z : Maybe Bits8
 
-%runElab derive "Semi" [Show,Eq]
-%runElab deriveRecord "Semi" [Semigroup,Monoid]
+%runElab deriveRecord "Semi" [Show,Eq,Semigroup,Monoid]
 
 --------------------------------------------------------------------------------
 --          elab-util types
@@ -207,7 +202,7 @@ record Semi where
 
 %runElab derive "Language.Reflection.Syntax.Arg" [Eq,Show]
 
-%runElab deriveGeneral ["Language.Reflection.Types.MissingInfo"] [Enum]
+%runElab deriveEnum "Language.Reflection.Types.MissingInfo" [Show,Eq,Ord]
 
 %hint
 showAppArg : Show (AppArg a)

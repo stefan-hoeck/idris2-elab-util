@@ -5,17 +5,24 @@ import public Language.Reflection.Derive
 %default total
 
 --------------------------------------------------------------------------------
---          Named Constructors
+--          Utilities
 --------------------------------------------------------------------------------
 
-||| Witness that an explicit argument in a Pi type has an explicit
-||| name.
 public export
-data NamedArg : Arg -> Type where
-  NaExplicit : NamedArg (MkArg c ExplicitArg (Just n) t)
-  NaImplicit : NamedArg (MkArg c ImplicitArg n t)
-  NaAuto     : NamedArg (MkArg c AutoImplicit n t)
-  NaDeflt    : NamedArg (MkArg c (DefImplicit q) n t)
+conWithArgs : Prec -> String -> List String -> String
+conWithArgs p str [] = str
+conWithArgs p str ss = showCon p str $ concat ss
+
+public export
+recordWithArgs : Prec -> String -> List (String,String) -> String
+recordWithArgs p str [] = str
+recordWithArgs p str ss =
+  let args := concat $ intersperse ", " $ map (\(n,v) => "\{n} = \{v}") ss
+   in showCon p str $ " {\{args}}"
+
+--------------------------------------------------------------------------------
+--          Named Constructors
+--------------------------------------------------------------------------------
 
 ||| Checks, if the given argument is properly named.
 public export
@@ -26,18 +33,9 @@ namedArg (MkArg _ ImplicitArg _ _)             = True
 namedArg (MkArg _ AutoImplicit _ _)            = True
 namedArg (MkArg _ (DefImplicit _) _ _)         = True
 
-public export
-namedType : TypeInfo -> Bool
-namedType ti = all (\c => all namedArg c.args) ti.cons
-
 --------------------------------------------------------------------------------
 --          Claims
 --------------------------------------------------------------------------------
-
-||| Name of the top-level function implementing the derived show function.
-public export
-(.showName) : Named a => a -> Name
-v.showName = UN $ Basic "show\{v.nameStr}"
 
 ||| General type of a `showPrec` function with the given list
 ||| of implicit and auto-implicit arguments, plus the given argument type
@@ -49,20 +47,16 @@ generalShowType is arg = piAll `(Prec -> ~(arg) -> String) is
 ||| Top-level function declaration implementing the `showPrec` function for
 ||| the given data type.
 export
-showClaim : (p : ParamTypeInfo) -> Decl
-showClaim p =
-  let tpe := generalShowType (allImplicits p "Show") p.applied
-   in public' p.showName tpe
-
-||| Name of the derived interface implementation.
-public export
-(.showImplName) : Named a => a -> Name
-v.showImplName = UN $ Basic "showImpl\{v.nameStr}"
+showClaim : (fun : Name) -> (p : ParamTypeInfo) -> Decl
+showClaim fun p =
+  let arg := p.applied
+      tpe := piAll `(Prec -> ~(arg) -> String) (allImplicits p "Show")
+   in public' fun tpe
 
 ||| Top-level declaration of the `Show` implementation for the given data type.
 export
-showImplClaim : (p : ParamTypeInfo) -> Decl
-showImplClaim p = implClaim p.showImplName (implType "Show" p)
+showImplClaim : (impl : Name) -> (p : ParamTypeInfo) -> Decl
+showImplClaim impl p = implClaim impl (implType "Show" p)
 
 --------------------------------------------------------------------------------
 --          Definitions
@@ -70,67 +64,49 @@ showImplClaim p = implClaim p.showImplName (implType "Show" p)
 
 ||| Top-level definition of the `Show` implementation for the given data type.
 export
-showImplDef : Named a => a -> Decl
-showImplDef p =
-  def p.showImplName [var p.showImplName .= var "mkShowPrec" .$ var p.showName]
+showImplDef : (fun, impl : Name) -> Decl
+showImplDef f i = def i [var i .= var "mkShowPrec" .$ var f]
 
 pvar : TTImp
 pvar = var "p"
 
 parameters (nms : List Name)
+  ttimp : BoundArg 1 Explicit -> TTImp
+  ttimp (BA (MkArg M0 _ _ _) _   _) = primVal (Str " _")
+  ttimp (BA (MkArg _  _ _ t) [x] _) = assertIfRec nms t `(showArg ~(var x))
 
-  namedRHS :
-       Name
-    -> SnocList TTImp
-    -> (as : Vect n Arg)
-    -> (ns : Vect n Name)
-    -> TTImp
-  namedRHS n st (MkArg M0 ExplicitArg (Just nm) _ :: xs) (y :: ys) =
-    let t := primVal (Str "\{nameStr nm} = _")
-     in namedRHS n (st :< t) xs ys
-  namedRHS n st (MkArg _  ExplicitArg (Just nm) t :: xs) (y :: ys) =
-    let shown := assertIfRec nms t `(show ~(var y))
-        str   := primVal (Str "\{nameStr nm} = ")
-        t     := `(~(str) ++ ~(shown))
-     in namedRHS n (st :< t) xs ys
-  namedRHS n st (_ :: xs) (_ :: ys) = namedRHS n st xs ys
-  namedRHS n Lin      [] [] = n.namePrim
-  namedRHS n (h :< t) [] [] =
-    let sx   := map (\x => `(~(x) ++ ", ")) h :< t
-        args := foldr (\e,acc => `(~(e) :: ~(acc))) `(Prelude.Nil) sx
-     in var "showCon" .$ pvar .$ n.namePrim .$
-        `(" {" ++ concat ~(args) ++ "}")
+  rsh : Name -> SnocList TTImp -> TTImp
+  rsh n [<] = n.namePrim
+  rsh n st  = `(conWithArgs p ~(n.namePrim) ~(listOf st))
 
-  -- Right-hand side of a single show clause.
-  -- String conversion for a set of constructor arguments.
-  -- Checks if the argument types are safely recursive, that is, contains
-  -- one of the data type names listed in `nms`. If so, prefixes
-  -- the generated function call with `assert_total`.
-  rhs : Name -> SnocList TTImp -> Vect n Arg -> Vect n Name -> TTImp
-  rhs n st (x :: xs) (y :: ys) = case isExplicit x of
-    True  => case x.count of
-      M0 => primVal (Str " _")
-      _  => let t := assertIfRec nms x.type `(showArg ~(var y))
-             in rhs n (st :< t) xs ys
-    False => rhs n st xs ys
-  rhs n Lin []        [] = n.namePrim
-  rhs n sx  []        [] =
-    let args := foldr (\e,acc => `(~(e) :: ~(acc))) `(Prelude.Nil) sx
-     in var "showCon" .$ pvar .$ n.namePrim .$ `(concat ~(args))
+  nttimp : BoundArg 1 NamedExplicit -> TTImp
+  nttimp (BA a [x]   _) =
+    let nm := (argName a).namePrim
+     in case a.count of
+       M0 => `(MkPair ~(nm) "_")
+       _  =>
+         let shown := assertIfRec nms a.type `(show ~(var x))
+          in `(MkPair ~(nm) ~(shown))
+
+  nrsh : Name -> SnocList TTImp -> TTImp
+  nrsh n [<] = n.namePrim
+  nrsh n st  = `(recordWithArgs p ~(n.namePrim) ~(listOf st))
 
   export
   showClauses : (fun : Maybe Name) -> TypeInfo -> List Clause
-  showClauses fun ti =
-    let b := namedType ti
-     in map (clause b) ti.cons
-    where clause : Bool -> Con ti.arty ti.args -> Clause
-          clause b c =
+  showClauses fun ti = map clause ti.cons
+    where clause : Con ti.arty ti.args -> Clause
+          clause c =
             let ns  := freshNames "x" c.arty
                 bc  := bindCon c ns
                 lhs := maybe bc ((.$ pvar .$ bc) . var) fun
-             in lhs .=
-                  if b then namedRHS c.name Lin c.args ns
-                       else rhs c.name Lin c.args ns
+             in case all namedArg c.args of
+                  True =>
+                    let st := nttimp <$> boundArgs namedExplicit c.args [ns]
+                     in lhs .= nrsh c.name st
+                  False =>
+                    let st := ttimp <$> boundArgs explicit c.args [ns]
+                     in lhs .= rsh c.name st
 
   export
   showDef : Name -> TypeInfo -> Decl
@@ -164,6 +140,8 @@ deriveShow = do
 export
 Show : List Name -> ParamTypeInfo -> List TopLevel
 Show nms p =
-  [ TL (showClaim p) (showDef nms p.showName p.info)
-  , TL (showImplClaim p) (showImplDef p)
-  ]
+  let fun  := funName p "showPrec"
+      impl := implName p "Show"
+   in [ TL (showClaim fun p) (showDef nms fun p.info)
+      , TL (showImplClaim impl p) (showImplDef fun impl)
+      ]

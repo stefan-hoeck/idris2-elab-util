@@ -53,19 +53,23 @@ public export
 data RuntimeEnum : (i : TypeInfo) -> Type where
   IsRuntimeEnum : {i : TypeInfo} -> All RuntimeConst i.cons -> RuntimeEnum i
 
+public export
+0 Enum : Type
+Enum = Subset TypeInfo RuntimeEnum
+
+
 ||| Tries to convert a type info to an runtime enum.
 public export
 runtimeEnum : (t : TypeInfo) -> Res (RuntimeEnum t)
 runtimeEnum (MkTypeInfo _ _ _ cs) = IsRuntimeEnum <$> runtimeConsts cs
 
 public export %inline
-Elaborateable (Subset TypeInfo RuntimeEnum) where
+Elaborateable Enum where
   find_ = refine runtimeEnum
 
 --------------------------------------------------------------------------------
 --          Derive Enum
 --------------------------------------------------------------------------------
-
 export
 ifaceClaimType :
      Name
@@ -76,46 +80,44 @@ ifaceClaimType :
 ifaceClaimType n t ns = piAll (var n .$ appArgs t.name ns) (implicits ns)
 
 export
-eqTL :
-     (t : TypeInfo)
-  -> Vect t.arty Name
-  -> {auto 0 _ : RuntimeEnum t}
-  -> TopLevel
-eqTL t ns =
-  let nm  := t.eqName
-      ci  := var $ t.conIndexName
-   in TL
-        (implClaim nm (ifaceClaimType "Eq" t ns))
-        (def nm [var nm .= `(mkEq $ \x,y => ~(ci) x == ~(ci) y)])
+Eq : List Name -> Enum -> List TopLevel
+Eq nms (Element t _) =
+  let ns := freshNames "par" t.arty
+      nm := implName t "Eq"
+      ci := var $ funName t "conIndex"
+      cl := var nm .= `(mkEq $ \x,y => ~(ci) x == ~(ci) y)
+   in ConIndex nms t ++
+      [ TL (implClaim nm (ifaceClaimType "Eq" t ns)) (def nm [cl]) ]
 
 export
-ordTL :
-     (t : TypeInfo)
-  -> Vect t.arty Name
-  -> {auto 0 _ : RuntimeEnum t}
-  -> TopLevel
-ordTL t ns =
-  let nm := t.ordName
-      ci := var $ t.conIndexName
+Ord : List Name -> Enum -> List TopLevel
+Ord nms (Element t _) =
+  let ns := freshNames "par" t.arty
+      nm := implName t "Ord"
+      ci := var $ funName t "conIndex"
       cl := var nm .= `(mkOrd $ \x,y => compare (~(ci) x) (~(ci) y))
-   in TL (implClaim nm (ifaceClaimType "Ord" t ns)) (def nm [cl])
+   in [ TL (implClaim nm (ifaceClaimType "Ord" t ns)) (def nm [cl]) ]
 
 export
-showTL :
-     (t : TypeInfo)
-  -> Vect t.arty Name
-  -> {auto 0 _ : RuntimeEnum t}
-  -> List TopLevel
-showTL t ns =
-  let nm  := t.showImplName
-      tpe := generalShowType (implicits ns) $ appArgs t.name ns
-      clm := public' t.showName tpe
-   in [ TL clm (showDef [] t.showName t)
-      , TL (implClaim nm (ifaceClaimType "Show" t ns)) (showImplDef t)
+Show : List Name -> Enum -> List TopLevel
+Show nms (Element t _) =
+  let ns   := freshNames "par" t.arty
+      impl := implName t "Show"
+      fun  := funName t "showPrec"
+      tpe  := generalShowType (implicits ns) $ appArgs t.name ns
+      clm := public' fun tpe
+   in [ TL clm (showDef [] fun t)
+      , TL (implClaim impl (ifaceClaimType "Show" t ns)) (showImplDef fun impl)
       ]
 
-export
-Enum : List Name -> Subset TypeInfo RuntimeEnum -> List TopLevel
-Enum nms (Element t _) =
-  let ns := freshNames "par" t.arty
-   in ConIndex nms t ++ [eqTL t ns, ordTL t ns] ++ showTL t ns
+||| Given a name of an enum type plus a list of
+||| interface generation functions, tries
+||| to implement these interfaces automatically using
+||| elaborator reflection.
+export %inline
+deriveEnum :
+     Elaboration m
+  => Name
+  -> List (List Name -> Enum -> List TopLevel)
+  -> m ()
+deriveEnum n = deriveGeneral [n]
