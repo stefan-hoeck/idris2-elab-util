@@ -9,7 +9,7 @@ import public Data.DPair
 ||| Proof that the given data type only has a single constructor.
 public export
 data Record : TypeInfo -> Type where
-  IsRecord : Record (MkTypeInfo n k as [c])
+  IsRecord : Record (MkTypeInfo n k vs [c])
 
 ||| Checks if the given data type only has a single constructor.
 public export

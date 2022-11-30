@@ -33,7 +33,7 @@ monoidImplDef f i = def i [var i .= var "MkMonoid" .$ var f]
 ttimp : BoundArg 0 UnerasedExplicit -> TTImp
 ttimp _ = `(neutral)
 
-rhs : Con n as -> TTImp
+rhs : Con n vs -> TTImp
 rhs c =
   let st := ttimp <$> boundArgs unerasedExplicit c.args []
    in appAll c.name (st <>> [])
