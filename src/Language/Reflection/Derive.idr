@@ -164,6 +164,12 @@ public export
 namedExplicit : (a : Arg) -> Maybe (NamedExplicit a)
 namedExplicit a = [| MkPair (named a) (explicit a) |]
 
+public export
+toNamed : BoundArg n p -> Maybe (BoundArg n (\a => (NamedArg a, p a)))
+toNamed (BA arg vars prf) = case named arg of
+  Just v  => Just (BA arg vars (v, prf))
+  Nothing => Nothing
+
 --------------------------------------------------------------------------------
 --          Utilities
 --------------------------------------------------------------------------------
