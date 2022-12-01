@@ -196,6 +196,15 @@ bindCon c ns = go c.nameVar (map piInfo c.args) ns
         go t (ExplicitArg :: xs) (n :: ns) = go (t .$ n.bindVar) xs ns
         go t (_           :: xs) (n :: ns) = go t xs ns
 
+||| Applies a constructor to variables of the given name.
+export
+applyCon : (c : Con n vs) -> Vect c.arty Name -> TTImp
+applyCon c ns = go c.nameVar (map piInfo c.args) ns
+  where go : TTImp -> Vect k (PiInfo TTImp) -> Vect k Name -> TTImp
+        go t []                  []        = t
+        go t (ExplicitArg :: xs) (n :: ns) = go (t .$ var n) xs ns
+        go t (_           :: xs) (n :: ns) = go t xs ns
+
 ||| Tries to lookup a data constructor by name, based on the
 ||| given list of arguments of the corresponding data constructor.
 export
