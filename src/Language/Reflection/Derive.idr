@@ -109,16 +109,16 @@ explicit _                         = Nothing
 
 public export
 data NamedArg : Arg -> Type where
-  IsNamed : NamedArg (MkArg c p (Just n) t)
+  IsNamed : NamedArg (MkArg c p (Just (UN $ Basic n)) t)
 
 public export
 named : (a : Arg) -> Maybe (NamedArg a)
-named (MkArg _ _ (Just n) _) = Just IsNamed
-named _                      = Nothing
+named (MkArg _ _ (Just $ UN $ Basic n) _) = Just IsNamed
+named _                                   = Nothing
 
 public export
 argName : (a : Arg) -> {auto 0 prf : NamedArg a} -> Name
-argName (MkArg _ _ (Just n) _) {prf = IsNamed} = n
+argName (MkArg _ _ (Just $ UN $ Basic n) _) {prf = IsNamed} = UN $ Basic n
 
 public export
 data Unerased : Arg -> Type where
