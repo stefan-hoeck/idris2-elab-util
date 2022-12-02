@@ -193,6 +193,19 @@ record Semi where
 %runElab deriveRecord "Semi" [Show,Eq,Semigroup,Monoid]
 
 --------------------------------------------------------------------------------
+--          Num
+--------------------------------------------------------------------------------
+
+record V3 a where
+  constructor MkV3
+  x : a
+  y : a
+  z : a
+
+%runElab deriveRecord "V3"
+  [Show,Eq,Semigroup,Monoid,Num,Neg,Abs,Integral,FromDouble,Fractional]
+
+--------------------------------------------------------------------------------
 --          elab-util types
 --------------------------------------------------------------------------------
 

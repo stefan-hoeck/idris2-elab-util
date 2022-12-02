@@ -10,14 +10,21 @@ sourcedir  = "src"
 depends    = base    >= 0.6.0
            , contrib >= 0.6.0
 
-modules = Derive.Enum
+modules = Derive.Abs
+        , Derive.Enum
         , Derive.Eq
+        , Derive.Fractional
+        , Derive.FromDouble
+        , Derive.Integral
         , Derive.Monoid
+        , Derive.Neg
+        , Derive.Num
         , Derive.Ord
         , Derive.Prelude
         , Derive.Record
         , Derive.Semigroup
         , Derive.Show
+
         , Language.Reflection.Derive
         , Language.Reflection.Pretty
         , Language.Reflection.Refined
