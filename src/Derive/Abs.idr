@@ -29,23 +29,11 @@ absImplDef abs impl = def impl [var impl .= appNames "MkAbs" [abs]]
 
 parameters (nms : List Name)
   abs : BoundArg 1 Explicit -> TTImp
-  abs (BA arg [x] _)  = `(abs ~(var x))
-
-  -- TODO: Less copy-paste
-  export
-  absClause :
-       (fun        : Name)
-    -> (t          : TypeInfo)
-    -> {auto 0 prf : Record t}
-    -> Clause
-  absClause fun (MkTypeInfo n k as [c]) {prf = IsRecord} =
-    let nx := freshNames "x" c.arty
-        st := abs <$> boundArgs explicit c.args [nx]
-     in var fun .$ bindCon c nx .= appAll c.name (st <>> [])
+  abs (BA _ [x] _)  = `(abs ~(x))
 
   export
-  absDef : Name -> (t : TypeInfo) -> {auto 0 _ : Record t} -> Decl
-  absDef fun ti = def fun [absClause fun ti]
+  absDef : Name -> Con n vs -> Decl
+  absDef fun c = def fun [mapArgs explicit (var fun .$) abs c]
 
 --------------------------------------------------------------------------------
 --          Deriving
@@ -58,7 +46,6 @@ Abs : List Name -> ParamRecord -> List TopLevel
 Abs nms (Element p _) =
   let abs     := funName p "abs"
       impl    := implName p "Abs"
-   in [ TL (absClaim abs p) (absDef nms abs p.info)
+   in [ TL (absClaim abs p) (absDef nms abs $ getConstructor p.info)
       , TL (absImplClaim impl p) (absImplDef abs impl)
       ]
-

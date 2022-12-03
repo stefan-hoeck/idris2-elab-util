@@ -40,62 +40,30 @@ numImplClaim impl p = implClaim impl (implType "Num" p)
 numImplDef : (p, m, fi, impl : Name) -> Decl
 numImplDef p m fi impl = def impl [var impl .= appNames "MkNum" [p,m,fi]]
 
-parameters (nms : List Name)
-  plus : BoundArg 2 Explicit -> TTImp
-  plus (BA arg [x,y] _)  = `(~(var x) + ~(var y))
+plus : BoundArg 2 Explicit -> TTImp
+plus (BA arg [x,y] _)  = `(~(x) + ~(y))
 
-  mult : BoundArg 2 Explicit -> TTImp
-  mult (BA arg [x,y] _)  = `(~(var x) * ~(var y))
+mult : BoundArg 2 Explicit -> TTImp
+mult (BA arg [x,y] _)  = `(~(x) * ~(y))
 
-  fromInt : BoundArg 0 Explicit -> TTImp
-  fromInt (BA arg _ _) = `(fromInteger n)
+fromInt : BoundArg 0 Explicit -> TTImp
+fromInt _ = `(fromInteger n)
 
-  export
-  plusClause :
-       (fun        : Name)
-    -> (t          : TypeInfo)
-    -> {auto 0 prf : Record t}
-    -> Clause
-  plusClause fun (MkTypeInfo n k as [c]) {prf = IsRecord} =
-    let nx := freshNames "x" c.arty
-        ny := freshNames "y" c.arty
-        st := plus <$> boundArgs explicit c.args [nx,ny]
-     in var fun .$ bindCon c nx .$ bindCon c ny .= appAll c.name (st <>> [])
+export
+plusDef : Name -> Con n vs -> Decl
+plusDef fun c =
+  let clause := mapArgs2 explicit (\x,y => var fun .$ x .$ y) plus c
+   in def fun [clause]
 
-  -- TODO: Less copy-paste
-  export
-  multClause :
-       (fun        : Name)
-    -> (t          : TypeInfo)
-    -> {auto 0 prf : Record t}
-    -> Clause
-  multClause fun (MkTypeInfo n k as [c]) {prf = IsRecord} =
-    let nx := freshNames "x" c.arty
-        ny := freshNames "y" c.arty
-        st := mult <$> boundArgs explicit c.args [nx,ny]
-     in var fun .$ bindCon c nx .$ bindCon c ny .= appAll c.name (st <>> [])
+export
+multDef : Name -> Con n vs -> Decl
+multDef fun c =
+  let clause := mapArgs2 explicit (\x,y => var fun .$ x .$ y) mult c
+   in def fun [clause]
 
-  export
-  fromIntClause :
-       (fun        : Name)
-    -> (t          : TypeInfo)
-    -> {auto 0 prf : Record t}
-    -> Clause
-  fromIntClause fun (MkTypeInfo n k as [c]) {prf = IsRecord} =
-    let st := fromInt <$> boundArgs explicit c.args []
-     in var fun .$ bindVar "n" .= appAll c.name (st <>> [])
-
-  export
-  plusDef : Name -> (t : TypeInfo) -> {auto 0 _ : Record t} -> Decl
-  plusDef fun ti = def fun [plusClause fun ti]
-
-  export
-  multDef : Name -> (t : TypeInfo) -> {auto 0 _ : Record t} -> Decl
-  multDef fun ti = def fun [multClause fun ti]
-
-  export
-  fromIntDef : Name -> (t : TypeInfo) -> {auto 0 _ : Record t} -> Decl
-  fromIntDef fun ti = def fun  [fromIntClause fun ti]
+export
+fromIntDef : Name -> Con n vs -> Decl
+fromIntDef f c = def f [var f .$ `(n) .= injArgs explicit fromInt c]
 
 --------------------------------------------------------------------------------
 --          Deriving
@@ -110,8 +78,9 @@ Num nms (Element p _) =
       plus    := funName p "plus"
       fromInt := funName p "fromInt"
       impl    := implName p "Num"
-   in [ TL (pmClaim plus p) (plusDef nms plus p.info)
-      , TL (pmClaim mult p) (multDef nms mult p.info)
-      , TL (fromIntClaim fromInt p) (fromIntDef nms fromInt p.info)
+      con     := getConstructor p.info
+   in [ TL (pmClaim plus p) (plusDef plus con)
+      , TL (pmClaim mult p) (multDef mult con)
+      , TL (fromIntClaim fromInt p) (fromIntDef fromInt con)
       , TL (numImplClaim impl p) (numImplDef plus mult fromInt impl)
       ]

@@ -67,7 +67,7 @@ public export
 record BoundArg (n : Nat) (p : Arg -> Type) where
   constructor BA
   arg  : Arg
-  vars : Vect n Name
+  vars : Vect n TTImp
   prf  : p arg
 
 public export
@@ -94,7 +94,7 @@ boundArgs f = go Lin
         go sx (x :: xs) ns =
           let (y, ys) := split ns
            in case f x of
-                Just prf => go (sx :< BA x y prf) xs ys
+                Just prf => go (sx :< BA x (map var y) prf) xs ys
                 Nothing  => go sx xs ys
         go sx []        _  = sx
 
@@ -189,6 +189,174 @@ refine f nm = do
   case f v of
     Right prf => pure $ Element v prf
     Left err  => fail "Error when refining \{nm}: \{err}"
+
+||| Generates a pattern clause for accumulating the arguments
+||| of a singled data constructor.
+|||
+||| This is used, for instance, to implement `showPrec`, when
+||| deriving `Show` implementations.
+|||
+||| @ p   : The predicate used to refine the constructor's arguments
+|||
+||| @ f   : Refining function.
+|||
+||| @ lhs : Adjusts the left-hand side of the clause.
+|||         The argument corresponds to the constructor with
+|||         all explicit arguments bound to variables named
+|||         `x0`, `x1` etc.
+|||
+||| @ rhs : Adjusts the right-hand side of the clause.
+|||         The `SnocList` contains the arguments, as transformed
+|||         by `arg`.
+|||
+||| @ arg : Processes a single argument
+|||
+||| @ con : The constructor to process.
+export
+accumArgs :
+     {0 p : Arg -> Type}
+  -> (f : (a : Arg) -> Maybe (p a))
+  -> (lhs : TTImp -> TTImp)
+  -> (rhs : SnocList TTImp -> TTImp)
+  -> (arg : BoundArg 1 p -> TTImp)
+  -> (con : Con n vs)
+  -> Clause
+accumArgs f lhs rhs arg c =
+  let xs := freshNames "x" c.arty
+      cx := bindCon c xs
+      sx := map arg (boundArgs f c.args [xs])
+   in lhs cx .= rhs sx
+
+||| Generates a pattern clause for accumulating the arguments
+||| of two equivalent data constructors.
+|||
+||| This is used, for instance, to implement `(==)`, when
+||| deriving `Eq` implementations.
+|||
+||| @ p   : The predicate used to refine the constructor's arguments
+|||
+||| @ f   : Refining function.
+|||
+||| @ lhs : Adjusts the left-hand side of the clause.
+|||         The first argument corresponds to the constructor with
+|||         all explicit arguments bound to variables named
+|||         `x0`, `x1` etc., the second to the constructor
+|||         with bound explicit arguments namd `y0`, `y1` etc.
+|||
+||| @ rhs : Adjusts the right-hand side of the clause.
+|||         The `SnocList` contains the arguments, as transformed
+|||         by `arg`.
+|||
+||| @ arg : Processes a single pair of arguments
+|||
+||| @ con : The constructor to process.
+export
+accumArgs2 :
+     {0 p : Arg -> Type}
+  -> (f : (a : Arg) -> Maybe (p a))
+  -> (lhs : TTImp -> TTImp -> TTImp)
+  -> (rhs : SnocList TTImp -> TTImp)
+  -> (arg : BoundArg 2 p -> TTImp)
+  -> (con : Con n vs)
+  -> Clause
+accumArgs2 f lhs rhs arg c =
+  let xs := freshNames "x" c.arty
+      ys := freshNames "y" c.arty
+      cx := bindCon c xs
+      cy := bindCon c ys
+      sx := map arg (boundArgs f c.args [xs,ys])
+   in lhs cx cy .= rhs sx
+
+||| Generates a pattern clause for mapping the arguments
+||| of a data constructors over a unary function.
+|||
+||| This is used, for instance, to implement `abs`, when
+||| deriving `Abs` implementations.
+|||
+||| @ p   : The predicate used to refine the constructor's arguments
+|||
+||| @ f   : Refining function.
+|||
+||| @ lhs : Adjusts the left-hand side of the clause.
+|||         The argument corresponds to the constructor with
+|||         all explicit arguments bound to variables named
+|||         `x0`, `x1` etc.
+|||
+||| @ arg : Processes a single argument
+|||
+||| @ con : The constructor to process.
+export
+mapArgs :
+     {0 p : Arg -> Type}
+  -> (f : (a : Arg) -> Maybe (p a))
+  -> (lhs : TTImp -> TTImp)
+  -> (arg : BoundArg 1 p -> TTImp)
+  -> (con : Con n vs)
+  -> Clause
+mapArgs f lhs arg c =
+  let xs := freshNames "x" c.arty
+      cx := bindCon c xs
+      sx := map arg (boundArgs f c.args [xs])
+   in lhs cx .= appAll c.name (sx <>> [])
+
+||| Generates a pattern clause for mapping the arguments
+||| of two data constructors over a binary function.
+|||
+||| This is used, for instance, to implement `(+)`, when
+||| deriving `Num` implementations.
+|||
+||| @ p   : The predicate used to refine the constructor's arguments
+|||
+||| @ f   : Refining function.
+|||
+||| @ lhs : Adjusts the left-hand side of the clause.
+|||         The first argument corresponds to the constructor with
+|||         all explicit arguments bound to variables named
+|||         `x0`, `x1` etc., the second to the constructor
+|||         with bound explicit arguments namd `y0`, `y1` etc.
+|||
+||| @ arg : Processes a pair of arguments
+|||
+||| @ con : The constructor to process.
+export
+mapArgs2 :
+     {0 p : Arg -> Type}
+  -> (f : (a : Arg) -> Maybe (p a))
+  -> (lhs : TTImp -> TTImp -> TTImp)
+  -> (arg : BoundArg 2 p -> TTImp)
+  -> (con : Con n vs)
+  -> Clause
+mapArgs2 f lhs arg c =
+  let xs := freshNames "x" c.arty
+      ys := freshNames "y" c.arty
+      cx := bindCon c xs
+      cy := bindCon c ys
+      sx := map arg (boundArgs f c.args [xs,ys])
+   in lhs cx cy .= appAll c.name (sx <>> [])
+
+||| Generates a pattern clause for creating and applying
+||| constructor arguments.
+|||
+||| This is used, for instance, to implement `fromInteger`, when
+||| deriving `Num` implementations for record types.
+|||
+||| @ p   : The predicate used to refine the constructor's arguments
+|||
+||| @ f   : Refining function.
+|||
+||| @ arg : Processes a single argument
+|||
+||| @ con : The constructor to process.
+export
+injArgs :
+     {0 p : Arg -> Type}
+  -> (f : (a : Arg) -> Maybe (p a))
+  -> (arg : BoundArg 0 p -> TTImp)
+  -> (con : Con n vs)
+  -> TTImp
+injArgs f arg c =
+  let sx := map arg (boundArgs f c.args [])
+   in appAll c.name (sx <>> [])
 
 --------------------------------------------------------------------------------
 --          Deriving Implementations

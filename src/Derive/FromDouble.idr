@@ -29,23 +29,11 @@ dblImplClaim impl p = implClaim impl (implType "FromDouble" p)
 dblImplDef : (fd, impl : Name) -> Decl
 dblImplDef fd impl = def impl [var impl .= appNames "MkFromDouble" [fd]]
 
-parameters (nms : List Name)
-  fromDbl : BoundArg 0 Explicit -> TTImp
-  fromDbl (BA arg _ _) = `(fromDouble n)
-
-  export
-  fromDblClause :
-       (fun        : Name)
-    -> (t          : TypeInfo)
-    -> {auto 0 prf : Record t}
-    -> Clause
-  fromDblClause fun (MkTypeInfo n k as [c]) {prf = IsRecord} =
-    let st := fromDbl <$> boundArgs explicit c.args []
-     in var fun .$ bindVar "n" .= appAll c.name (st <>> [])
-
-  export
-  fromDblDef : Name -> (t : TypeInfo) -> {auto 0 _ : Record t} -> Decl
-  fromDblDef fun ti = def fun  [fromDblClause fun ti]
+export
+fromDblDef : Name -> Con n vs -> Decl
+fromDblDef f c =
+  let t := `(fromDouble n)
+   in def f [var f .$ bindVar "n" .= injArgs explicit (const t) c]
 
 --------------------------------------------------------------------------------
 --          Deriving
@@ -55,9 +43,9 @@ parameters (nms : List Name)
 ||| single-constructor data type.
 export
 FromDouble : List Name -> ParamRecord -> List TopLevel
-FromDouble nms (Element p _) =
-  let fromDbl := funName p "fromDouble"
-      impl    := implName p "FromDouble"
-   in [ TL (fromDblClaim fromDbl p) (fromDblDef nms fromDbl p.info)
-      , TL (dblImplClaim impl p) (dblImplDef fromDbl impl)
+FromDouble _ (Element p _) =
+  let fun  := funName p "fromDouble"
+      impl := implName p "FromDouble"
+   in [ TL (fromDblClaim fun p) (fromDblDef fun $ getConstructor p.info)
+      , TL (dblImplClaim impl p) (dblImplDef fun impl)
       ]

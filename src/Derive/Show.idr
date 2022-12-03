@@ -71,42 +71,42 @@ pvar : TTImp
 pvar = var "p"
 
 parameters (nms : List Name)
-  ttimp : BoundArg 1 Explicit -> TTImp
-  ttimp (BA (MkArg M0 _ _ _) _   _) = primVal (Str " _")
-  ttimp (BA (MkArg _  _ _ t) [x] _) = assertIfRec nms t `(showArg ~(var x))
+  -- showing a single, explicit, unnamed constructor argument
+  arg : BoundArg 1 Explicit -> TTImp
+  arg (BA (MkArg M0 _ _ _) _   _) = primVal (Str " _")
+  arg (BA (MkArg _  _ _ t) [x] _) = assertIfRec nms t `(showArg ~(x))
 
-  rsh : Name -> SnocList TTImp -> TTImp
-  rsh n [<] = n.namePrim
-  rsh n st  = `(conWithArgs p ~(n.namePrim) ~(listOf st))
+  -- showing a constructor plus its arguments
+  rhs : Name -> SnocList TTImp -> TTImp
+  rhs n [<] = n.namePrim
+  rhs n st  = `(conWithArgs p ~(n.namePrim) ~(listOf st))
 
-  nttimp : BoundArg 1 NamedExplicit -> TTImp
-  nttimp (BA a [x]   _) =
+  -- showing a single, explicit, named constructor argument
+  narg : BoundArg 1 NamedExplicit -> TTImp
+  narg (BA a [x]   _) =
     let nm := (argName a).namePrim
      in case a.count of
        M0 => `(MkPair ~(nm) "_")
        _  =>
-         let shown := assertIfRec nms a.type `(show ~(var x))
+         let shown := assertIfRec nms a.type `(show ~(x))
           in `(MkPair ~(nm) ~(shown))
 
-  nrsh : Name -> SnocList TTImp -> TTImp
-  nrsh n [<] = n.namePrim
-  nrsh n st  = `(recordWithArgs p ~(n.namePrim) ~(listOf st))
+  -- showing a constructor plus its named arguments
+  nrhs : Name -> SnocList TTImp -> TTImp
+  nrhs n [<] = n.namePrim
+  nrhs n st  = `(recordWithArgs p ~(n.namePrim) ~(listOf st))
 
   export
   showClauses : (fun : Maybe Name) -> TypeInfo -> List Clause
   showClauses fun ti = map clause ti.cons
-    where clause : Con ti.arty ti.args -> Clause
-          clause c =
-            let ns  := freshNames "x" c.arty
-                bc  := bindCon c ns
-                lhs := maybe bc ((.$ pvar .$ bc) . var) fun
-             in case all namedArg c.args of
-                  True =>
-                    let st := nttimp <$> boundArgs namedExplicit c.args [ns]
-                     in lhs .= nrsh c.name st
-                  False =>
-                    let st := ttimp <$> boundArgs explicit c.args [ns]
-                     in lhs .= rsh c.name st
+    where
+      lhs : TTImp -> TTImp
+      lhs bc = maybe bc ((.$ pvar .$ bc) . var) fun
+
+      clause : Con ti.arty ti.args -> Clause
+      clause c = case all namedArg c.args of
+        True  => accumArgs namedExplicit lhs (nrhs c.name) narg c
+        False => accumArgs explicit lhs (rhs c.name) arg c
 
   export
   showDef : Name -> TypeInfo -> Decl

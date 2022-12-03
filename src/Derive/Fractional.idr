@@ -34,44 +34,23 @@ fractionalImplClaim i p = implClaim i (implType "Fractional" p)
 fractionalImplDef : (div, recip, impl : Name) -> Decl
 fractionalImplDef d r i = def i [var i .= appNames "MkFractional" [d, r]]
 
-parameters (nms : List Name)
-  div : BoundArg 2 Explicit -> TTImp
-  div (BA arg [x,y] _)  = `(~(var x) / ~(var y))
+div : BoundArg 2 Explicit -> TTImp
+div (BA arg [x,y] _)  = `(~(x) / ~(y))
 
-  recip : BoundArg 1 Explicit -> TTImp
-  recip (BA arg [x] _)  = `(recip ~(var x))
+recip : BoundArg 1 Explicit -> TTImp
+recip (BA arg [x] _)  = `(recip ~(x))
 
-  export
-  divClause :
-       (fun        : Name)
-    -> (t          : TypeInfo)
-    -> {auto 0 prf : Record t}
-    -> Clause
-  divClause fun (MkTypeInfo n k as [c]) {prf = IsRecord} =
-    let nx := freshNames "x" c.arty
-        ny := freshNames "y" c.arty
-        st := div <$> boundArgs explicit c.args [nx,ny]
-     in var fun .$ bindCon c nx .$ bindCon c ny .= appAll c.name (st <>> [])
+export
+divDef : Name -> Con n vs -> Decl
+divDef fun c =
+  let clause := mapArgs2 explicit (\x,y => var fun .$ x .$ y) div c
+   in def fun [clause]
 
-  -- TODO: Less copy-paste
-  export
-  recipClause :
-       (fun        : Name)
-    -> (t          : TypeInfo)
-    -> {auto 0 prf : Record t}
-    -> Clause
-  recipClause fun (MkTypeInfo n k as [c]) {prf = IsRecord} =
-    let nx := freshNames "x" c.arty
-        st := recip <$> boundArgs explicit c.args [nx]
-     in var fun .$ bindCon c nx .= appAll c.name (st <>> [])
-
-  export
-  divDef : Name -> (t : TypeInfo) -> {auto 0 _ : Record t} -> Decl
-  divDef fun ti = def fun [divClause fun ti]
-
-  export
-  recipDef : Name -> (t : TypeInfo) -> {auto 0 _ : Record t} -> Decl
-  recipDef fun ti = def fun [recipClause fun ti]
+export
+recipDef : Name -> Con n vs -> Decl
+recipDef fun c =
+  let clause := mapArgs explicit (var fun .$) recip c
+   in def fun [clause]
 
 --------------------------------------------------------------------------------
 --          Deriving
@@ -81,11 +60,12 @@ parameters (nms : List Name)
 ||| single-constructor data type.
 export
 Fractional : List Name -> ParamRecord -> List TopLevel
-Fractional nms (Element p _) =
+Fractional _ (Element p _) =
   let recip := funName p "recip"
       div   := funName p "divide"
       impl  := implName p "Fractional"
-   in [ TL (recipClaim recip p) (recipDef nms recip p.info)
-      , TL (divClaim div p) (divDef nms div p.info)
+      con   := getConstructor p.info
+   in [ TL (recipClaim recip p) (recipDef recip con)
+      , TL (divClaim div p) (divDef div con)
       , TL (fractionalImplClaim impl p) (fractionalImplDef div recip impl)
       ]

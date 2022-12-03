@@ -30,19 +30,14 @@ export
 monoidImplDef : (fun, impl : Name) -> Decl
 monoidImplDef f i = def i [var i .= var "MkMonoid" .$ var f]
 
-ttimp : BoundArg 0 Regular -> TTImp
-ttimp _ = `(neutral)
-
 rhs : Con n vs -> TTImp
-rhs c =
-  let st := ttimp <$> boundArgs regular c.args []
-   in appAll c.name (st <>> [])
+rhs = injArgs explicit (const `(neutral))
 
 ||| Definition of a (local or top-level) function implementing
 ||| the neutral operation.
 export
-neutralDef : Name -> (t : TypeInfo) -> {auto 0 _ : Record t} -> Decl
-neutralDef fun t = def fun [var fun .= rhs (getConstructor t)]
+neutralDef : Name -> Con n vs -> Decl
+neutralDef f c = def f [var f .= rhs c]
 
 --------------------------------------------------------------------------------
 --          Deriving
@@ -63,7 +58,7 @@ deriveMonoid = do
   let impl := rhs (getConstructor t)
 
   logMsg "derive.definitions" 1 $ show impl
-  check $ var "MkSemigroup" .$ impl
+  check $ var "MkMonoid" .$ impl
 
 ||| Generate declarations and implementations for `Semigroup` for a given data type.
 export
@@ -71,6 +66,6 @@ Monoid : List Name -> ParamRecord -> List TopLevel
 Monoid _ (Element p _) =
   let fun  := funName p "neutral"
       impl := implName p "Monoid"
-   in [ TL (neutralClaim fun p) (neutralDef fun p.info)
+   in [ TL (neutralClaim fun p) (neutralDef fun $ getConstructor p.info)
       , TL (monoidImplClaim impl p) (monoidImplDef fun impl)
       ]

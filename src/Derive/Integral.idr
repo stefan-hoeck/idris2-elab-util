@@ -29,43 +29,22 @@ intImplDef d m impl = def impl [var impl .= appNames "MkIntegral" [d,m]]
 
 parameters (nms : List Name)
   div : BoundArg 2 Explicit -> TTImp
-  div (BA arg [x,y] _)  = `(div ~(var x) ~(var y))
+  div (BA arg [x,y] _)  = `(div ~(x) ~(y))
 
   mod : BoundArg 2 Explicit -> TTImp
-  mod (BA arg [x,y] _)  = `(mod ~(var x) ~(var y))
+  mod (BA arg [x,y] _)  = `(mod ~(x) ~(y))
 
   export
-  divClause :
-       (fun        : Name)
-    -> (t          : TypeInfo)
-    -> {auto 0 prf : Record t}
-    -> Clause
-  divClause fun (MkTypeInfo n k as [c]) {prf = IsRecord} =
-    let nx := freshNames "x" c.arty
-        ny := freshNames "y" c.arty
-        st := div <$> boundArgs explicit c.args [nx,ny]
-     in var fun .$ bindCon c nx .$ bindCon c ny .= appAll c.name (st <>> [])
-
-  -- TODO: Less copy-paste
-  export
-  modClause :
-       (fun        : Name)
-    -> (t          : TypeInfo)
-    -> {auto 0 prf : Record t}
-    -> Clause
-  modClause fun (MkTypeInfo n k as [c]) {prf = IsRecord} =
-    let nx := freshNames "x" c.arty
-        ny := freshNames "y" c.arty
-        st := mod <$> boundArgs explicit c.args [nx,ny]
-     in var fun .$ bindCon c nx .$ bindCon c ny .= appAll c.name (st <>> [])
+  divDef : Name -> Con n vs -> Decl
+  divDef fun c =
+    let clause := mapArgs2 explicit (\x,y => var fun .$ x .$ y) div c
+     in def fun [clause]
 
   export
-  divDef : Name -> (t : TypeInfo) -> {auto 0 _ : Record t} -> Decl
-  divDef fun ti = def fun [divClause fun ti]
-
-  export
-  modDef : Name -> (t : TypeInfo) -> {auto 0 _ : Record t} -> Decl
-  modDef fun ti = def fun [modClause fun ti]
+  modDef : Name -> Con n vs -> Decl
+  modDef fun c =
+    let clause := mapArgs2 explicit (\x,y => var fun .$ x .$ y) mod c
+     in def fun [clause]
 
 --------------------------------------------------------------------------------
 --          Deriving
@@ -79,7 +58,8 @@ Integral nms (Element p _) =
   let div  := funName p "div"
       mod  := funName p "mod"
       impl := implName p "Integral"
-   in [ TL (dvClaim div p) (divDef nms div p.info)
-      , TL (dvClaim mod p) (modDef nms mod p.info)
+      con  := getConstructor p.info
+   in [ TL (dvClaim div p) (divDef nms div con)
+      , TL (dvClaim mod p) (modDef nms mod con)
       , TL (intImplClaim impl p) (intImplDef div mod impl)
       ]

@@ -30,31 +30,15 @@ export
 semigroupImplDef : (fun, impl : Name) -> Decl
 semigroupImplDef f i = def i [var i .= var "MkSemigroup" .$ var f]
 
-parameters (nms : List Name)
-  ttimp : BoundArg 2 Regular -> TTImp
-  ttimp (BA arg [x,y] _) = assertIfRec nms arg.type `(~(var x) <+> ~(var y))
+app : BoundArg 2 Explicit -> TTImp
+app (BA _ [x,y] _) = `(~(x) <+> ~(y))
 
-  ||| Generates pattern match clauses for the constructors of
-  ||| the given data type. `fun` is the name of the function we implement.
-  ||| This is either a local function definition in case of a
-  ||| custom derivation, or the name of a top-level function.
-  export
-  appClause :
-       (fun        : Name)
-    -> (t          : TypeInfo)
-    -> {auto 0 prf : Record t}
-    -> Clause
-  appClause fun (MkTypeInfo n k as [c]) {prf = IsRecord} =
-    let nx := freshNames "x" c.arty
-        ny := freshNames "y" c.arty
-        st := ttimp <$> boundArgs regular c.args [nx,ny]
-     in var fun .$ bindCon c nx .$ bindCon c ny .= appAll c.name (st <>> [])
+appClause : Name -> Con n vs -> Clause
+appClause f = mapArgs2 explicit (\x,y => var f .$ x .$ y) app
 
-  ||| Definition of a (local or top-level) function implementing
-  ||| the append operation.
-  export
-  appDef : Name -> (t : TypeInfo) -> {auto 0 _ : Record t} -> Decl
-  appDef fun ti = def fun [appClause fun ti]
+export
+appDef : Name -> Con n vs -> Decl
+appDef f c = def f [appClause f c]
 
 --------------------------------------------------------------------------------
 --          Deriving
@@ -74,7 +58,8 @@ deriveSemigroup = do
 
   let impl :=  lambdaArg {a = Name} "x"
            .=> lambdaArg {a = Name} "y"
-           .=> iCase `(MkPair x y) implicitFalse [appClause [ti.name] "MkPair" ti]
+           .=> iCase `(MkPair x y) implicitFalse
+                 [appClause "MkPair" $ getConstructor ti]
 
   logMsg "derive.definitions" 1 $ show impl
   check $ var "MkSemigroup" .$ impl
@@ -85,6 +70,6 @@ Semigroup : List Name -> ParamRecord -> List TopLevel
 Semigroup nms (Element p _) =
   let fun  := funName p "append"
       impl := implName p "Semigroup"
-   in [ TL (appClaim fun p) (appDef nms fun p.info)
+   in [ TL (appClaim fun p) (appDef fun $ getConstructor p.info)
       , TL (semigroupImplClaim impl p) (semigroupImplDef fun impl)
       ]

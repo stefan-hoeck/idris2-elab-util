@@ -44,8 +44,8 @@ rhs Lin       = `(True)
 rhs (sx :< x) = foldr (\e,acc => `(~(e) && ~(acc))) x sx
 
 parameters (nms : List Name)
-  ttimp : BoundArg 2 Regular -> TTImp
-  ttimp (BA arg [x,y] _) = assertIfRec nms arg.type `(~(var x) == ~(var y))
+  arg : BoundArg 2 Regular -> TTImp
+  arg (BA g [x,y] _) = assertIfRec nms g.type `(~(x) == ~(y))
 
   ||| Generates pattern match clauses for the constructors of
   ||| the given data type. `fun` is the name of the function we implement.
@@ -54,12 +54,9 @@ parameters (nms : List Name)
   export
   eqClauses : (fun : Name) -> TypeInfo -> List Clause
   eqClauses fun ti = map clause ti.cons ++ catchAll fun ti
-   where clause : Con ti.arty ti.args -> Clause
-         clause c =
-           let nx := freshNames "x" c.arty
-               ny := freshNames "y" c.arty
-               st := ttimp <$> boundArgs regular c.args [nx,ny]
-            in var fun .$ bindCon c nx .$ bindCon c ny .= rhs st
+   where
+     clause : Con ti.arty ti.args -> Clause
+     clause = accumArgs2 regular (\x,y => var fun .$ x .$ y) rhs arg
 
   ||| Definition of a (local or top-level) function implementing
   ||| the equality check for the given data type.
