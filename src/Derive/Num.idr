@@ -1,6 +1,5 @@
 module Derive.Num
 
-import Derive.Record
 import public Language.Reflection.Derive
 
 %default total
@@ -72,15 +71,16 @@ fromIntDef f c = def f [var f .$ `(n) .= injArgs explicit fromInt c]
 ||| Generate declarations and implementations for `Num` for a
 ||| single-constructor data type.
 export
-Num : List Name -> ParamRecord -> List TopLevel
-Num nms (Element p _) =
-  let mult    := funName p "mult"
-      plus    := funName p "plus"
-      fromInt := funName p "fromInt"
-      impl    := implName p "Num"
-      con     := getConstructor p.info
-   in [ TL (pmClaim plus p) (plusDef plus con)
-      , TL (pmClaim mult p) (multDef mult con)
-      , TL (fromIntClaim fromInt p) (fromIntDef fromInt con)
-      , TL (numImplClaim impl p) (numImplDef plus mult fromInt impl)
-      ]
+Num : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Num nms p = case p.info.cons of
+  [c] =>
+    let mult    := funName p "mult"
+        plus    := funName p "plus"
+        fromInt := funName p "fromInt"
+        impl    := implName p "Num"
+     in Right [ TL (pmClaim plus p) (plusDef plus c)
+              , TL (pmClaim mult p) (multDef mult c)
+              , TL (fromIntClaim fromInt p) (fromIntDef fromInt c)
+              , TL (numImplClaim impl p) (numImplDef plus mult fromInt impl)
+              ]
+  _   => failRecord "Num"

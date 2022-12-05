@@ -1,6 +1,5 @@
 module Derive.Neg
 
-import Derive.Record
 import public Language.Reflection.Derive
 
 %default total
@@ -59,13 +58,14 @@ negDef fun c =
 ||| Generate declarations and implementations for `Neg` for a
 ||| single-constructor data type.
 export
-Neg : List Name -> ParamRecord -> List TopLevel
-Neg _ (Element p _) =
-  let neg   := funName p "negate"
-      minus := funName p "minus"
-      impl  := implName p "Neg"
-      con   := getConstructor p.info
-   in [ TL (negClaim neg p) (negDef neg con)
-      , TL (minusClaim minus p) (minusDef minus con)
-      , TL (negImplClaim impl p) (negImplDef neg minus impl)
-      ]
+Neg : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Neg nms p = case p.info.cons of
+  [c] =>
+    let neg   := funName p "negate"
+        minus := funName p "minus"
+        impl  := implName p "Neg"
+     in Right [ TL (negClaim neg p) (negDef neg c)
+              , TL (minusClaim minus p) (minusDef minus c)
+              , TL (negImplClaim impl p) (negImplDef neg minus impl)
+              ]
+  _   => failRecord "Neg"

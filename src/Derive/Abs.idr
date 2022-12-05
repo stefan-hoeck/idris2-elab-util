@@ -1,6 +1,5 @@
 module Derive.Abs
 
-import Derive.Record
 import public Language.Reflection.Derive
 
 %default total
@@ -42,10 +41,12 @@ parameters (nms : List Name)
 ||| Generate declarations and implementations for `Abs` for a
 ||| single-constructor data type.
 export
-Abs : List Name -> ParamRecord -> List TopLevel
-Abs nms (Element p _) =
-  let abs     := funName p "abs"
-      impl    := implName p "Abs"
-   in [ TL (absClaim abs p) (absDef nms abs $ getConstructor p.info)
-      , TL (absImplClaim impl p) (absImplDef abs impl)
-      ]
+Abs : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Abs nms p = case p.info.cons of
+  [c] =>
+    let abs     := funName p "abs"
+        impl    := implName p "Abs"
+     in Right [ TL (absClaim abs p) (absDef nms abs c)
+              , TL (absImplClaim impl p) (absImplDef abs impl)
+              ]
+  _   => failRecord "Abs"

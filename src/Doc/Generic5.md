@@ -58,11 +58,11 @@ be used.
 mkEq : (eq : a -> a -> Bool) -> Eq a
 mkEq eq = mkEq' eq (\a,b => not $ eq a b)
 
-Eq' : List Name -> ParamTypeInfo -> List TopLevel
+Eq' : List Name -> ParamTypeInfo -> Res (List TopLevel)
 Eq' _ p =
   let nm := implName p "Eq" -- name of implementation function
       cl := var nm .= `(mkEq genEq) -- single clause of the function
-   in [TL (implClaim nm (implType "Eq" p)) (def nm [cl])]
+   in Right [TL (implClaim nm (implType "Eq" p)) (def nm [cl])]
 ```
 
 This approach is even more useful when deriving `Ord`: In our previous
@@ -91,11 +91,11 @@ mkOrd comp = mkOrd' comp
                     (\a,b => if comp a b == GT then a else b)
                     (\a,b => if comp a b == LT then a else b)
 
-Ord' : List Name -> ParamTypeInfo -> List TopLevel
+Ord' : List Name -> ParamTypeInfo -> Res (List TopLevel)
 Ord' _ p =
   let nm := implName p "Ord" -- name of implementation function
       cl := var nm .= `(mkOrd genCompare) -- single clause of the function
-   in [TL (implClaim nm (implType "Ord" p)) (def nm [cl])]
+   in Right [TL (implClaim nm (implType "Ord" p)) (def nm [cl])]
 ```
 
 We quickly test if it works:

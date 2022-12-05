@@ -1,6 +1,5 @@
 module Derive.Semigroup
 
-import public Derive.Record
 import public Language.Reflection.Derive
 
 --------------------------------------------------------------------------------
@@ -44,32 +43,14 @@ appDef f c = def f [appClause f c]
 --          Deriving
 --------------------------------------------------------------------------------
 
-||| Derive an implementation of `Semigroup a` for a custom data type `a`.
-|||
-||| Use this, if you need custom constraints in your implementation.
-export %macro
-deriveSemigroup : Elab (Eq f)
-deriveSemigroup = do
-  Just tpe <- goal
-    | Nothing => fail "Can't infer goal"
-  let Just (resTpe, nm) := extractResult tpe
-    | Nothing => fail "Invalid goal type: \{show tpe}"
-  Element ti _  <- find (Subset TypeInfo Record) nm
-
-  let impl :=  lambdaArg {a = Name} "x"
-           .=> lambdaArg {a = Name} "y"
-           .=> iCase `(MkPair x y) implicitFalse
-                 [appClause "MkPair" $ getConstructor ti]
-
-  logMsg "derive.definitions" 1 $ show impl
-  check $ var "MkSemigroup" .$ impl
-
 ||| Generate declarations and implementations for `Semigroup` for a given data type.
 export
-Semigroup : List Name -> ParamRecord -> List TopLevel
-Semigroup nms (Element p _) =
-  let fun  := funName p "append"
-      impl := implName p "Semigroup"
-   in [ TL (appClaim fun p) (appDef fun $ getConstructor p.info)
-      , TL (semigroupImplClaim impl p) (semigroupImplDef fun impl)
-      ]
+Semigroup : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Semigroup nms p = case p.info.cons of
+  [c] =>
+    let fun  := funName p "append"
+        impl := implName p "Semigroup"
+     in Right [ TL (appClaim fun p) (appDef fun c)
+              , TL (semigroupImplClaim impl p) (semigroupImplDef fun impl)
+              ]
+  _   => failRecord "Semigroup"

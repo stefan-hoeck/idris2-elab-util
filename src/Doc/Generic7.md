@@ -90,10 +90,10 @@ mkSOP k = mkSOP1 k . listOf
 export
 mkCode : (p : ParamTypeInfo) -> TTImp
 mkCode p = listOf $ map (\c => listOf $ explicits c.args) p.cons
-  where explicits : Vect n (ConArg p.info.arty) -> List TTImp
+  where explicits : Vect n (ConArg p.numParams) -> List TTImp
         explicits [] = []
         explicits (CArg _ _ ExplicitArg t :: as) =
-          ttimp p.defltNames t :: explicits as
+          ttimp p.paramNames t :: explicits as
         explicits (_ :: as) = explicits as
 
 private
@@ -128,14 +128,14 @@ conNames c =
 ||| Derives a `Generic` implementation for the given data type
 ||| and visibility.
 export
-GenericVis : Visibility -> List Name -> ParamTypeInfo -> List TopLevel
+GenericVis : Visibility -> List Name -> ParamTypeInfo -> Res (List TopLevel)
 GenericVis vis _ p =
   let names    = zipWithIndex (map conNames p.cons)
       fun      = UN . Basic $ "implGeneric" ++ camelCase p.info.name
 
       appType  = p.applied
       genType  = `(Generic) .$ appType .$ mkCode p
-      funType  = piAllImplicit genType (toList p.defltNames)
+      funType  = piAll genType p.implicits
 
       x        = lambdaArg {a = Name} "x"
       varX     = var "x"
@@ -146,11 +146,11 @@ GenericVis vis _ p =
 
       impl     = appAll mkGeneric [from,to,fromToId,toFromId]
 
-   in [ TL (interfaceHint vis fun funType) (def fun [var fun .= impl])]
+   in Right [ TL (interfaceHint vis fun funType) (def fun [var fun .= impl])]
 
 ||| Alias for `GenericVis Public`.
 export
-Generic' : List Name -> ParamTypeInfo -> List TopLevel
+Generic' : List Name -> ParamTypeInfo -> Res (List TopLevel)
 Generic' = GenericVis Public
 ```
 
@@ -230,17 +230,17 @@ mkEqV :  Eq a
       -> EqV a
 mkEqV = %runElab check (var $ singleCon "EqV")
 
-Eq' : List Name -> ParamTypeInfo -> List TopLevel
+Eq' : List Name -> ParamTypeInfo -> Res (List TopLevel)
 Eq' _ p =
   let nm := implName p "Eq"
       cl := var nm .= `(mkEq genEq)
-   in [TL (implClaim nm (implType "Eq" p)) (def nm [cl])]
+   in Right [TL (implClaim nm (implType "Eq" p)) (def nm [cl])]
 
-EqV' : List Name -> ParamTypeInfo -> List TopLevel
+EqV' : List Name -> ParamTypeInfo -> Res (List TopLevel)
 EqV' _ p =
   let nm := implName p "EqV"
       cl := var nm .= `(mkEqV genEqRefl genEqSym genEqTrans (\_,_ => Refl))
-   in [TL (implClaim nm (implType "EqV" p)) (def nm [cl])]
+   in Right [TL (implClaim nm (implType "EqV" p)) (def nm [cl])]
 
 data AnotherSum : Type where
   Var   : (v : String) -> AnotherSum

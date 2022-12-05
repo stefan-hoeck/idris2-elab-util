@@ -31,10 +31,10 @@ paramConNames c =
 export
 mkCode : (p : ParamTypeInfo) -> TTImp
 mkCode p = listOf $ map (\c => listOf $ explicits c.args) p.cons
-  where explicits : Vect n (ConArg p.info.arty) -> List TTImp
+  where explicits : Vect n (ConArg p.numParams) -> List TTImp
         explicits [] = []
         explicits (CArg _ _ ExplicitArg t :: as) =
-          ttimp p.defltNames t :: explicits as
+          ttimp p.paramNames t :: explicits as
         explicits (_ :: as) = explicits as
 ```
 
@@ -62,7 +62,7 @@ genericDecl p =
       -- Prefixes function type with implicit arguments for
       -- type parameters:
       -- `{0 a : _} -> {0 b : _} -> Generic (Either a b) [[a],[b]]`
-      funType  = piAllImplicit genType (toList p.defltNames)
+      funType  = piAll genType p.implicits
 
       x       = lambdaArg {a = Name} "x"
       varX    = var "x"

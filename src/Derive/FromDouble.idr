@@ -1,6 +1,5 @@
 module Derive.FromDouble
 
-import Derive.Record
 import public Language.Reflection.Derive
 
 %default total
@@ -42,10 +41,12 @@ fromDblDef f c =
 ||| Generate declarations and implementations for `FromDouble` for a
 ||| single-constructor data type.
 export
-FromDouble : List Name -> ParamRecord -> List TopLevel
-FromDouble _ (Element p _) =
-  let fun  := funName p "fromDouble"
-      impl := implName p "FromDouble"
-   in [ TL (fromDblClaim fun p) (fromDblDef fun $ getConstructor p.info)
-      , TL (dblImplClaim impl p) (dblImplDef fun impl)
-      ]
+FromDouble : List Name -> ParamTypeInfo -> Res (List TopLevel)
+FromDouble nms p = case p.info.cons of
+  [c] =>
+    let fun  := funName p "fromDouble"
+        impl := implName p "FromDouble"
+     in Right [ TL (fromDblClaim fun p) (fromDblDef fun c)
+              , TL (dblImplClaim impl p) (dblImplDef fun impl)
+              ]
+  _   => failRecord "FromDouble"

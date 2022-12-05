@@ -1,7 +1,6 @@
 module Derive.Prelude
 
 import public Derive.Abs
-import public Derive.Enum
 import public Derive.Eq
 import public Derive.Fractional
 import public Derive.FromDouble

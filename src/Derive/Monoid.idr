@@ -1,6 +1,5 @@
 module Derive.Monoid
 
-import public Derive.Record
 import public Language.Reflection.Derive
 
 --------------------------------------------------------------------------------
@@ -43,29 +42,14 @@ neutralDef f c = def f [var f .= rhs c]
 --          Deriving
 --------------------------------------------------------------------------------
 
-||| Derive an implementation of `Semigroup a` for a custom data type `a`.
-|||
-||| Use this, if you need custom constraints in your implementation.
-export %macro
-deriveMonoid : Elab (Eq f)
-deriveMonoid = do
-  Just tpe <- goal
-    | Nothing => fail "Can't infer goal"
-  let Just (resTpe, nm) := extractResult tpe
-    | Nothing => fail "Invalid goal type: \{show tpe}"
-  Element t _  <- find (Subset TypeInfo Record) nm
-
-  let impl := rhs (getConstructor t)
-
-  logMsg "derive.definitions" 1 $ show impl
-  check $ var "MkMonoid" .$ impl
-
 ||| Generate declarations and implementations for `Semigroup` for a given data type.
 export
-Monoid : List Name -> ParamRecord -> List TopLevel
-Monoid _ (Element p _) =
-  let fun  := funName p "neutral"
-      impl := implName p "Monoid"
-   in [ TL (neutralClaim fun p) (neutralDef fun $ getConstructor p.info)
-      , TL (monoidImplClaim impl p) (monoidImplDef fun impl)
-      ]
+Monoid : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Monoid nms p = case p.info.cons of
+  [c] =>
+    let fun  := funName p "neutral"
+        impl := implName p "Monoid"
+     in Right [ TL (neutralClaim fun p) (neutralDef fun c)
+              , TL (monoidImplClaim impl p) (monoidImplDef fun impl)
+              ]
+  _   => failRecord "Monoid"

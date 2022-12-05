@@ -458,56 +458,31 @@ Pretty (Con n vs) where
 
 export covering
 Pretty TypeInfo where
-  pretty (MkTypeInfo name arty rgs cons) =
+  pretty (MkTypeInfo name arty rgs ns cons) =
     let head = applyH Open "MkTypeInfo" [name, arty, rgs]
         cons = indent 2 $ vsep (map pretty cons)
      in vsep [head,cons]
 
-export
-Pretty (Tpe t) where
-  prettyPrec p Ty       = "Type"
-  prettyPrec p (Pi x y) = appParens p (prettyPrec App x <++> "->" <++> pretty y)
-  prettyPrec p Hol      = "_?"
 
 export
-Pretty (Param a) where
-  prettyPrec p (IsParam t) = prettyPrec p t
+Vect n Name => Pretty (PArg n) where
+  prettyPrec p v = prettyPrec p $ ttimp %search v
 
 export
-Pretty (Params vs) where
-  pretty vs = list $ go vs
-    where go : Params bs -> List (Doc ann)
-          go []       = []
-          go (x :: y) = pretty x :: go y
-
-export
-Pretty (PArg n) where
-  prettyPrec p (PPar fc x)  = angles (pretty $ finToNat x)
-  prettyPrec p (PVar fc nm) = pretty nm
-  prettyPrec p (PApp fc x y) =
-    backtickParens p (alignInfix "PApp" "$" $ reverse (args x))
-      where args : PArg n -> List (Doc ann)
-            args (PApp _ f t) = prettyBacktick t :: args f
-            args t            = [prettyBacktick t]
-  prettyPrec p (PPrim fc c) = apply p "PPrim" [c]
-  prettyPrec p (PDelayed fc lr x) = applyH p "PDelayed" [lr, x]
-  prettyPrec p (PType fc) = "Type"
-
-export
-Pretty (ConArg n) where
+Vect n Name => Pretty (ConArg n) where
   prettyPrec p (ParamArg x s)         = angles (pretty $ finToNat x)
   prettyPrec p (CArg mnm rig pinfo x) =
     parens $ hsepH [rig, pinfo, mnm, ":", x]
 
 export covering
-Pretty (ParamCon n) where
-  prettyPrec p (MkParamCon n arty args ns) =
-    applyH p "MkParamCon" [n, arty, args, ns]
+Vect n Name => Pretty (ParamCon n) where
+  prettyPrec p (MkParamCon n arty args) =
+    applyH p "MkParamCon" [n, arty, args]
 
 export covering
 Pretty ParamTypeInfo where
-  pretty (MkParamTypeInfo info params dnames cons pargs) =
-    let head = applyH Open "MkParamTypeInfo" [info.name, params, dnames]
+  pretty (MkParamTypeInfo info _ names cons pargs) =
+    let head = applyH Open "MkParamTypeInfo" [info.name, names]
         cons = indent 2 $ vsep (map pretty cons)
         args = indent 2 $ vsep (map pretty pargs)
      in vsep [head,"Constructors",cons,"Param args",args]

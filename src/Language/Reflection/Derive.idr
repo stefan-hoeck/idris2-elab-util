@@ -6,7 +6,7 @@
 module Language.Reflection.Derive
 
 import Decidable.Equality
-import Data.DPair
+import public Data.DPair
 import public Language.Reflection.Syntax
 import public Language.Reflection.Types
 
@@ -32,10 +32,6 @@ find _ = find_
 export %inline
 Elaborateable TypeInfo where
   find_ = getInfo'
-
-export %inline
-Elaborateable ParamTypeInfo where
-  find_ = getParamInfo'
 
 public export %inline
 Named a => Named (Subset a p) where
@@ -174,21 +170,10 @@ toNamed (BA arg vars prf) = case named arg of
 --          Utilities
 --------------------------------------------------------------------------------
 
-||| Tries to lookup and refine an elaboratable value based on the
-||| given predicate.
-public export
-refine :
-     {0 p : a -> Type}
-  -> Elaboration m
-  => Elaborateable a
-  => ((v : a) -> Res (p v))
-  -> Name
-  -> m (Subset a p)
-refine f nm = do
-  v <- find a nm
-  case f v of
-    Right prf => pure $ Element v prf
-    Left err  => fail "Error when refining \{nm}: \{err}"
+export
+failRecord : String -> Res a
+failRecord s =
+  Left "Interface \{s} can only be derived for single-constructor data tpyes"
 
 ||| Generates a pattern clause for accumulating the arguments
 ||| of a singled data constructor.
@@ -416,45 +401,70 @@ extractResult (IApp _ _ tpe) = case unAppAny tpe of
   _         => Nothing
 extractResult _              = Nothing
 
-||| Generates (potentially mutually recursive) declarations and
-||| definitions by looking up the given names and converting them
-||| to toplevel definitions.
-|||
-||| All claims will be declared first, so that we support mutually
-||| recursive definitions.
-|||
-||| The list of resolved names is passed together with the resolved
-||| values to the function generating the desired toplevel definitions.
+export %inline
+sequenceJoin : Applicative f => List (f $ List a) -> f (List a)
+sequenceJoin = map join . sequence
+
+public export
+record ParamInfo where
+  constructor PI
+  name     : Name
+  strategy : (n : Nat) -> Maybe (Exists $ ParamPattern n)
+  goals    : List (List Name -> ParamTypeInfo -> Res (List TopLevel))
+
+fromParamInfo : List Name -> TypeInfo -> ParamInfo -> Res (List TopLevel)
+fromParamInfo nms ti (PI n f gs) = case f ti.arty of
+  Just (Evidence _ pat) => do
+    pti <- paramType ti pat
+    map join $ traverse (\g => g nms pti) gs
+
+  Nothing               => Left """
+    Parameter pattern does not match type constructor arity (\{show ti.arty}).
+    Note, that the arity includes implicit arguments, so those have to
+    be considered in the pattern, too.
+    """
+
 export
-deriveGeneral :
-     Elaboration m
-  => Elaborateable t
-  => List Name
-  -> List (List Name -> t -> List TopLevel)
-  -> m ()
-deriveGeneral ns fs = do
-  pts <- traverse (find t) ns
-  let names  := map (.getName) pts
-      tls    := fs >>= \f => pts >>= f names
-      claims := map claim tls
+deriveParam : Elaboration m => List ParamInfo -> m ()
+deriveParam is = do
+  ts <- traverse (find TypeInfo . name) is
+  let ns := map (.getName) ts
+
+  Right tls <- pure . map join . sequence $ zipWith (fromParamInfo ns) ts is
+    | Left err => fail err
+
+  let claims := map claim tls
       defns  := map defn tls
 
   logMsg "derive.claims" 1 $ unlines (map show claims)
   logMsg "derive.definitions" 1 $ unlines (map show defns)
   declare $ claims ++ defns
 
-||| Allows the derivation of mutually dependant interface
-||| implementations by first defining type declarations before
-||| declaring implementations.
-|||
-||| Note: There is no need to call this from withi a `mutual` block.
-export %inline
+export
+allParams : (n : Nat) -> Maybe (Exists $ ParamPattern n)
+allParams n = Just $ Evidence _ $ paramsOnly n
+
+export
+allIndices : (n : Nat) -> Maybe (Exists $ ParamPattern n)
+allIndices n = Just $ Evidence _ $ indicesOnly n
+
+export
+match : ParamPattern m k -> (n : Nat) -> Maybe (Exists $ ParamPattern n)
+match p n = map (\v => Evidence _ v) $ go n p
+  where
+    go : (z : Nat) -> ParamPattern x y -> Maybe (ParamPattern z y)
+    go 0 []           = Just []
+    go (S j) (a :: b) = (a ::) <$> go j b
+    go 0 (_ :: _)     = Nothing
+    go (S j) []       = Nothing
+
+export
 deriveMutual :
      Elaboration m
   => List Name
-  -> List (List Name -> ParamTypeInfo -> List TopLevel)
+  -> List (List Name -> ParamTypeInfo -> Res (List TopLevel))
   -> m ()
-deriveMutual = deriveGeneral
+deriveMutual ns fs = deriveParam $ map (\n => PI n allParams fs) ns
 
 ||| Given a name of a parameterized data type plus a list of
 ||| interface generation functions, tries
@@ -467,9 +477,26 @@ export %inline
 derive :
      Elaboration m
   => Name
-  -> List (List Name -> ParamTypeInfo -> List TopLevel)
+  -> List (List Name -> ParamTypeInfo -> Res (List TopLevel))
   -> m ()
 derive n = deriveMutual [n]
+
+export %inline
+deriveIndexed :
+     Elaboration m
+  => Name
+  -> List (List Name -> ParamTypeInfo -> Res (List TopLevel))
+  -> m ()
+deriveIndexed n fs = deriveParam [PI n allIndices fs]
+
+export %inline
+derivePattern :
+     Elaboration m
+  => Name
+  -> ParamPattern n k
+  -> List (List Name -> ParamTypeInfo -> Res (List TopLevel))
+  -> m ()
+derivePattern n pat fs = deriveParam [PI n (match pat) fs]
 
 --------------------------------------------------------------------------------
 --          Interface Factories

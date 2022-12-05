@@ -8,7 +8,8 @@ license    = "BSD-2 Clause"
 sourcedir  = "src"
 depends    = contrib
 
-modules = Doc.Enum1
+modules = Doc.Derive
+        , Doc.Enum1
         , Doc.Enum2
         , Doc.Generic1
         , Doc.Generic2

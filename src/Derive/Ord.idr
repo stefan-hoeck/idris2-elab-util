@@ -1,75 +1,8 @@
 module Derive.Ord
 
-import public Language.Reflection.Derive
+import public Derive.Eq
 
 %default total
-
---------------------------------------------------------------------------------
---          Constructor Index
---------------------------------------------------------------------------------
-
-||| Type used to represent the index of a data constructor.
-export
-conIndexTypes : Nat -> (Bits32 -> TTImp, TTImp)
-conIndexTypes n =
-  let f := primVal . PrT
-   in if      n < 256     then (primVal . B8 . cast, f Bits8Type)
-      else if n < 0x20000 then (primVal . B16 . cast, f Bits16Type)
-      else                     (primVal . B32, f Bits32Type)
-
-||| Clauses returning the index for each constructor in the given
-||| list.
-export
-conIndexClauses : Named a => Name -> List a -> List Clause
-conIndexClauses n ns = go 0 (fst $ conIndexTypes $ length ns) ns
-  where go : Bits32 -> (Bits32 -> TTImp) -> List a -> List Clause
-        go _  _ []        = []
-        go ix f (c :: cs) = (var n .$ bindAny c .= f ix) :: go (ix + 1) f cs
-
-||| Declaration of a function returning the constructor index
-||| for a value of the given data type.
-export
-conIndexClaim : (fun : Name) -> (t : TypeInfo) -> Vect t.arty Name -> Decl
-conIndexClaim fun t ns =
-  let tpe := snd (conIndexTypes $ length t.cons)
-      arg := appArgs t.name ns
-   in public' fun $ piAll `(~(arg) -> ~(tpe)) (implicits ns)
-
-||| Definition of a function returning the constructor index
-||| for a value of the given data type.
-export
-conIndexDef : (fun : Name) -> TypeInfo -> Decl
-conIndexDef fun t = def fun $ conIndexClauses fun t.cons
-
-||| For the given data type, creates a function for returning
-||| a 0-based index for each constructor.
-|||
-||| For instance, for `Either a b = Left a | Right b` this creates
-||| declarations as follows:
-|||
-||| ```idris
-||| conIndexEither : Either a b -> Bits8
-||| conIndexEither (Left {})  = 0
-||| conIndexEither (Right {}) = 1
-||| ```
-|||
-||| This function is useful in several situations: When deriving
-||| `Ord` for a sum type with more than one data constructors, we
-||| can use the constructor index to compare values created from
-||| distinct constructors. This allows us to only use a linear number
-||| of pattern matches to implement the ordering.
-|||
-||| For enum types (all data constructors have only erased arguments - if any),
-||| there are even greater benefits: `conIndex` is
-||| the identity function at runtime, being completely eliminated during
-||| code generations. This allows us to get `Eq` and `Ord` implementations for
-||| enum types, which run in O(1)!
-export
-ConIndex : List Name -> TypeInfo -> List TopLevel
-ConIndex _ t =
-  let ns  := freshNames "par" t.arty
-      fun := funName t "conIndex"
-   in [ TL (conIndexClaim fun t ns) (conIndexDef fun t) ]
 
 --------------------------------------------------------------------------------
 --          Claims
@@ -97,6 +30,10 @@ ordImplClaim impl p = implClaim impl (implType "Ord" p)
 export
 ordImplDef : (fun, impl : Name) -> Decl
 ordImplDef fun impl = def impl [var impl .= var "mkOrd" .$ var fun]
+
+ordEnumDef : (impl, ci : Name) -> Decl
+ordEnumDef i c =
+  def i [var i .= `(mkOrd $ \x,y => compare (~(var c) x) (~(var c) y))]
 
 -- Generates the right-hand side of the ordering test on a single
 -- pair of (identical) data constructors based on the given list of
@@ -141,13 +78,20 @@ parameters (nms : List Name)
 
 ||| Generate declarations and implementations for `Ord` for a given data type.
 export
-Ord : List Name -> ParamTypeInfo -> List TopLevel
-Ord nms p =
-  let ci   := funName p "conIndex"
-      pre  := if length p.cons > 1 then ConIndex nms p.info else []
-      fun  := funName p "ord"
-      impl := implName p "Ord"
-   in pre ++
-      [ TL (ordClaim fun p) (ordDef nms ci fun p.info)
-      , TL (ordImplClaim impl p) (ordImplDef fun impl)
-      ]
+Ord : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Ord nms p = case isEnum p.info of
+  True  =>
+    let impl := implName p "Ord"
+        ci   := conIndexName p
+     in Right [ TL (ordImplClaim impl p) (ordEnumDef impl ci) ]
+  False =>
+    let ci   := conIndexName p
+        pre  := if length p.cons > 1 then ConIndex nms p else Right []
+        fun  := funName p "ord"
+        impl := implName p "Ord"
+     in sequenceJoin
+          [ pre
+          , Right [ TL (ordClaim fun p) (ordDef nms ci fun p.info)
+                  , TL (ordImplClaim impl p) (ordImplDef fun impl)
+                  ]
+          ]

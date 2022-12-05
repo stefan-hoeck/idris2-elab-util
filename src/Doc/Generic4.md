@@ -102,7 +102,7 @@ Generic' p =
 
       appType  = p.applied
       genType  = `(Generic) .$ appType .$ mkCode p
-      funType  = piAllImplicit genType (toList p.defltNames)
+      funType  = piAll genType p.implicits
 
       x       = lambdaArg {a = Name} "x"
       varX    = var "x"

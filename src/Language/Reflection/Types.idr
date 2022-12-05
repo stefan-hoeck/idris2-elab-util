@@ -69,7 +69,7 @@ Uninhabited (MissingInfo ExplicitArg) where
 
 ||| An argument extracted from an applied function.
 |||
-||| We use these to match applied constructor types against the
+||| We use these to match result types of data constructors against the
 ||| arguments of the corresponding type constructor, so they
 ||| are indexed by the corresponding argument.
 public export
@@ -87,10 +87,11 @@ data AppArg : Arg -> Type where
   Missing  : MissingInfo p -> AppArg (MkArg c p n t)
 
 public export
-(.ttimp) : AppArg (MkArg c ExplicitArg n t) -> TTImp
+(.ttimp) : AppArg a -> TTImp
 (.ttimp) (NamedApp nm s) = s
 (.ttimp) (Regular s)     = s
-(.ttimp) (Missing x)     = absurd x
+(.ttimp) (AutoApp s)     = s
+(.ttimp) (Missing x)     = implicitFalse
 
 ||| Applies an argument to the given value.
 public export
@@ -228,14 +229,48 @@ getCon vs n = do
 public export
 record TypeInfo where
   constructor MkTypeInfo
-  name : Name
-  arty : Nat
-  args : Vect arty Arg
-  cons : List (Con arty args)
+  name     : Name
+  arty     : Nat
+  args     : Vect arty Arg
+  argNames : Vect arty Name
+  cons     : List (Con arty args)
 
 public export %inline
 Named TypeInfo where
   t.getName = t.name
+
+public export
+namedArg : (a : Arg) -> Maybe Name
+namedArg (MkArg _ _ (Just n) _) = Just n
+namedArg _                      = Nothing
+
+||| Returns the names of explicit arguments of a type constructor.
+public export
+(.explicitArgs) : TypeInfo -> List Name
+(.explicitArgs) p = go Lin p.args p.argNames
+  where
+    go : SnocList Name -> Vect k Arg -> Vect k Name -> List Name
+    go sn []        []                              = sn <>> []
+    go sn (MkArg _ ExplicitArg _ _ :: xs) (n :: ns) = go (sn :< n) xs ns
+    go sn (_                       :: xs) (n :: ns) = go sn xs ns
+
+||| Returns a type constructor
+||| applied to the names of its explicit arguments
+public export
+(.applied) : TypeInfo -> TTImp
+(.applied) p = appNames p.name p.explicitArgs
+  where
+    go : TTImp -> Vect k Arg -> Vect k Name -> TTImp
+    go t []        []                              = t
+    go t (MkArg _ ExplicitArg _ _ :: xs) (n :: ns) = go (t .$ var n) xs ns
+    go t (_                       :: xs) (n :: ns) = go t xs ns
+
+||| Returns a list of implicit arguments corresponding
+||| to the data type's explicit arguments.
+public export %inline
+(.implicits) : TypeInfo -> List Arg
+(.implicits) p = implicits p.explicitArgs
+
 
 ||| True if the given type has only constant constructors and
 ||| is therefore represented by a single unsigned integer at runtime.
@@ -269,7 +304,7 @@ isSnoc (MkCon n _ as _) = isSnoc n && count isExplicit as == 2
 ||| unerased argument.
 public export
 isNewtype : TypeInfo -> Bool
-isNewtype (MkTypeInfo _ _ _ [c]) = count (not . isErased) c.args == 1
+isNewtype (MkTypeInfo _ _ _ _ [c]) = count (not . isErased) c.args == 1
 isNewtype _                      = False
 
 ||| True, if the given type has exactly one
@@ -277,7 +312,7 @@ isNewtype _                      = False
 ||| argument and a `(::)` constructor with two explicit arguments.
 public export
 isListLike : TypeInfo -> Bool
-isListLike (MkTypeInfo _ _ _ [x,y]) = isNil x && isCons y || isCons x && isNil y
+isListLike (MkTypeInfo _ _ _ _ [x,y]) = isNil x && isCons y || isCons x && isNil y
 isListLike _                        = False
 
 ||| True, if the given type has exactly one
@@ -285,7 +320,7 @@ isListLike _                        = False
 ||| argument and a `(:<)` constructor with two explicit arguments.
 public export
 isSnocListLike : TypeInfo -> Bool
-isSnocListLike (MkTypeInfo _ _ _ [x,y]) =
+isSnocListLike (MkTypeInfo _ _ _ _ [x,y]) =
   isLin x && isSnoc y || isSnoc x && isLin y
 isSnocListLike _                        = False
 
@@ -293,8 +328,8 @@ isSnocListLike _                        = False
 ||| arguments. Such a value will have a trivial runtime representation.
 public export
 isErased : TypeInfo -> Bool
-isErased (MkTypeInfo _ _ _ [c]) = isConstant c
-isErased _                      = False
+isErased (MkTypeInfo _ _ _ _ [c]) = isConstant c
+isErased _                        = False
 
 ||| Tries to get information about the data type specified
 ||| by name. The name need not be fully qualified, but
@@ -307,10 +342,11 @@ getInfo' n =
        | (_,_) => fail "Type declaration does not end in IType: \{show tt}"
 
      let (arty ** vargs) := (length args ** Vect.fromList args)
-
+     Just nargs    <- pure $ traverse name vargs
+       | Nothing => fail "\{n'} has unnamed type arguments"
      conNames       <- getCons n'
      cons           <- traverse (getCon vargs) conNames
-     pure (MkTypeInfo n' arty vargs cons)
+     pure (MkTypeInfo n' arty vargs nargs cons)
 
 ||| macro version of `getInfo'`
 export %macro
@@ -324,94 +360,100 @@ getInfo = getInfo'
 export %macro
 singleCon : Name -> Elab Name
 singleCon n = do
-  (MkTypeInfo _ _ _ cs) <- getInfo' n
-  (c::Nil) <- pure cs | _ => fail "not a single constructor"
+  (MkTypeInfo _ _ _ _ [c]) <- getInfo' n
+    | _ => fail "\{n} is not a single-constructor data type"
   pure $ c.name
 
 --------------------------------------------------------------------------------
 --          Parameterized Types
 --------------------------------------------------------------------------------
 
-||| Witness that a `TTImp` expression is a
-||| basic type level function similar to Haskell 98's kind system.
-|||
-||| For parameterized data types, we only accept type arguments of this
-||| shape.
 public export
-data Tpe : TTImp -> Type where
-  Ty  : Tpe (IType fc)
-  Pi  : Tpe x -> Tpe y -> Tpe (IPi fc c ExplicitArg nm x y)
-  Hol : Tpe (IHole fc s)
+data ParamTag : Nat -> Type where
+  I : ParamTag 0
+  P : ParamTag 1
 
-||| Tries to convert a `TTImp` to a `Tpe` without loss of information.
 public export
-tpe : (t : TTImp) -> Res (Tpe t)
-tpe (IType fc)                    = Right Ty
-tpe (IPi fc c ExplicitArg nm x y) = Pi <$> tpe x <*> tpe y
-tpe (IHole fc s)                  = Right Hol
-tpe t                             =
-  Left "\{show t} is not a simple type argument"
+data ParamPattern : (typeArgs, params : Nat) -> Type where
+  Nil  : ParamPattern 0 0
+  (::) : ParamTag k -> ParamPattern m n -> ParamPattern (S m) (k + n)
 
-||| Proof that the given argument has the shape of a parameter in a
-||| parameterized data type.
 public export
-data Param : Arg -> Type where
-  IsParam : Tpe t -> Param (MkArg c ExplicitArg nm t)
+paramsOnly : (k : Nat) -> ParamPattern k k
+paramsOnly 0     = []
+paramsOnly (S k) = P :: paramsOnly k
 
-||| Proof that the given type arguments have the shape of a
-||| parameter in a parameterized data type.
 public export
-0 Params : Vect n Arg -> Type
-Params = All Param
+indicesOnly : (k : Nat) -> ParamPattern k 0
+indicesOnly 0     = []
+indicesOnly (S k) = I :: indicesOnly k
 
-||| Tries to proof that the type argument is a plain type or type function.
 public export
-param : (a : Arg) -> Res (Param a)
-param (MkArg c ExplicitArg nm t) = IsParam <$> tpe t
-param (MkArg _ _           nm t) =
-  let str := maybe "_" show nm
-   in Left "\{str} is not an explicit type argument"
+extractParams : ParamPattern n k -> (vs : Vect n a) -> Vect k a
+extractParams []        []        = []
+extractParams (I :: ps) (x :: xs) = extractParams ps xs
+extractParams (P :: ps) (x :: xs) = x :: extractParams ps xs
 
 ||| Constructor argument type in a parameterized data type
 ||| with `n` parameters.
 public export
 data PArg : (n : Nat) -> Type where
-  PPar     : FC -> Fin n -> PArg n
-  PVar     : FC -> Name -> PArg n
-  PApp     : FC -> (x,y : PArg n) -> PArg n
-  PPrim    : FC -> Constant -> PArg n
-  PDelayed : FC -> LazyReason -> PArg n -> PArg n
-  PType    : FC -> PArg n
+  PPar      : Fin n -> PArg n
+  PVar      : Name -> PArg n
+  PLam      : Count -> PiInfo TTImp -> Maybe Name -> PArg n -> PArg n -> PArg n
+  PApp      : (x,y : PArg n) -> PArg n
+  PNamedApp : PArg n -> Name -> PArg n -> PArg n
+  PAutoApp  : PArg n -> PArg n -> PArg n
+  PWithApp  : PArg n -> PArg n -> PArg n
+  PSearch   : Nat -> PArg n
+  PPrim     : Constant -> PArg n
+  PDelayed  : LazyReason -> PArg n -> PArg n
+  PType     : PArg n
+  PHole     : String -> PArg n
 
 ||| Checks if two `PArgs` are equal (ignoring the `FC`).
 export
 Eq (PArg n) where
-  PPar _ x        == PPar _ y         = x == y
-  PVar _ x        == PVar _ y         = x == y
-  PApp _ x y      == PApp _ v w       = x == v && y == w
-  PPrim _ c       == PPrim _ d        = c == d
-  PDelayed _ lr x == PDelayed _ lr2 y = lr == lr2 && x == y
-  PType _         == PType _          = True
-  _               == _                = False
+  PPar x == PPar y = x == y
+  PVar x == PVar y = x == y
+  PApp x y == PApp v w = x == v && y == w
+  PLam c p m u v == PLam d q n x y =
+    c == d && p == q && m == n && u == x && v == y
+  PNamedApp x m y == PNamedApp v n w = x == v && m == n && y == w
+  PAutoApp x y == PAutoApp v w = x == v && y == w
+  PWithApp x y == PWithApp v w = x == v && y == w
+  PSearch c == PSearch d = c == d
+  PPrim c == PPrim d = c == d
+  PDelayed lr x == PDelayed lr2 y = lr == lr2 && x == y
+  PType == PType = True
+  PHole c == PHole d = c == d
+  _ == _ = False
 
 ||| Checks if the given name corresponds to a parameter, in
 ||| which case it must be present in the given vector of names.
 public export
-pvar : Named a => Vect n a -> FC -> Name -> PArg n
-pvar xs fc nm = case findIndex (\v => nm == v.getName) xs of
-  Just ix => PPar fc ix
-  Nothing => PVar fc nm
+pvar : Named a => Vect n a -> (bound : List Name) -> Name -> PArg n
+pvar xs bound nm = case findIndex (\v => nm == v.getName) xs of
+  Just ix => if nm `elem` bound then PVar nm else PPar ix
+  Nothing => PVar nm
 
 ||| Tries to convert a `TTImp` to an argument of a
 ||| parameterized constructor using the given vector of parameter names.
 public export
-parg : Named a => Vect n a -> TTImp -> Res (PArg n)
-parg xs (IVar fc nm)       = Right $ pvar xs fc nm
-parg xs (IApp fc s t)      = PApp fc <$> parg xs s <*> parg xs t
-parg xs (IDelayed fc lr s) = PDelayed fc lr <$> parg xs s
-parg xs (IPrimVal fc c)    = Right $ PPrim fc c
-parg xs (IType fc)         = Right $ PType fc
-parg xs t                  =
+parg : Named a => Vect n a -> (bound : List Name) -> TTImp -> Res (PArg n)
+parg xs b (IVar _ nm)         = Right $ pvar xs b nm
+parg xs b (IApp _ s t)        = PApp <$> parg xs b s <*> parg xs b t
+parg xs b (INamedApp _ s n t) = PNamedApp <$> parg xs b s <*> pure n <*> parg xs b t
+parg xs b (IAutoApp _ s t)    = PAutoApp <$> parg xs b s <*> parg xs b t
+parg xs b (IWithApp _ s t)    = PWithApp <$> parg xs b s <*> parg xs b t
+parg xs b (IDelayed _ lr s)   = PDelayed lr <$> parg xs b s
+parg xs b (IPrimVal _ c)      = Right $ PPrim c
+parg xs b (IType _)           = Right PType
+parg xs b (ISearch _ n)       = Right $ PSearch n
+parg xs b (IHole _ n)         = Right $ PHole n
+parg xs b (ILam _ c p n x y)  =
+  [| PLam (pure c) (pure p) (pure n) (parg xs b x) (parg xs (toList n ++ b) y) |]
+parg xs b t                 =
   Left "\{show t} is not a valid constructor argument type"
 
 namespace PArg
@@ -419,12 +461,18 @@ namespace PArg
   ||| corresponding `TTImp` expression.
   public export
   ttimp : Vect n Name -> PArg n -> TTImp
-  ttimp ns (PPar fc x)        = IVar fc (index x ns)
-  ttimp ns (PVar fc nm)       = IVar fc nm
-  ttimp ns (PApp fc x y)      = IApp fc (ttimp ns x) (ttimp ns y)
-  ttimp ns (PPrim fc c)       = IPrimVal fc c
-  ttimp ns (PDelayed fc lr x) = IDelayed fc lr (ttimp ns x)
-  ttimp ns (PType fc)         = IType fc
+  ttimp ns (PPar x)          = var (index x ns)
+  ttimp ns (PVar nm)         = var nm
+  ttimp ns (PApp x y)        = ttimp ns x .$ ttimp ns y
+  ttimp ns (PNamedApp x n y) = INamedApp EmptyFC (ttimp ns x) n (ttimp ns y)
+  ttimp ns (PAutoApp x y)    = IAutoApp EmptyFC (ttimp ns x) (ttimp ns y)
+  ttimp ns (PWithApp x y)    = IWithApp EmptyFC (ttimp ns x) (ttimp ns y)
+  ttimp ns (PPrim c)         = primVal c
+  ttimp ns (PDelayed lr x)   = IDelayed EmptyFC lr (ttimp ns x)
+  ttimp ns (PSearch n)       = ISearch EmptyFC n
+  ttimp ns PType             = IType EmptyFC
+  ttimp ns (PHole n)         = IHole EmptyFC n
+  ttimp ns (PLam c p n x y)  = ILam EmptyFC c p n (ttimp ns x) (ttimp ns y)
 
 ||| Extracts the sub-expressions from an argument's type
 ||| where the outermost value is a parameter.
@@ -434,18 +482,32 @@ namespace PArg
 ||| `[f Int, f a, b]` from `Maybe (Pair (f Int, Pair (f a, b)))`
 public export
 paramArgs : PArg n -> List (PArg n)
-paramArgs (PPar fc x)              = [PPar fc x]
-paramArgs (PVar fc nm)             = []
-paramArgs p@(PApp fc (PPar _ _) y) = [p]
-paramArgs (PApp fc x y)            = nub $ paramArgs x ++ paramArgs y
-paramArgs (PPrim fc c)             = []
-paramArgs (PDelayed fc lr x)       = paramArgs x
-paramArgs (PType fc)               = []
+paramArgs (PPar x)                   = [PPar x]
+paramArgs (PVar nm)                  = []
+paramArgs p@(PApp (PPar _) y)        = [p]
+paramArgs p@(PAutoApp (PPar _) y)    = [p]
+paramArgs p@(PWithApp (PPar _) y)    = [p]
+paramArgs p@(PNamedApp (PPar _) n y) = [p]
+paramArgs (PLam _ _ _ _ y)           = paramArgs y
+paramArgs (PApp x y)                 = nub $ paramArgs x ++ paramArgs y
+paramArgs (PAutoApp x y)             = nub $ paramArgs x ++ paramArgs y
+paramArgs (PWithApp x y)             = nub $ paramArgs x ++ paramArgs y
+paramArgs (PNamedApp x n y)          = nub $ paramArgs x ++ paramArgs y
+paramArgs (PPrim c)                  = []
+paramArgs (PDelayed lr x)            = paramArgs x
+paramArgs  PType                     = []
+paramArgs (PSearch _)                = []
+paramArgs (PHole _)                  = []
 
 public export
-paramNames : {0 vs : Vect n Arg} -> Params vs -> AppArgs vs -> Res (Vect n Name)
-paramNames []                []        = Right []
-paramNames (IsParam _ :: ps) (v :: vs) = case v.ttimp of
+paramNames :
+     {0 vs : Vect n Arg}
+  -> ParamPattern n k
+  -> AppArgs vs
+  -> Res (Vect k Name)
+paramNames []        []        = Right []
+paramNames (I :: ps) (v :: vs) = paramNames ps vs
+paramNames (P :: ps) (v :: vs) = case v.ttimp of
   IVar _ nm => (nm ::) <$> paramNames ps vs
   t         => Left "\{show t} is not a parameter"
 
@@ -464,8 +526,8 @@ public export
 conArg : Vect n Name -> Arg -> Res (ConArg n)
 conArg ns (MkArg M0 ImplicitArg (Just nm) t) = case findIndex (nm ==) ns of
   Just ix => Right $ ParamArg ix t
-  Nothing => CArg (Just nm) M0 ImplicitArg <$> parg ns t
-conArg ns (MkArg c pi nm t)           = CArg nm c pi <$> parg ns t
+  Nothing => CArg (Just nm) M0 ImplicitArg <$> parg ns Nil t
+conArg ns (MkArg c pi nm t)                  = CArg nm c pi <$> parg ns Nil t
 
 namespace ConArg
   public export
@@ -476,10 +538,9 @@ namespace ConArg
 public export
 record ParamCon (n : Nat) where
   constructor MkParamCon
-  name       : Name
-  arty       : Nat
-  args       : Vect arty (ConArg n)
-  paramNames : Vect n Name
+  name : Name
+  arty : Nat
+  args : Vect arty (ConArg n)
 
 namespace ParamCon
   public export
@@ -491,11 +552,11 @@ Named (ParamCon n) where
   c.getName = c.name
 
 public export
-paramCon : Params vs -> Con n vs -> Res (ParamCon n)
+paramCon : ParamPattern n k -> Con n vs -> Res (ParamCon k)
 paramCon ps (MkCon name arty args typeArgs) = do
   params  <- paramNames ps typeArgs
   conArgs <- traverse (conArg params) args
-  pure $ MkParamCon name arty conArgs params
+  pure $ MkParamCon name arty conArgs
 
 public export
 record ParamTypeInfo where
@@ -503,18 +564,15 @@ record ParamTypeInfo where
   ||| Underlying type info
   info       : TypeInfo
 
-  ||| Witness that all type arguments of the type constructor
-  ||| are basic type-level functions as defined in `Tpe t`.
-  params     : Params info.args
+  ||| Information about which type arguments are parameters and
+  ||| which are indices
+  pattern    : ParamPattern info.arty numParams
 
-  ||| Default parameter names. These are either the explicitly
-  ||| given names or the names used in the first data constructor
-  ||| for unnamed parameters. Generated names are used for
-  ||| the rare zero-constructor data types with unnamed parameters.
-  defltNames : Vect info.arty Name
+  ||| Name of parameters
+  paramNames : Vect numParams Name
 
   ||| List of data constructors
-  cons       : List (ParamCon info.arty)
+  cons       : List (ParamCon numParams)
 
   ||| List of types appearing in constructor arguments, where the
   ||| the outermost applied type is one of the parameters. We use this
@@ -524,48 +582,41 @@ record ParamTypeInfo where
   ||| For instance, in case of a constructor argument `Either (f a) (b, f Nat)`
   ||| with `f`, `a`, and `b` being parameters, this list will contain
   ||| the encoded forms of `f a`, `f Nat`, and `b`.
-  pargs      : List (PArg info.arty)
+  pargs      : List (PArg numParams)
 
 public export
 Named ParamTypeInfo where
   p.getName = p.info.name
 
 public export
-paramType : TypeInfo -> Res ParamTypeInfo
-paramType ti@(MkTypeInfo nm n vs cs) = do
-  ps     <- tryAll param vs
-  cons   <- traverse (paramCon ps) cs
-
-  let names := case cons of
-                 h :: _ => h.paramNames
-                 Nil    => freshNames "par" n
-
-      pns   := zipWith (\a,n => fromMaybe n a.name) vs names
-
-  pure $ MkParamTypeInfo ti ps pns cons (nub $ cons >>= paramArgs)
+paramType : (ti : TypeInfo) -> ParamPattern ti.arty k -> Res ParamTypeInfo
+paramType ti@(MkTypeInfo nm n vs ns cs) ps = do
+  cons <- traverse (paramCon ps) cs
+  pure $ MkParamTypeInfo ti ps (extractParams ps ns) cons (nub $ cons >>= paramArgs)
 
 ||| Returns the constraints required to implement the given interface
 ||| for the given parameterized data types.
 |||
 ||| The interface must be of type `Type -> Type`.
 export
-constraints : ParamTypeInfo -> (iname  : Name) -> List Arg
-constraints p iname = map toCon p.pargs
-  where toCon : PArg p.info.arty -> Arg
-        toCon pa = MkArg MW AutoImplicit Nothing . (var iname .$) $
-                   ttimp p.defltNames pa
+constraints : ParamTypeInfo -> (iname : Name) -> List Arg
+constraints p iname = map (toCon p.paramNames) p.pargs
+  where toCon : Vect k Name ->  PArg k -> Arg
+        toCon ns pa = MkArg MW AutoImplicit Nothing . (var iname .$) $
+                   ttimp ns pa
 
-||| Returns the type constructor of a parameterized
-||| data type applied to its parameters
-public export
-(.applied) : ParamTypeInfo -> TTImp
-(.applied) p = appArgs p.getName p.defltNames
+namespace ParamTypeInfo
+  ||| Returns the type constructor of a parameterized
+  ||| data type applied to its parameters
+  public export
+  (.applied) : ParamTypeInfo -> TTImp
+  (.applied) p = p.info.applied
 
-||| Returns a list of implicit arguments corresponding
-||| to the data type's parameters.
-public export %inline
-(.implicits) : ParamTypeInfo -> List Arg
-(.implicits) p = implicits p.defltNames
+  ||| Returns a list of implicit arguments corresponding
+  ||| to the data type's arguments.
+  public export %inline
+  (.implicits) : ParamTypeInfo -> List Arg
+  (.implicits) p = p.info.implicits
 
 ||| Short-hand for `p.implicits ++ constraints iname p`.
 public export %inline
@@ -573,76 +624,21 @@ allImplicits : (p : ParamTypeInfo) -> (iname : Name) -> List Arg
 allImplicits p iname = p.implicits ++ constraints p iname
 
 ||| Returns information about a parameterized data type
-||| specified by the given (probably not fully qualified) name.
-|||
-||| The implementation makes sure, that all occurences of
-||| type parameters in the constructors have been given
-||| the same names as occurences in the type declaration.
+||| specified by the given (probably not fully qualified) name
+||| and a strategy for distinguishing between type parameters
+||| and indices.
 export
-getParamInfo' : Elaboration m => Name -> m ParamTypeInfo
+getParamInfo' :
+     Elaboration m
+  => Name
+  -> m ParamTypeInfo
 getParamInfo' n = do
   ti <- getInfo' n
-  case paramType ti of
+  case paramType ti (paramsOnly ti.arty) of
     Right pt => pure pt
-    Left err => fail "\{n} is not a parameterized type: \{err}"
+    Left err => fail "Type \{n} is not supported: \{err}"
 
 ||| macro version of `getParamInfo`.
 export %macro
 getParamInfo : Name -> Elab ParamTypeInfo
 getParamInfo = getParamInfo'
-
--- ||| Information about a parameterized data type.
--- |||
--- ||| The constructors of such a data type are only
--- ||| allowed to have two kinds of arguments:
--- ||| Implicit arguments corresponding to the data
--- ||| type's parameters and explicit arguments.
--- |||
--- ||| Auto implicits or existentials are not allowed.
--- |||
--- ||| Below are some examples of valid parameterized data types
--- |||
--- ||| ```
--- ||| data Foo a = Val a | Nope
--- |||
--- ||| data Reader : (m : Type -> Type) -> (e : Type) -> (a : Type) -> Type where
--- |||   MkReader : (run : e -> m a) -> Reader m e a
--- |||
--- ||| data Wrapper : (n : Nat) -> (t : Type) -> Type
--- |||   Wrap : Vect n t -> Wrapper n t
--- ||| ```
--- |||
--- ||| Examples of invalid parameterized data types
--- |||
--- ||| Indexed types families:
--- |||
--- ||| ```
--- ||| data GADT : (t : Type) -> Type where
--- |||   A : GADT Int
--- |||   B : GADT ()
--- |||   Any : a -> GADT a
--- ||| ```
--- |||
--- ||| Existentials:
--- |||
--- ||| ```
--- ||| data Forget : Type where
--- |||  DoForget : a -> Forget
--- ||| ```
--- |||
--- ||| Constraint types:
--- |||
--- ||| ```
--- ||| data ShowableForget : Type where
--- |||  ShowForget : Show a => a -> Forget
--- ||| ```
--- public export
--- record ParamTypeInfo where
---   constructor MkParamTypeInfo
---   name   : Name
---   params : List (Name,TTImp)
---   cons   : List ParamCon
---
--- public export %inline
--- Named ParamTypeInfo where
---   t.getName = t.name

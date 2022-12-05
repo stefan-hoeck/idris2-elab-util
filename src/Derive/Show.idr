@@ -138,10 +138,10 @@ deriveShow = do
 
 ||| Generate declarations and implementations for `Show` for a given data type.
 export
-Show : List Name -> ParamTypeInfo -> List TopLevel
+Show : List Name -> ParamTypeInfo -> Res (List TopLevel)
 Show nms p =
   let fun  := funName p "showPrec"
       impl := implName p "Show"
-   in [ TL (showClaim fun p) (showDef nms fun p.info)
-      , TL (showImplClaim impl p) (showImplDef fun impl)
-      ]
+   in Right [ TL (showClaim fun p) (showDef nms fun p.info)
+            , TL (showImplClaim impl p) (showImplDef fun impl)
+            ]

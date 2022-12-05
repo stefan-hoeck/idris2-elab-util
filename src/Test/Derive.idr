@@ -26,7 +26,7 @@ data Elem =
             | Bk | Cf | Es | Fm | Md | No | Lr
                  | Rf | Db | Sg | Bh | Hs | Mt | Ds | Rg | Cn | Nh | Fl | Mc | Lv | Ts | Og
 
-%runElab deriveEnum "Elem" [Show,Eq,Ord]
+%runElab derive "Elem" [Show,Eq,Ord]
 
 --------------------------------------------------------------------------------
 --          Plain
@@ -120,7 +120,7 @@ data Tree : Type -> Type where
 %runElab deriveMutual ["Tree","Forest"] [Show, Eq, Ord]
 
 --------------------------------------------------------------------------------
---          Expr
+--          Indexed Types
 --------------------------------------------------------------------------------
 
 data Expr : Type -> Type where
@@ -133,52 +133,32 @@ data Expr : Type -> Type where
   GTE   : Expr Nat -> Expr Nat -> Expr Bool
   ITE   : Expr Bool -> Expr a -> Expr a -> Expr a
 
-export %hint
-eqExprImpl : Eq (Expr t)
-eqExprImpl = deriveEq
-
-export %hint
-showExprImpl : Show (Expr t)
-showExprImpl = deriveShow
-
---------------------------------------------------------------------------------
---          Indexed
---------------------------------------------------------------------------------
+%runElab deriveIndexed "Expr" [Show, Eq, Ord]
 
 record Matrix m n a where
   constructor MkMatrix
   runMatrix : Vect m (Vect n a)
 
-%hint
-showMatrix : Show a => Show (Matrix m n a)
-showMatrix = deriveShow
-
-%hint
-eqMatrix : Eq a => Eq (Matrix m n a)
-eqMatrix = deriveEq
+%runElab derivePattern "Matrix" [I,I,P] [Show, Eq, Ord]
 
 public export
 data Op : (n : Nat) -> Type where
   Neg : Op 1
   Add : Op 2
 
-%runElab deriveEnum "Op" [Show,Eq,Ord]
+%runElab deriveIndexed "Op" [Show,Eq,Ord]
 
 data TM : Type -> Type where
   Var : a -> TM a
   Call : Op n -> Vect n (TM a) -> TM a
   Lam : TM (Maybe a) -> TM a
 
-%hint
-showTm : Show a => Show (TM a)
-showTm = deriveShow
+%runElab derive "TM" [Show]
 
 data IVect : {n : Nat} -> (a : Type) -> Type where
   MkIVect : (v : Vect n a) -> IVect {n} a
 
-%hint
-showIVect : {m : Nat} -> Show a => Show (IVect {n = m} a)
-showIVect = deriveShow
+%runElab derivePattern "IVect" [I,P] [Show]
 
 --------------------------------------------------------------------------------
 --          Semigroup
@@ -190,7 +170,7 @@ record Semi where
   y : String
   z : Maybe Bits8
 
-%runElab deriveRecord "Semi" [Show,Eq,Semigroup,Monoid]
+%runElab derive "Semi" [Show,Eq,Semigroup,Monoid]
 
 --------------------------------------------------------------------------------
 --          Num
@@ -202,7 +182,7 @@ record V3 a where
   y : a
   z : a
 
-%runElab deriveRecord "V3"
+%runElab derive "V3"
   [Show,Eq,Semigroup,Monoid,Num,Neg,Abs,Integral,FromDouble,Fractional]
 
 --------------------------------------------------------------------------------
@@ -215,58 +195,6 @@ record V3 a where
 
 %runElab derive "Language.Reflection.Syntax.Arg" [Eq,Show]
 
-%runElab deriveEnum "Language.Reflection.Types.MissingInfo" [Show,Eq,Ord]
+%runElab deriveIndexed "Language.Reflection.Types.MissingInfo" [Show,Eq,Ord]
 
-%hint
-showAppArg : Show (AppArg a)
-showAppArg = deriveShow
-
-%hint
-showAppArgs : Show (Vect.Quantifiers.All.All AppArg vs)
-showAppArgs = deriveShow
-
-%hint
-showCon : Show (Con n vs)
-showCon = deriveShow
-
-%hint
-showInfo : Show TypeInfo
-showInfo = deriveShow
-
-%hint
-eqTpe : Eq (Tpe t)
-eqTpe = deriveEq
-
-%hint
-showTpe : Show (Tpe t)
-showTpe = deriveShow
-
-%hint
-eqParam : Eq (Param t)
-eqParam = deriveEq
-
-%hint
-showParam : Show (Param t)
-showParam = deriveShow
-
-Show FC where show _ = "fc"
-
-%hint
-showPArg : Show (PArg n)
-showPArg = deriveShow
-
-%hint
-showConArg : Show (ConArg n)
-showConArg = deriveShow
-
-%hint
-showParamCon : Show (ParamCon n)
-showParamCon = deriveShow
-
-%hint
-showParams : Show (Vect.Quantifiers.All.All Param vs)
-showParams = deriveShow
-
-%hint
-showParamTypeInfo : Show ParamTypeInfo
-showParamTypeInfo = deriveShow
+%runElab deriveIndexed "Language.Reflection.Types.AppArg" [Show]

@@ -1,6 +1,5 @@
 module Derive.Integral
 
-import Derive.Record
 import public Language.Reflection.Derive
 
 %default total
@@ -53,13 +52,14 @@ parameters (nms : List Name)
 ||| Generate declarations and implementations for `Integral` for a
 ||| single-constructor data type.
 export
-Integral : List Name -> ParamRecord -> List TopLevel
-Integral nms (Element p _) =
-  let div  := funName p "div"
-      mod  := funName p "mod"
-      impl := implName p "Integral"
-      con  := getConstructor p.info
-   in [ TL (dvClaim div p) (divDef nms div con)
-      , TL (dvClaim mod p) (modDef nms mod con)
-      , TL (intImplClaim impl p) (intImplDef div mod impl)
-      ]
+Integral : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Integral nms p = case p.info.cons of
+  [c] =>
+    let div  := funName p "div"
+        mod  := funName p "mod"
+        impl := implName p "Integral"
+     in Right [ TL (dvClaim div p) (divDef nms div c)
+              , TL (dvClaim mod p) (modDef nms mod c)
+              , TL (intImplClaim impl p) (intImplDef div mod impl)
+              ]
+  _   => failRecord "Integral"

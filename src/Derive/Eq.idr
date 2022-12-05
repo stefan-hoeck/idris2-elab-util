@@ -5,6 +5,76 @@ import public Language.Reflection.Derive
 %default total
 
 --------------------------------------------------------------------------------
+--          Constructor Index
+--------------------------------------------------------------------------------
+
+export
+conIndexName : Named a => a -> Name
+conIndexName v = funName v "conIndex"
+
+||| Type used to represent the index of a data constructor.
+export
+conIndexTypes : Nat -> (Bits32 -> TTImp, TTImp)
+conIndexTypes n =
+  let f := primVal . PrT
+   in if      n < 256     then (primVal . B8 . cast, f Bits8Type)
+      else if n < 0x20000 then (primVal . B16 . cast, f Bits16Type)
+      else                     (primVal . B32, f Bits32Type)
+
+||| Clauses returning the index for each constructor in the given
+||| list.
+export
+conIndexClauses : Named a => Name -> List a -> List Clause
+conIndexClauses n ns = go 0 (fst $ conIndexTypes $ length ns) ns
+  where go : Bits32 -> (Bits32 -> TTImp) -> List a -> List Clause
+        go _  _ []        = []
+        go ix f (c :: cs) = (var n .$ bindAny c .= f ix) :: go (ix + 1) f cs
+
+||| Declaration of a function returning the constructor index
+||| for a value of the given data type.
+export
+conIndexClaim : (fun : Name) -> (t : TypeInfo) -> Decl
+conIndexClaim fun t =
+  let tpe := snd (conIndexTypes $ length t.cons)
+      arg := t.applied
+   in public' fun $ piAll `(~(arg) -> ~(tpe)) (t.implicits)
+
+||| Definition of a function returning the constructor index
+||| for a value of the given data type.
+export
+conIndexDef : (fun : Name) -> TypeInfo -> Decl
+conIndexDef fun t = def fun $ conIndexClauses fun t.cons
+
+||| For the given data type, creates a function for returning
+||| a 0-based index for each constructor.
+|||
+||| For instance, for `Either a b = Left a | Right b` this creates
+||| declarations as follows:
+|||
+||| ```idris
+||| conIndexEither : Either a b -> Bits8
+||| conIndexEither (Left {})  = 0
+||| conIndexEither (Right {}) = 1
+||| ```
+|||
+||| This function is useful in several situations: When deriving
+||| `Ord` for a sum type with more than one data constructors, we
+||| can use the constructor index to compare values created from
+||| distinct constructors. This allows us to only use a linear number
+||| of pattern matches to implement the ordering.
+|||
+||| For enum types (all data constructors have only erased arguments - if any),
+||| there are even greater benefits: `conIndex` is
+||| the identity function at runtime, being completely eliminated during
+||| code generations. This allows us to get `Eq` and `Ord` implementations for
+||| enum types, which run in O(1)!
+export
+ConIndex : List Name -> ParamTypeInfo -> Res (List TopLevel)
+ConIndex _ t =
+  let fun := conIndexName t
+   in Right [ TL (conIndexClaim fun t.info) (conIndexDef fun t.info) ]
+
+--------------------------------------------------------------------------------
 --          Claims
 --------------------------------------------------------------------------------
 
@@ -29,6 +99,9 @@ eqImplClaim impl p = implClaim impl (implType "Eq" p)
 
 eqImplDef : (fun, impl : Name) -> Decl
 eqImplDef fun impl = def impl [var impl .= var "mkEq" .$ var fun]
+
+eqEnumDef : (impl, ci : Name) -> Decl
+eqEnumDef i c = def i [var i .= `(mkEq $ \x,y => ~(var c) x == ~(var c) y)]
 
 -- catch-all pattern clause for data types with more than
 -- one data constructor
@@ -90,10 +163,16 @@ deriveEq = do
 
 ||| Generate declarations and implementations for `Eq` for a given data type.
 export
-Eq : List Name -> ParamTypeInfo -> List TopLevel
-Eq nms p =
-  let fun  := funName p "eq"
-      impl := implName p "Eq"
-   in [ TL (eqClaim fun p) (eqDef nms fun p.info)
-      , TL (eqImplClaim impl p) (eqImplDef fun impl)
-      ]
+Eq : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Eq nms p = case isEnum p.info of
+  True  =>
+    let impl := implName p "Eq"
+        ci   := conIndexName p
+     in sequenceJoin
+          [ConIndex nms p, Right [ TL (eqImplClaim impl p) (eqEnumDef impl ci) ]]
+  False =>
+    let fun  := funName p "eq"
+        impl := implName p "Eq"
+     in Right [ TL (eqClaim fun p) (eqDef nms fun p.info)
+              , TL (eqImplClaim impl p) (eqImplDef fun impl)
+              ]

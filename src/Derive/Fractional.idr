@@ -1,6 +1,5 @@
 module Derive.Fractional
 
-import Derive.Record
 import public Language.Reflection.Derive
 
 %default total
@@ -59,13 +58,14 @@ recipDef fun c =
 ||| Generate declarations and implementations for `Fractional` for a
 ||| single-constructor data type.
 export
-Fractional : List Name -> ParamRecord -> List TopLevel
-Fractional _ (Element p _) =
-  let recip := funName p "recip"
-      div   := funName p "divide"
-      impl  := implName p "Fractional"
-      con   := getConstructor p.info
-   in [ TL (recipClaim recip p) (recipDef recip con)
-      , TL (divClaim div p) (divDef div con)
-      , TL (fractionalImplClaim impl p) (fractionalImplDef div recip impl)
-      ]
+Fractional : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Fractional nms p = case p.info.cons of
+  [c] =>
+    let recip := funName p "recip"
+        div   := funName p "divide"
+        impl  := implName p "Fractional"
+     in Right [ TL (recipClaim recip p) (recipDef recip c)
+              , TL (divClaim div p) (divDef div c)
+              , TL (fractionalImplClaim impl p) (fractionalImplDef div recip impl)
+              ]
+  _   => failRecord "Fractional"
