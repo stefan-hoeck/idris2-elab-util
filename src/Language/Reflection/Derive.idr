@@ -173,7 +173,7 @@ toNamed (BA arg vars prf) = case named arg of
 export
 failRecord : String -> Res a
 failRecord s =
-  Left "Interface \{s} can only be derived for single-constructor data tpyes"
+  Left "Interface \{s} can only be derived for single-constructor data types"
 
 ||| Generates a pattern clause for accumulating the arguments
 ||| of a singled data constructor.
