@@ -31,7 +31,7 @@ implConArgNames : Con n vs -> List Name
 implConArgNames (MkCon _ _ args _) = mapMaybe implArgName $ toList args
 
 implArgNames : TypeInfo -> List Name
-implArgNames (MkTypeInfo _ _ _ cs) =
+implArgNames (MkTypeInfo _ _ _ _ cs) =
   toList cs >>= implConArgNames
 
 data Foo : (a : Type) -> (b : Type) -> Type where

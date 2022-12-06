@@ -13,7 +13,9 @@ depends    = base    >= 0.6.0
 modules = Derive.Abs
         , Derive.Eq
         , Derive.Fractional
+        , Derive.FromChar
         , Derive.FromDouble
+        , Derive.FromString
         , Derive.Integral
         , Derive.Monoid
         , Derive.Neg

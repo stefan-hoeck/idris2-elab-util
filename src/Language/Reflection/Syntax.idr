@@ -392,14 +392,6 @@ public export
 piAllAuto : TTImp -> List TTImp -> TTImp
 piAllAuto res = piAll res . map (MkArg MW AutoImplicit Nothing)
 
-public export
-params : Named a => Foldable t => t a -> TTImp -> TTImp
-params ns r = foldl (\t,n => erasedImplicit n .-> t) r ns
-
-export
-appArgs : Named a => Foldable t => Name -> t a -> TTImp
-appArgs nm = foldl (\t,n => t .$ n.nameVar) (var nm)
-
 --------------------------------------------------------------------------------
 --          Pattern Matching
 --------------------------------------------------------------------------------
