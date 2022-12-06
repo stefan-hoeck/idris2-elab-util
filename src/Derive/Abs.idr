@@ -28,7 +28,7 @@ absImplDef abs impl = def impl [var impl .= appNames "MkAbs" [abs]]
 
 parameters (nms : List Name)
   abs : BoundArg 1 Explicit -> TTImp
-  abs (BA _ [x] _)  = `(abs ~(x))
+  abs (BA _ [x] _)  = `(abs ~(varStr x))
 
   export
   absDef : Name -> Con n vs -> Decl

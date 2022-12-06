@@ -28,10 +28,10 @@ intImplDef d m impl = def impl [var impl .= appNames "MkIntegral" [d,m]]
 
 parameters (nms : List Name)
   div : BoundArg 2 Explicit -> TTImp
-  div (BA arg [x,y] _)  = `(div ~(x) ~(y))
+  div (BA arg [x,y] _)  = `(div ~(varStr x) ~(varStr y))
 
   mod : BoundArg 2 Explicit -> TTImp
-  mod (BA arg [x,y] _)  = `(mod ~(x) ~(y))
+  mod (BA arg [x,y] _)  = `(mod ~(varStr x) ~(varStr y))
 
   export
   divDef : Name -> Con n vs -> Decl

@@ -30,7 +30,7 @@ semigroupImplDef : (fun, impl : Name) -> Decl
 semigroupImplDef f i = def i [var i .= var "MkSemigroup" .$ var f]
 
 app : BoundArg 2 Explicit -> TTImp
-app (BA _ [x,y] _) = `(~(x) <+> ~(y))
+app (BA _ [x,y] _) = `(~(varStr x) <+> ~(varStr y))
 
 appClause : Name -> Con n vs -> Clause
 appClause f = mapArgs2 explicit (\x,y => var f .$ x .$ y) app

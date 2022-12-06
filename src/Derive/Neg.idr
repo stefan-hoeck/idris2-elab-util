@@ -34,10 +34,10 @@ negImplDef : (neg, min, impl : Name) -> Decl
 negImplDef neg min impl = def impl [var impl .= appNames "MkNeg" [neg, min]]
 
 minus : BoundArg 2 Explicit -> TTImp
-minus (BA arg [x,y] _)  = `(~(x) - ~(y))
+minus (BA arg [x,y] _)  = `(~(varStr x) - ~(varStr y))
 
 neg : BoundArg 1 Explicit -> TTImp
-neg (BA arg [x] _)  = `(negate ~(x))
+neg (BA arg [x] _)  = `(negate ~(varStr x))
 
 export
 minusDef : Name -> Con n vs -> Decl
