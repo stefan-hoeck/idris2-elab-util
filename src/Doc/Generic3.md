@@ -25,8 +25,8 @@ export
 paramConNames : ParamCon n -> ConNames
 paramConNames c =
   let ns   := toList $ freshNames "x" (count isExplicit c.args)
-      vars := map var ns
-   in (c.name, map nameStr ns, vars)
+      vars := map varStr ns
+   in (c.name, ns, vars)
 
 export
 mkCode : (p : ParamTypeInfo) -> TTImp

@@ -122,8 +122,8 @@ zipWithIndex as = run 0 as
 conNames : ParamCon n -> ConNames
 conNames c =
   let ns   := toList $ freshNames "x" (count isExplicit c.args)
-      vars := map var ns
-   in (c.name, map nameStr ns, vars)
+      vars := map varStr ns
+   in (c.name, ns, vars)
 
 ||| Derives a `Generic` implementation for the given data type
 ||| and visibility.

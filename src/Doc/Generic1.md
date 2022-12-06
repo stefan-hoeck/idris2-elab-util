@@ -236,8 +236,8 @@ private
 conNames : (c : Con n vs) -> ConNames
 conNames c =
   let ns   := toList $ freshNames "x" c.arty
-      vars := map var ns
-   in (c.name, map nameStr ns, vars)
+      vars := map varStr ns
+   in (c.name, ns, vars)
 
 export
 fromClause : (Nat,ConNames) -> Clause
