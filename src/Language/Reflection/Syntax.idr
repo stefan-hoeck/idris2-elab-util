@@ -3,7 +3,7 @@
 |||
 ||| Some notes: Use quotes whenever possible:
 |||
-||| Names can be quoted like so: `{{ AName }}, `{{ In.Namespace.AName }}.
+||| Names can be quoted like so: `{ AName }, `{ In.Namespace.AName }.
 ||| Both examples are of type Language.Reflection.TT.Name.
 |||
 ||| Expressions can be quoted like so: `(\x => x * x)
@@ -25,11 +25,40 @@ FromString Name where
     where run : List1 String -> List String -> Name
           run (h ::: []) []        = UN $ Basic h
           run (h ::: []) ns        = NS (MkNS ns) (UN $ Basic h)
-          run ll@(h ::: (y :: ys)) xs = run (assert_smaller ll $ y ::: ys) (h :: xs)
+          run ll@(h ::: (y :: ys)) xs =
+            run (assert_smaller ll $ y ::: ys) (h :: xs)
 
 export
 Interpolation Name where
   interpolate = show
+
+||| True if the given name ends on (`Basic $ UN "Nil")
+public export
+isNil : Name -> Bool
+isNil (NS ns nm)         = isNil nm
+isNil (UN $ Basic "Nil") = True
+isNil _                  = False
+
+||| True if the given name ends on (`Basic $ UN "Lin")
+public export
+isLin : Name -> Bool
+isLin (NS ns nm)         = isLin nm
+isLin (UN $ Basic "Lin") = True
+isLin _                  = False
+
+||| True if the given name ends on (`Basic $ UN "::")
+public export
+isCons : Name -> Bool
+isCons (NS ns nm)        = isCons nm
+isCons (UN $ Basic "::") = True
+isCons _                 = False
+
+||| True if the given name ends on (`Basic $ UN ":<")
+public export
+isSnoc : Name -> Bool
+isSnoc (NS ns nm)        = isSnoc nm
+isSnoc (UN $ Basic ":<") = True
+isSnoc _                 = False
 
 ||| Takes a (probably fully qualified name) and generates a
 ||| identifier from this without the dots.
@@ -75,7 +104,7 @@ Named Name where
   n.getName = n
 
 ||| Use `nameStr` to convert the name of a value to a simple string.
-export %inline
+public export %inline
 (.nameStr) : Named a => a -> String
 x.nameStr = nameStr x.getName
 
@@ -90,57 +119,57 @@ x.nameStr = nameStr x.getName
 |||
 ||| Likewise, if the name is already known at the time of
 ||| writing, use quotes for defining variables directly: `(AName)
-export
+public export %inline
 var : Name -> TTImp
 var = IVar EmptyFC
 
 ||| Creates a variable with the name of the given value.
-export %inline
+public export %inline
 (.nameVar) : Named a => a -> TTImp
 n.nameVar = var n.getName
 
 ||| Alias for `var . fromString`
-export
+public export %inline
 varStr : String -> TTImp
 varStr = var . fromString
 
 ||| Binds a new variable, for instance in a pattern match.
 |||
 ||| This is an alias for `IBindVar EmptyFC`.
-export
+public export %inline
 bindVar : String -> TTImp
 bindVar = IBindVar EmptyFC
 
 ||| Bind a named value to a variable. This uses `nameStr` for
 ||| the variable's name.
-export %inline
+public export %inline
 (.bindVar) : Named a => a -> TTImp
 x.bindVar = bindVar x.nameStr
 
 ||| Implicit value bound if unsolved
 |||
 ||| This is an alias for `Implicit EmptyFC True`
-export
+public export %inline
 implicitTrue : TTImp
 implicitTrue = Implicit EmptyFC True
 
 ||| Implicitly typed value unbound if unsolved
 |||
 ||| This is an alias for `Implicit EmptyFC False`
-export
+public export %inline
 implicitFalse : TTImp
 implicitFalse = Implicit EmptyFC False
 
 ||| Primitive values.
 |||
 ||| This is an alias for `IPrimVal EmptyFC`
-export
+public export %inline
 primVal : (c : Constant) -> TTImp
 primVal = IPrimVal EmptyFC
 
 ||| Creates a string constant from a named value. Uses
 ||| `nameStr` to convert the name to a string.
-export %inline
+public export %inline
 (.namePrim) : Named a => a -> TTImp
 x.namePrim = primVal $ Str x.nameStr
 
@@ -148,14 +177,14 @@ x.namePrim = primVal $ Str x.nameStr
 ||| The type `Type`.
 |||
 ||| This is an alias for `IType EmptyFC`.
-export
+public export %inline
 type :  TTImp
 type = IType EmptyFC
 
 ||| Tries to extract a variable name from a `TTImp`.
 |||
 ||| Returns `Nothing` if not an `IVar`.
-export
+public export
 unVar : TTImp -> Maybe Name
 unVar (IVar _ n) = Just n
 unVar _          = Nothing
@@ -170,7 +199,7 @@ unVar _          = Nothing
 |||
 ||| Example: ```app (var "Just") (var "x")```
 |||          is equivalent to `(Just x)
-export
+public export %inline
 app : TTImp -> TTImp -> TTImp
 app = IApp EmptyFC
 
@@ -179,7 +208,7 @@ infixl 6 .$
 ||| Infix version of `app`
 |||
 ||| Example: ```var "Just" .$ var "x"```
-export
+public export %inline
 (.$) : TTImp -> TTImp -> TTImp
 (.$) = IApp EmptyFC
 
@@ -193,7 +222,7 @@ unApp = run []
 ||| Applies a list of variables to a function.
 |||
 ||| See `appNames` for an example
-export
+public export %inline
 appAll : Name -> List TTImp -> TTImp
 appAll fun = foldl (.$) (var fun)
 
@@ -201,7 +230,7 @@ appAll fun = foldl (.$) (var fun)
 |||
 ||| Example: appNames "either" ["f","g","val"]
 |||          is equivalent to ~(either f g val)
-export
+public export %inline
 appNames : (fun : Name) -> (args : List Name) -> TTImp
 appNames fun = appAll fun . map var
 
@@ -209,8 +238,8 @@ appNames fun = appAll fun . map var
 ||| a pattern match.
 |||
 ||| Example: bindAll "MkPair" ["a","b"]
-|||          is the same as ~(MkPair a b)
-export
+|||          is the same as `(MkPair a b)
+public export %inline
 bindAll : (fun : Name) -> (args : List String) -> TTImp
 bindAll fun = appAll fun . map bindVar
 
@@ -218,9 +247,9 @@ bindAll fun = appAll fun . map bindVar
 |||
 ||| This is an alias for `IAutoApp EmptyFC`.
 |||
-||| Example: ```autoApp (var "traverse") (var "MyApp")```
+||| Example: `autoApp (var "traverse") (var "MyApp")`
 |||          is equivalent to `(traverse @{MyApp})
-export
+public export %inline
 autoApp : TTImp -> TTImp -> TTImp
 autoApp = IAutoApp EmptyFC
 
@@ -228,110 +257,88 @@ autoApp = IAutoApp EmptyFC
 |||
 ||| This is an alias for `INamedApp EmptyFC`.
 |||
-||| Example: ```namedApp (var "traverse") "f" (var "MyApp")```
+||| Example: `namedApp (var "traverse") "f" (var "MyApp")`
 |||          is equivalent to `(traverse {f = MyApp})
-export
+public export %inline
 namedApp : TTImp -> Name -> TTImp -> TTImp
 namedApp = INamedApp EmptyFC
+
+||| Catch-all pattern match on a data constructor.
+|||
+||| Example: `bindAny "Person"`
+|||          is the same as `(Person {})
+||| ```
+public export %inline
+bindAny : Named a => a -> TTImp
+bindAny n = namedApp n.nameVar (UN Underscore) implicitTrue
 
 --------------------------------------------------------------------------------
 --          Function Arguments
 --------------------------------------------------------------------------------
 
+||| A function argument, typically extracted from pi-types or used
+||| to define pi-types.
 public export
-record Arg (nameMandatory : Bool) where
+record Arg where
   constructor MkArg
   count   : Count
   piInfo  : PiInfo TTImp
-  name    : if nameMandatory then Name else Maybe Name
+  name    : Maybe Name
   type    : TTImp
 
-public export
-NamedArg : Type
-NamedArg = Arg True
-
+||| Creates an explicit unnamed argument of the given type.
 public export %inline
-Named NamedArg where
-  (.getName) (MkArg _ _ n _) = n
-
-export
-namedArg : Elaboration m => Arg False -> m NamedArg
-namedArg (MkArg c p m t) =
-  map (\n => MkArg c p n t) $ maybe (genSym "x") pure m
-
-export
-arg : TTImp -> Arg False
+arg : TTImp -> Arg
 arg = MkArg MW ExplicitArg Nothing
 
-export
-erasedArg : TTImp -> Arg False
+||| Creates an explicit, unnamed, zero-quantity
+||| argument of the given type.
+public export %inline
+erasedArg : TTImp -> Arg
 erasedArg = MkArg M0 ExplicitArg Nothing
 
-export
-lambdaArg : Name -> Arg False
-lambdaArg n = MkArg MW ExplicitArg (Just n) implicitFalse
+||| Creates an explicit argument of the given name
+||| to be used in a lambda.
+public export %inline
+lambdaArg : Named a => a -> Arg
+lambdaArg n = MkArg MW ExplicitArg (Just n.getName) implicitFalse
+
+||| Creates an erased implicit argument of the given name.
+public export %inline
+erasedImplicit : Named a => a -> Arg
+erasedImplicit n = MkArg M0 ImplicitArg (Just n.getName) implicitFalse
 
 ||| True if the given argument is an explicit argument.
 public export
-isExplicit : Arg b -> Bool
+isExplicit : Arg -> Bool
 isExplicit (MkArg _ ExplicitArg _ _) = True
 isExplicit (MkArg _ _           _ _) = False
 
 ||| True if the given argument has quantity zero.
 public export
-isErased : Arg b -> Bool
+isErased : Arg -> Bool
 isErased (MkArg M0 _ _ _) = True
 isErased _                = False
 
 ||| True if the given argument is explicit and does not have
 ||| quantity zero.
 public export
-isExplicitUnerased : Arg b -> Bool
+isExplicitUnerased : Arg -> Bool
 isExplicitUnerased (MkArg M1 ExplicitArg _ _) = True
 isExplicitUnerased (MkArg MW ExplicitArg _ _) = True
 isExplicitUnerased _                          = False
 
 ||| Extracts the arguments from a function type.
 export
-unPi : TTImp -> (List $ Arg False, TTImp)
+unPi : TTImp -> (List Arg, TTImp)
 unPi (IPi _ c p n at rt) = mapFst (MkArg c p n at ::) $ unPi rt
 unPi tpe                 = ([],tpe)
 
-||| Extracts properly named arguments from a function type.
-export
-unPiNamed : Elaboration m => TTImp -> m (List NamedArg, TTImp)
-unPiNamed v = let (args,rt') = unPi v
-               in (, rt') <$> traverse namedArg args
-
 ||| Extracts the arguments from a lambda.
 export
-unLambda : TTImp -> (List $ Arg False, TTImp)
+unLambda : TTImp -> (List Arg, TTImp)
 unLambda (ILam _ c p n at rt) = mapFst (MkArg c p n at ::) $ unLambda rt
 unLambda tpe                  = ([],tpe)
-
-||| Extracts properly named arguments from a lambda.
-export
-unLambdaNamed : Elaboration m => TTImp -> m (List NamedArg, TTImp)
-unLambdaNamed v = let (args,rt') = unLambda v
-                  in (, rt') <$> traverse namedArg args
-
-
-||| Renames a list of arguments, using the given string as a prefix
-||| and appending each argument's index in the list.
-|||
-||| It is at times necessary to provide a set of fresh names to
-||| a list of named arguments, for instance, when pattern matching
-||| on a data constructor making sure to not shadow already existing
-||| names. This function provides a pure way to do so without having
-||| to run this in the `Elab` monad.
-export
-renameArgs : String -> List NamedArg -> List NamedArg
-renameArgs s = go 0
-  where go : Nat -> List NamedArg -> List NamedArg
-        go k []        = []
-        go k (x :: xs) =
-          let n := UN $ Basic $ s ++ show k
-           in {name := n} x :: go (S k) xs
 
 --------------------------------------------------------------------------------
 --          Lambdas
@@ -340,15 +347,15 @@ renameArgs s = go 0
 ||| Defines an anonymous function (lambda).
 |||
 ||| This passes the fields of `Arg` to `ILam EmptyFC`
-export
-lam : Arg False -> (lamTy : TTImp) -> TTImp
+public export
+lam : Arg -> (lamTy : TTImp) -> TTImp
 lam (MkArg c p n t) = ILam EmptyFC c p n t
 
 infixr 3 .=>
 
 ||| Infix alias for `lam`.
-export
-(.=>) : Arg False -> TTImp -> TTImp
+public export %inline
+(.=>) : Arg -> TTImp -> TTImp
 (.=>) = lam
 
 --------------------------------------------------------------------------------
@@ -358,32 +365,30 @@ export
 ||| Defines a function type.
 |||
 ||| This passes the fields of `Arg` to `IPi EmptyFC`
-export
-pi : Arg False -> (retTy : TTImp) -> TTImp
+public export
+pi : Arg -> (retTy : TTImp) -> TTImp
 pi (MkArg c p n t) = IPi EmptyFC c p n t
 
 infixr 5 .->
 
 ||| Infix alias for `pi`.
-export
-(.->) : Arg False -> TTImp -> TTImp
+public export %inline
+(.->) : Arg -> TTImp -> TTImp
 (.->) = pi
 
 ||| Defines a function type taking the given arguments.
-export
-piAll : TTImp -> List (Arg False) -> TTImp
+public export %inline
+piAll : TTImp -> List Arg -> TTImp
 piAll res = foldr (.->) res
 
 ||| Defines a function type taking implicit arguments of the
 ||| given names.
-export
+public export %inline
 piAllImplicit : TTImp -> List Name -> TTImp
-piAllImplicit res = piAll res . map toArg
-  where toArg : Name -> Arg False
-        toArg n = MkArg M0 ImplicitArg (Just n) implicitFalse
+piAllImplicit res = piAll res . map erasedImplicit
 
 ||| Defines a function type taking the given auto-implicit arguments.
-export
+public export
 piAllAuto : TTImp -> List TTImp -> TTImp
 piAllAuto res = piAll res . map (MkArg MW AutoImplicit Nothing)
 
@@ -394,7 +399,7 @@ piAllAuto res = piAll res . map (MkArg MW AutoImplicit Nothing)
 ||| An impossible clause in a pattern match.
 |||
 ||| This is an alias for `ImpossibleClause EmptyFC`.
-export
+public export %inline
 impossibleClause : (lhs : TTImp) -> Clause
 impossibleClause = ImpossibleClause EmptyFC
 
@@ -402,28 +407,28 @@ impossibleClause = ImpossibleClause EmptyFC
 ||| right-hand side of the pattern arrow "=>".
 |||
 ||| This is an alias for `PatClause EmptyFC`.
-export
+public export %inline
 patClause : (lhs : TTImp) -> (rhs : TTImp) -> Clause
 patClause = PatClause EmptyFC
 
 infixr 3 .=
 
 ||| Infix alias for `patClause`
-export
+public export %inline
 (.=) : TTImp -> TTImp -> Clause
 (.=) = patClause
 
 ||| A case expression.
 |||
 ||| This is an alias for `ICase EmptyFC`.
-export
+public export %inline
 iCase : TTImp -> (ty : TTImp) -> List Clause -> TTImp
 iCase = ICase EmptyFC
 
 ||| "as"-pattern.
 |||
 ||| This is an alias for `IAs EmptyFC UseLeft`.
-export
+public export %inline
 as : Name -> TTImp -> TTImp
 as = IAs EmptyFC EmptyFC UseLeft
 
@@ -434,7 +439,7 @@ as = IAs EmptyFC EmptyFC UseLeft
 ||| Named type.
 |||
 ||| This is an alias for `MkTyp EmptyFC`.
-export
+public export %inline
 mkTy : (n : Name) -> (ty : TTImp) -> ITy
 mkTy = MkTy EmptyFC EmptyFC
 
@@ -442,56 +447,56 @@ mkTy = MkTy EmptyFC EmptyFC
 |||
 ||| `claim c v opts n tp` is an alias for
 ||| `IClaim EmptyFC c v opts (MkTy EmptyFC n tp)`.
-export
+public export %inline
 claim : Count -> Visibility -> List FnOpt -> Name -> TTImp -> Decl
 claim c v opts n tp = IClaim EmptyFC c v opts (mkTy n tp)
 
 ||| `simpleClaim v n t` is an alias for `claim MW v [] (mkTy n t)`
-export
+public export %inline
 simpleClaim : Visibility -> Name -> TTImp -> Decl
 simpleClaim v = claim MW v []
 
 ||| Alias for `simpleClaim Public`
-export
+public export %inline
 public' : Name -> TTImp -> Decl
 public' = simpleClaim Public
 
 ||| Alias for `simpleClaim Private``
-export
+public export %inline
 private' : Name -> TTImp -> Decl
 private' = simpleClaim Private
 
 ||| Alias for `simpleClaim Export`
-export
+public export %inline
 export' : Name -> TTImp -> Decl
 export' = simpleClaim Export
 
 ||| `directHint v` is an alias for `claim MW v [Hint True]`
-export
+public export %inline
 directHint : Visibility -> Name -> TTImp -> Decl
 directHint v = claim MW v [Hint True]
 
 ||| `interfaceHint v opts` is an alias for `claim MW v (Hint False :: opts)`
-export
+public export %inline
 interfaceHintOpts : Visibility -> List FnOpt -> Name -> TTImp -> Decl
 interfaceHintOpts v opts = claim MW v (Hint False :: opts)
 
 ||| `interfaceHint v` is an alias for `claim MW v [Hint False]`
-export
+public export %inline
 interfaceHint : Visibility -> Name -> TTImp -> Decl
 interfaceHint v = claim MW v [Hint False]
 
 ||| Function definition (implementation)
 |||
 ||| This is an alias for `IDef EmptyFC`.
-export
+public export %inline
 def : Name -> List Clause -> Decl
 def = IDef EmptyFC
 
 ||| Local definitions
 |||
 ||| This is an alias for `ILocal EmptyFC`.
-export
+public export %inline
 local : List Decl -> TTImp -> TTImp
 local = ILocal EmptyFC
 
@@ -502,7 +507,7 @@ local = ILocal EmptyFC
 ||| Data declaration.
 |||
 ||| This merges constructors `IData` and `MkData`.
-export
+public export
 iData :  Visibility
       -> Name
       -> (tycon : TTImp)
@@ -516,17 +521,17 @@ iData v n tycon opts cons =
 ||| no indices).
 |||
 ||| `simpleData v n` is an alias for `iData v n type []`.
-export
+public export %inline
 simpleData : Visibility -> Name -> (cons : List ITy) -> Decl
 simpleData v n = iData v n type []
 
 ||| Alias for `simpleData Public`
-export
+public export %inline
 simpleDataPublic : Name -> (cons : List ITy) -> Decl
 simpleDataPublic = simpleData Public
 
 ||| Alias for `simpleData Export`
-export
+public export %inline
 simpleDataExport : Name -> (cons : List ITy) -> Decl
 simpleDataExport = simpleData Export
 
@@ -537,30 +542,64 @@ simpleDataExport = simpleData Export
 ||| Let bindings.
 |||
 ||| This is an alias for `ILet EmptyFC`.
-export
-iLet : Count -> Name -> (nTy : TTImp) -> (nVal : TTImp)
-    -> (scope : TTImp) -> TTImp
+public export %inline
+iLet :
+     Count
+  -> Name
+  -> (nTy   : TTImp)
+  -> (nVal  : TTImp)
+  -> (scope : TTImp)
+  -> TTImp
 iLet = ILet EmptyFC EmptyFC
+
+--------------------------------------------------------------------------------
+--          Recursion
+--------------------------------------------------------------------------------
+
+
+||| Checks if one of the given names makes an appearance in the
+||| given type.
+export
+rec : List Name -> (tpe : TTImp) -> Bool
+rec nms (IVar fc nm1)        = nm1 `elem` nms
+rec nms (IApp fc s t)        = rec nms s || rec nms t
+rec nms (INamedApp fc s _ t) = rec nms s || rec nms t
+rec nms (IAutoApp fc s t)    = rec nms s || rec nms t
+rec nms (IDelayed _ LLazy t) = rec nms t
+rec nms t                    = False
+
+||| Prefixes the given expression with `assert_total`, if
+||| one of the names listed makes an appearance in the given type.
+export
+assertIfRec : List Name -> (tpe : TTImp) -> (expr : TTImp) -> TTImp
+assertIfRec nms tpe expr =
+  if rec nms tpe then var "assert_total" .$ expr else expr
 
 --------------------------------------------------------------------------------
 --          Elab Utils
 --------------------------------------------------------------------------------
 
-export
-listOf : List TTImp -> TTImp
-listOf [] = `( Nil )
-listOf (x :: xs) = `( ~(x) :: ~(listOf xs) )
+||| Constructs a `TTImp` from the given arguments, which
+||| wraps them in unqualified list constructors.
+|||
+||| For instance, `listOf [var "x", var "y"]` generates
+||| an expression corresponding to `x :: y :: Nil`
+public export %inline
+listOf : Foldable t => t TTImp -> TTImp
+listOf = foldr (\e,acc => `(~(e) :: ~(acc))) `( Nil )
 
 private errMsg : Name -> List (Name,TTImp) -> String
 errMsg n [] = show n ++ " is not in scope."
-errMsg n xs = let rest = concat $ intersperse ", " $ map (show . fst) xs
-               in show n ++ " is not unique: " ++ rest
+errMsg n xs =
+  let rest = concat $ intersperse ", " $ map (show . fst) xs
+   in show n ++ " is not unique: " ++ rest
 
 ||| Looks up a name in the current namespace.
 export
 lookupName : Elaboration m => Name -> m (Name, TTImp)
-lookupName n = do pairs <- getType n
-                  case (pairs,n) of
-                       ([p],_)     => pure p
-                       (ps,UN str) => inCurrentNS (UN str) >>= \m => assert_total {-now argument is NS, not UN-} $ lookupName m
-                       (ps,_)      => fail $ errMsg n ps
+lookupName n = do
+  pairs <- getType n
+  case (pairs,n) of
+    ([p],_)     => pure p
+    (ps,UN str) => inCurrentNS (UN str) >>= \m => assert_total {-now argument is NS, not UN-} $ lookupName m
+    (ps,_)      => fail $ errMsg n ps

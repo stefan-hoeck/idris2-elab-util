@@ -23,15 +23,15 @@ boolIsEnum = Refl
 --          Parameters
 --------------------------------------------------------------------------------
 
-implArgName : NamedArg -> Maybe Name
-implArgName (MkArg M0 ImplicitArg name _) = Just name
+implArgName : Arg -> Maybe Name
+implArgName (MkArg M0 ImplicitArg name _) = name
 implArgName _                             = Nothing
 
-implConArgNames : Con n -> List Name
-implConArgNames (MkCon _ args _) = mapMaybe implArgName args
+implConArgNames : Con n vs -> List Name
+implConArgNames (MkCon _ _ args _) = mapMaybe implArgName $ toList args
 
 implArgNames : TypeInfo -> List Name
-implArgNames (MkTypeInfo _ _ _ cs) =
+implArgNames (MkTypeInfo _ _ _ _ cs) =
   toList cs >>= implConArgNames
 
 data Foo : (a : Type) -> (b : Type) -> Type where

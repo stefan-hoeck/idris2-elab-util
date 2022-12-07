@@ -45,20 +45,27 @@ mkEq' = %runElab check (var $ singleCon "Eq")
 ```
 
 Now that we have access to `Eq`'s constructor, we can get quite a bit
-of type safety back:
+of type safety back. In the code below, we make use of some utility
+functions for `Languag.Reflection.Derive`. One thing to note is,
+the `Eq'` takes an additional argument of type `List Name`.
+This allows us to generate mutually recursive implementations,
+annotating recursive calls with `assert_total` in case one of the
+data types in the given list of names is involved in an argument
+type. See for instance `Derive.Eq.eqRHS` to see, how this can
+be used.
 
 ```idris
 mkEq : (eq : a -> a -> Bool) -> Eq a
 mkEq eq = mkEq' eq (\a,b => not $ eq a b)
 
-Eq' : DeriveUtil -> InterfaceImpl
-Eq' g = MkInterfaceImpl "Eq" Public [] `(mkEq genEq) (implementationType `(Eq) g)
+Eq' : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Eq' _ p =
+  let nm := implName p "Eq" -- name of implementation function
+      cl := var nm .= `(mkEq genEq) -- single clause of the function
+   in Right [TL (implClaim nm (implType "Eq" p)) (def nm [cl])]
 ```
 
-This time, we used utilities from `Language.Reflection.Derive`.
-They are very similar in functionality to the ones we developed in
-[Generics Part 4](Generic4.md). This
-approach is even more useful when deriving `Ord`: In our previous
+This approach is even more useful when deriving `Ord`: In our previous
 version we had to manually pass the `Eq` instance to the `Ord`
 constructor, forcing us to get access to its implementation function
 by means of `implName`. This is no longer necessary:
@@ -84,9 +91,11 @@ mkOrd comp = mkOrd' comp
                     (\a,b => if comp a b == GT then a else b)
                     (\a,b => if comp a b == LT then a else b)
 
-Ord' : DeriveUtil -> InterfaceImpl
-Ord' g = MkInterfaceImpl "Ord" Public [] `(mkOrd genCompare)
-                                         (implementationType `(Ord) g)
+Ord' : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Ord' _ p =
+  let nm := implName p "Ord" -- name of implementation function
+      cl := var nm .= `(mkOrd genCompare) -- single clause of the function
+   in Right [TL (implClaim nm (implType "Ord" p)) (def nm [cl])]
 ```
 
 We quickly test if it works:

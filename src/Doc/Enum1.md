@@ -137,5 +137,5 @@ get access to `%runElab`.
 We have not gained much in terms of saved code from our
 first metaprogram. However, the implementation of `Eq Gender`
 above quickly identifies the next opportunity: Implementing
-type class instances automatically. In the [next section](Enum2.md)
+interface instances automatically. In the [next section](Enum2.md)
 we'll give this a try.

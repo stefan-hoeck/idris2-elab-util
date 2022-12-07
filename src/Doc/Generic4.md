@@ -22,95 +22,60 @@ here have been added to module `Language.Reflection.Derive`.
 
 ## An Intermediary Utility Type for Generic Deriving
 
-First, we write a utility data type holding additional
-precalculated values of parameterized data types that
-come up time and time again.
+First, we write a utility data type holding a top-level claim and
+definition:
 
 ```idris
-export
-record DeriveUtil where
-  constructor MkDeriveUtil
-
-  ||| The underlying type info
-  typeInfo           : ParamTypeInfo
-
-  ||| Fully applied data type, i.e. `var "Either" .$ var "a" .$ var "b"`
-  appliedType        : TTImp
-
-  ||| The names of type parameters
-  paramNames         : List Name
-
-  ||| Types of constructor arguments where at least one
-  ||| type parameter makes an appearance. These are the
-  ||| `tpe` fields of `ExplicitArg` where `hasParam`
-  ||| is set to true. See the documentation of `ExplicitArg`
-  ||| when this is the case
-  argTypesWithParams : List TTImp
-
-private
-genericUtil : ParamTypeInfo -> DeriveUtil
-genericUtil ti = let pNames = map fst $ params ti
-                     appTpe = appNames (name ti) pNames
-                     twps   = calcArgTypesWithParams ti
-                  in MkDeriveUtil ti appTpe pNames twps
-
-export
-implName : DeriveUtil -> String -> Name
-implName g interfaceName =  UN . Basic $ "impl" ++ interfaceName
-                                       ++ nameStr g.typeInfo.name
-```
-
-We make function `implName` for generating the name of the
-implementation function available, to allow interface
-implementations depending on other implementations
-to access this name. This is, for instance, required in
-the implementation of `Ord'` (see below).
-
-Since interface declarations always have the same
-structure, we gather the distinct parts in a separate
-data type:
-
-```idris
-export
-record InterfaceImpl where
-  constructor MkInterfaceImpl
-  interfaceName : String
-  impl          : TTImp
-  type          : TTImp
-
 public export
-MkImplementation : Type
-MkImplementation = DeriveUtil -> InterfaceImpl
-
-private
-implDecl : DeriveUtil -> MkImplementation -> (Decl, Decl)
-implDecl g f = let (MkInterfaceImpl iname impl type) = f g
-                   function = implName g iname
-
-                in ( interfaceHint Public function type
-                   , def function [var function .= impl] )
+record TopLevel where
+  constructor TL
+  claim : Decl
+  defn  : Decl
 ```
 
-We are now ready to define function `derive`, which,
-given the name of a data type and a list of
-interface specifications (`MkImplementation`),
-will derive implementations for these interfaces:
+We'd like to derive top-level definitions from some kind
+of data object describing in detail the data type we are
+interested in. Different representations are possible
+(at the moment, we have seen `TypeInfo` and `ParamTypeInfo`),
+so we want to abstract over the type providing the necessary
+information:
 
 ```idris
-private
-deriveDecls : Name -> List MkImplementation -> Elab $ List (Decl, Decl)
-deriveDecls name fs = mkDecls <$> getParamInfo' name
-  where mkDecls : ParamTypeInfo -> List $ (Decl, Decl)
-        mkDecls pi = let g = genericUtil pi
-                      in map (implDecl g) fs
+public export
+interface Named a => Elaborateable a where
+  find_ : Elaboration m => Name -> m a
 
+public export %inline
+find : (0 a : Type) -> Elaborateable a => Elaboration m => Name -> m a
+find _ = find_
 
-export
-derive : Name -> List MkImplementation -> Elab ()
-derive name fs = do decls <- deriveDecls name fs
-                    -- Declare types first. Then declare implementations.
-                    declare $ map fst decls
-                    declare $ map snd decls
+export %inline
+Elaborateable TypeInfo where
+  find_ = getInfo'
+
+export %inline
+Elaborateable ParamTypeInfo where
+  find_ = getParamInfo'
+```
+
+From these, we can come up with a first utility for deriving
+all kinds of definitions:
+
+```idris
+derive1 :
+     Elaboration m
+  => Elaborateable t
+  => Name
+  -> List (t -> TopLevel)
+  -> m ()
+derive1 ns fs = do
+  pt <- find t ns
+  let name   := pt.getName
+      tls    := map ($ pt) fs
+      claims := map claim tls
+      defns  := map defn tls
+
+  declare $ claims ++ defns
 ```
 
 ## Instances for `Generic`, `Eq`, and `Ord`
@@ -119,47 +84,55 @@ We can now write `MkImplementation` values for `Generic`,
 cleaning up parts of our code while we're at it.
 
 ```idris
+implName : Named a => a -> (iface : String) -> Name
+implName v iface = UN . Basic $ "impl" ++ iface ++ camelCase v.getName
+
 private
-conNames : ParamCon -> ConNames
-conNames (MkParamCon con args) = let ns   = map (nameStr . name) args
-                                     vars = map varStr ns
-                                  in (con, ns, vars)
+conNames : ParamCon n -> ConNames
+conNames c =
+  let ns   := toList $ freshNames "x" (count isExplicit c.args)
+      vars := map varStr ns
+   in (c.name, ns, vars)
 
 export
-Generic' : MkImplementation
-Generic' g =
-  let names    = zipWithIndex (map conNames g.typeInfo.cons)
-      genType  = `(Generic) .$ g.appliedType .$ mkCode g.typeInfo
-      funType  = piAllImplicit  genType g.paramNames
-      x        = lambdaArg "x"
-      varX     = var "x"
+Generic' : ParamTypeInfo -> TopLevel
+Generic' p =
+  let names    = zipWithIndex (map conNames p.cons)
+      function = implName p "Generic"
 
+      appType  = p.applied
+      genType  = `(Generic) .$ appType .$ mkCode p
+      funType  = piAll genType p.implicits
+
+      x       = lambdaArg {a = Name} "x"
+      varX    = var "x"
       from    = x .=> iCase varX implicitFalse (map fromClause names)
-      to      = x .=> iCase varX implicitFalse (map toClause names)
+      to      = x .=> iCase varX implicitFalse (toClauses names)
       impl    = appAll "MkGeneric" [from,to]
 
-   in MkInterfaceImpl "Generic" impl funType
+   in TL (interfaceHint Public function funType)
+         (def function [var function .= impl])
+
 ```
 
-Before we can define `MkImplementation` functions for `Eq`
-and `Ord`, we have must be able to prefix instance
-declarations with the required auto implicits. For instance,
-the `Eq` instance of `Maybe` has the following type:
+Before we can define the functions implementing `Eq`
+and `Ord`, we must be able to prefix instance
+declarations with the required implicit and auto implicit arguments.
+For instance, the `Eq` instance of `Maybe` has the following type:
 
 ```repl
 {0 a: _} -> Eq a => Eq (Maybe a)
 ```
 
-We define the function `implementationType` to set up this type
-for us:
+`ParamTypeInfo` already provides this functionality, and we can make
+use of it via the following utility function:
 
 ```idris
 export
-implementationType : (iface : TTImp) -> DeriveUtil -> TTImp
-implementationType iface (MkDeriveUtil _ appTp names argTypesWithParams) =
-  let appIface = iface .$ appTp
-      autoArgs = piAllAuto appIface $ map (iface .$) argTypesWithParams
-   in piAllImplicit autoArgs names
+implementationType : (iface : Name) -> ParamTypeInfo -> TTImp
+implementationType iface p =
+  let appIface = var iface .$ p.applied
+   in piAll appIface (allImplicits p iface)
 ```
 
 We can now derive `Eq` implementation for data types with
@@ -168,31 +141,37 @@ a `Generic` implementation:
 ```idris
 private
 mkEq : TTImp
-mkEq = varStr "MkEq" .$ `(genEq) .$ `(\a,b => not (a == b))
+mkEq = `(MkEq genEq (\a,b => not (a == b)))
 
 export
-Eq' : MkImplementation
-Eq' g = MkInterfaceImpl "Eq" mkEq (implementationType `(Eq) g)
+Eq' : ParamTypeInfo -> TopLevel
+Eq' p =
+  let function := implName p "Eq"
+   in TL (interfaceHint Public function $ implementationType "Eq" p)
+         (def function [var function .= mkEq])
 ```
 
 Same for `Ord`:
 
 ```idris
 private
-ordFunctions : List TTImp
-ordFunctions = [ `(genCompare)
-               , `(\a,b => compare a b == LT)
-               , `(\a,b => compare a b == GT)
-               , `(\a,b => compare a b /= GT)
-               , `(\a,b => compare a b /= LT)
-               , `(\a,b => if compare a b == GT then a else b)
-               , `(\a,b => if compare a b == LT then a else b)
-               ]
+mkOrd : TTImp
+mkOrd =
+  `(MkOrd
+     genCompare
+     (\a,b => compare a b == LT)
+     (\a,b => compare a b == GT)
+     (\a,b => compare a b /= GT)
+     (\a,b => compare a b /= LT)
+     (\a,b => if compare a b == GT then a else b)
+     (\a,b => if compare a b == LT then a else b))
 
 export
-Ord' : MkImplementation
-Ord' g = let impl = appAll "MkOrd" ordFunctions
-          in MkInterfaceImpl "Ord" impl (implementationType `(Ord) g)
+Ord' : ParamTypeInfo -> TopLevel
+Ord' p =
+  let function := implName p "Ord"
+   in TL (interfaceHint Public function $ implementationType "Ord" p)
+         (def function [var function .= mkOrd])
 ```
 
 ## Interface Implementations for `TTImp` and Friends
@@ -202,27 +181,27 @@ Finally, lets put our new utilities to work. Below, we derive
 from `Language.Reflection.TT` and `Language.Reflection.TTImp`.
 
 ```idris
-%runElab (derive "ModuleIdent"  [Generic', Eq', Ord'])
-%runElab (derive "VirtualIdent" [Generic', Eq', Ord'])
-%runElab (derive "OriginDesc"   [Generic', Eq', Ord'])
-%runElab (derive "FC"           [Generic', Eq', Ord'])
-%runElab (derive "NameType"     [Generic', Eq', Ord'])
-%runElab (derive "PrimType"     [Generic', Eq', Ord'])
-%runElab (derive "Constant"     [Generic', Eq', Ord'])
-%runElab (derive "Namespace"    [Generic', Eq', Ord'])
-%runElab (derive "UserName"     [Generic', Eq', Ord'])
-%runElab (derive "Name"         [Generic', Eq', Ord'])
-%runElab (derive "Count"        [Generic', Eq', Ord'])
-%runElab (derive "LazyReason"   [Generic', Eq', Ord'])
-%runElab (derive "PiInfo"       [Generic', Eq', Ord'])
-%runElab (derive "BindMode"     [Generic', Eq', Ord'])
-%runElab (derive "UseSide"      [Generic', Eq', Ord'])
-%runElab (derive "DotReason"    [Generic', Eq', Ord'])
-%runElab (derive "Visibility"   [Generic', Eq', Ord'])
-%runElab (derive "TotalReq"     [Generic', Eq', Ord'])
-%runElab (derive "DataOpt"      [Generic', Eq', Ord'])
-%runElab (derive "WithFlag"     [Generic', Eq', Ord'])
-%runElab (derive "BuiltinType"  [Generic', Eq', Ord'])
+%runElab (derive1 "ModuleIdent"  [Generic', Eq', Ord'])
+%runElab (derive1 "VirtualIdent" [Generic', Eq', Ord'])
+%runElab (derive1 "OriginDesc"   [Generic', Eq', Ord'])
+%runElab (derive1 "FC"           [Generic', Eq', Ord'])
+%runElab (derive1 "NameType"     [Generic', Eq', Ord'])
+%runElab (derive1 "PrimType"     [Generic', Eq', Ord'])
+%runElab (derive1 "Constant"     [Generic', Eq', Ord'])
+%runElab (derive1 "Namespace"    [Generic', Eq', Ord'])
+%runElab (derive1 "UserName"     [Generic', Eq', Ord'])
+%runElab (derive1 "Name"         [Generic', Eq', Ord'])
+%runElab (derive1 "Count"        [Generic', Eq', Ord'])
+%runElab (derive1 "LazyReason"   [Generic', Eq', Ord'])
+%runElab (derive1 "PiInfo"       [Generic', Eq', Ord'])
+%runElab (derive1 "BindMode"     [Generic', Eq', Ord'])
+%runElab (derive1 "UseSide"      [Generic', Eq', Ord'])
+%runElab (derive1 "DotReason"    [Generic', Eq', Ord'])
+%runElab (derive1 "Visibility"   [Generic', Eq', Ord'])
+%runElab (derive1 "TotalReq"     [Generic', Eq', Ord'])
+%runElab (derive1 "DataOpt"      [Generic', Eq', Ord'])
+%runElab (derive1 "WithFlag"     [Generic', Eq', Ord'])
+%runElab (derive1 "BuiltinType"  [Generic', Eq', Ord'])
 ```
 
 ~~It seems not yet to be possible, to use this method in a mutual
@@ -238,23 +217,32 @@ of `deriveMutual`:
 
 ```idris
 export
-deriveMutual : List (Name, List MkImplementation) -> Elab ()
-deriveMutual pairs = do declss <- traverse (uncurry deriveDecls) pairs
-                        -- Declare types first. Then declare implementations.
-                        traverse_ (declare . map fst) declss
-                        traverse_ (declare . map snd) declss
+deriveGeneral :
+     Elaboration m
+  => Elaborateable t
+  => List Name
+  -> List (t -> TopLevel)
+  -> m ()
+deriveGeneral ns fs = do
+  pts <- traverse (find t) ns
+  let tls    := fs >>= \f => map f pts
+      claims := map claim tls
+      defns  := map defn tls
 
-%runElab deriveMutual [ ("TTImp",        [Generic', Eq',Ord'])
-                      , ("IField",       [Generic', Eq',Ord'])
-                      , ("IFieldUpdate", [Generic', Eq',Ord'])
-                      , ("AltType",      [Generic', Eq',Ord'])
-                      , ("FnOpt",        [Generic', Eq',Ord'])
-                      , ("ITy",          [Generic', Eq',Ord'])
-                      , ("Data",         [Generic', Eq',Ord'])
-                      , ("Record",       [Generic', Eq',Ord'])
-                      , ("Clause",       [Generic', Eq',Ord'])
-                      , ("Decl",         [Generic', Eq',Ord'])
-                      ]
+  declare $ claims ++ defns
+
+%runElab deriveGeneral
+  [ "TTImp"
+  , "IField"
+  , "IFieldUpdate"
+  , "AltType"
+  , "FnOpt"
+  , "ITy"
+  , "Data"
+  , "Record"
+  , "Clause"
+  , "Decl"
+  ] [Generic', Eq', Ord']
 ```
 
 ## Compiler Performance
@@ -267,7 +255,7 @@ we exclude the generic instance of `TTImp`, a data type
 with 29 constructors, whose `Generic`
 instance alone takes about four seconds
 to be derived. Indeed, when we look at the implementation of
-`Generic`, we expect its compiletime complexity to grow
+`Generic`, we expect its compile-time complexity to grow
 with the square of the number of constructors since
 the generic representation of every additional constructor
 results in additional layer of `S` constructors.

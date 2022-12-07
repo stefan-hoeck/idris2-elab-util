@@ -140,7 +140,7 @@ Ord Person where compare = assert_total genCompare
 
 As can be seen, once we have an instance of `Generic t`,
 it is trivial to derive implementations of `Eq` and other
-typeclasses without the need of meta programming.
+interfaces without the need of meta programming.
 Note, however, that due to the inductive nature of
 `Person` it is necessary to convince the totality checker
 by using `assert_total`. There doesn't seem to be a way
@@ -183,13 +183,14 @@ for an implementation of `Generic`.
 
 Creating the `Code` is straight forward. We use utility function
 `listOf` from `Language.Reflection.Syntax`, which recursively
-applies the passed list of arguments to `(::)` and ends it with `Nil`.
+applies the passed sequence of arguments to `(::)` and ends it
+with `Nil`.
 
 ```idris
 -- Creates the `List (List Type)` code for a data type.
 private
 mkCode : TypeInfo -> TTImp
-mkCode ti = listOf . map (listOf . map type . args) $ ti.cons
+mkCode ti = listOf $ map (\c => listOf $ type <$> c.args) ti.cons
 ```
 
 For the pattern clauses in the implementation of `from`
@@ -201,28 +202,28 @@ to this index.
 ||| Applies the proper n-ary sum constructor to an argument
 ||| of arguments. `k` is the level of nesting used
 export
-mkSOP1 : (k : Int) -> (arg : TTImp) -> TTImp
-mkSOP1 k arg = if k <= 0 then `(Z) .$ arg
-                         else `(S) .$ mkSOP1 (k-1) arg
+mkSOP1 : (k : Nat) -> (arg : TTImp) -> TTImp
+mkSOP1 0     arg = `(Z) .$ arg
+mkSOP1 (S k) arg = `(S) .$ mkSOP1 k arg
 
 ||| Applies the proper n-ary sum constructor to a list
 ||| of arguments. `k` is the level of nesting used.
 export
-mkSOP : (k : Int) -> (args : List TTImp) -> TTImp
+mkSOP : Foldable t => (k : Nat) -> (args : t TTImp) -> TTImp
 mkSOP k = mkSOP1 k . listOf
 
 export
-zipWithIndex : List a -> List (Int,a)
+zipWithIndex : List a -> List (Nat,a)
 zipWithIndex as = run 0 as
-  where run : Int -> List a -> List (Int,a)
+  where run : Nat -> List a -> List (Nat,a)
         run _ []     = []
-        run k (h::t) = (k,h) :: run (k+1) t
+        run k (h::t) = (k,h) :: run (S k) t
 ```
 
 For the implementations of functions `from` and `to`,
 we need to generate pattern clauses for every data
 constructor. We collect the required constructor
-name and list of arguments in a tuple:
+name and generated list of fresh argument names in a tuple:
 
 ```idris
 ||| Constructor name and names of arguments
@@ -232,26 +233,27 @@ ConNames : Type
 ConNames = (Name, List String, List TTImp)
 
 private
-conNames : Con n -> ConNames
-conNames (MkCon con args _) = let ns   = map (nameStr . name) args
-                                  vars = map varStr ns
-                               in (con, ns, vars)
+conNames : (c : Con n vs) -> ConNames
+conNames c =
+  let ns   := toList $ freshNames "x" c.arty
+      vars := map varStr ns
+   in (c.name, ns, vars)
 
 export
-fromClause : (Int,ConNames) -> Clause
+fromClause : (Nat,ConNames) -> Clause
 fromClause (k,(con,ns,vars)) = bindAll con ns .= mkSOP k vars
 
 export
-toClause : (Int,ConNames) -> Clause
+toClause : (Nat,ConNames) -> Clause
 toClause (k,(con,ns,vars)) = mkSOP k (map bindVar ns) .= appAll con vars
 
 export
-toClauses : List (Int,ConNames) -> List Clause
+toClauses : List (Nat,ConNames) -> List Clause
 toClauses cs = map toClause cs ++
                -- in certain pathological cases, the coverage checker can not
                -- determine on its own that the above list of clauses is covering.
                -- we therefore append an explicit `impossible` clause.
-               [impossibleClause $ mkSOP1 (cast $ length cs) implicitTrue]
+               [impossibleClause $ mkSOP1 (length cs) implicitTrue]
 ```
 
 A quick note about function `nameStr`: Idris does not accept
@@ -262,7 +264,7 @@ The function `nameStr` converts such names to similar user-defined names.
 private
 genericDecl : TypeInfo -> List Decl
 genericDecl ti =
-  let -- constructor name
+  let -- constructor names
       names     = zipWithIndex (map conNames ti.cons)
 
       -- name of implementation function
@@ -272,7 +274,7 @@ genericDecl ti =
       funType = `(Generic) .$ var (name ti) .$ mkCode ti
 
       -- implementation of from and to as anonymous functions
-      x       = lambdaArg "x"
+      x       = lambdaArg {a = Name} "x"
       varX    = var "x"
       from    = x .=> iCase varX implicitFalse (map fromClause names)
       to      = x .=> iCase varX implicitFalse (toClauses names)
@@ -282,7 +284,8 @@ genericDecl ti =
 ```
 
 Let's break this down a bit: We first get access
-to `Generic`'s constructor and calculate the name
+to the data type's constructor and argument names
+and calculate the name
 of our implementation function. We then calculate
 the implementation's type by applying our data type and
 generated code to the type constructor `Generic`.
