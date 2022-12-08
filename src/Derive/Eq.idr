@@ -33,11 +33,11 @@ conIndexClauses n ns = go 0 (fst $ conIndexTypes $ length ns) ns
 ||| Declaration of a function returning the constructor index
 ||| for a value of the given data type.
 export
-conIndexClaim : (fun : Name) -> (t : TypeInfo) -> Decl
-conIndexClaim fun t =
+conIndexClaim : Visibility -> (fun : Name) -> (t : TypeInfo) -> Decl
+conIndexClaim vis fun t =
   let tpe := snd (conIndexTypes $ length t.cons)
       arg := t.applied
-   in public' fun $ piAll `(~(arg) -> ~(tpe)) (t.implicits)
+   in simpleClaim vis fun $ piAll `(~(arg) -> ~(tpe)) (t.implicits)
 
 ||| Definition of a function returning the constructor index
 ||| for a value of the given data type.
@@ -69,10 +69,15 @@ conIndexDef fun t = def fun $ conIndexClauses fun t.cons
 ||| code generations. This allows us to get `Eq` and `Ord` implementations for
 ||| enum types, which run in O(1)!
 export
-ConIndex : List Name -> ParamTypeInfo -> Res (List TopLevel)
-ConIndex _ t =
+ConIndexVis : Visibility -> List Name -> ParamTypeInfo -> Res (List TopLevel)
+ConIndexVis vis _ t =
   let fun := conIndexName t
-   in Right [ TL (conIndexClaim fun t.info) (conIndexDef fun t.info) ]
+   in Right [ TL (conIndexClaim vis fun t.info) (conIndexDef fun t.info) ]
+
+||| Alias for `ConIndexVis Public`
+export %inline
+ConIndex : List Name -> ParamTypeInfo -> Res (List TopLevel)
+ConIndex = ConIndexVis Public
 
 --------------------------------------------------------------------------------
 --          Claims
@@ -81,17 +86,17 @@ ConIndex _ t =
 ||| Top-level declaration implementing the equality test for
 ||| the given data type.
 export
-eqClaim : (fun : Name) -> (p : ParamTypeInfo) -> Decl
-eqClaim fun p =
+eqClaim : Visibility -> (fun : Name) -> (p : ParamTypeInfo) -> Decl
+eqClaim vis fun p =
   let arg := p.applied
       tpe := piAll `(~(arg) -> ~(arg) -> Bool) (allImplicits p "Eq")
-   in public' fun tpe
+   in simpleClaim vis fun tpe
 
 ||| Top-level declaration implementing the `Eq` interface for
 ||| the given data type.
 export
-eqImplClaim : (impl : Name) -> (p : ParamTypeInfo) -> Decl
-eqImplClaim impl p = implClaim impl (implType "Eq" p)
+eqImplClaim : Visibility -> (impl : Name) -> (p : ParamTypeInfo) -> Decl
+eqImplClaim vis impl p = implClaimVis vis impl (implType "Eq" p)
 
 --------------------------------------------------------------------------------
 --          Definitions
@@ -163,16 +168,23 @@ deriveEq = do
 
 ||| Generate declarations and implementations for `Eq` for a given data type.
 export
-Eq : List Name -> ParamTypeInfo -> Res (List TopLevel)
-Eq nms p = case isEnum p.info of
+EqVis : Visibility -> List Name -> ParamTypeInfo -> Res (List TopLevel)
+EqVis vis nms p = case isEnum p.info of
   True  =>
     let impl := implName p "Eq"
         ci   := conIndexName p
      in sequenceJoin
-          [ConIndex nms p, Right [ TL (eqImplClaim impl p) (eqEnumDef impl ci) ]]
+          [ ConIndexVis vis nms p
+          , Right [ TL (eqImplClaim vis impl p) (eqEnumDef impl ci) ]
+          ]
   False =>
     let fun  := funName p "eq"
         impl := implName p "Eq"
-     in Right [ TL (eqClaim fun p) (eqDef nms fun p.info)
-              , TL (eqImplClaim impl p) (eqImplDef fun impl)
+     in Right [ TL (eqClaim vis fun p) (eqDef nms fun p.info)
+              , TL (eqImplClaim vis impl p) (eqImplDef fun impl)
               ]
+
+||| Alias for `EqVis Public`
+export %inline
+Eq : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Eq = EqVis Public

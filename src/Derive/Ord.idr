@@ -11,17 +11,17 @@ import public Derive.Eq
 ||| Top-level function declaration implementing the ordering test for
 ||| the given data type.
 export
-ordClaim : (fun : Name) -> (p : ParamTypeInfo) -> Decl
-ordClaim fun p =
+ordClaim : Visibility -> (fun : Name) -> (p : ParamTypeInfo) -> Decl
+ordClaim vis fun p =
   let arg := p.applied
       tpe := piAll `(~(arg) -> ~(arg) -> Ordering) (allImplicits p "Ord")
-   in public' fun tpe
+   in simpleClaim vis fun tpe
 
 ||| Top-level declaration implementing the `Ord` interface for
 ||| the given data type.
 export
-ordImplClaim : (impl : Name) -> (p : ParamTypeInfo) -> Decl
-ordImplClaim impl p = implClaim impl (implType "Ord" p)
+ordImplClaim : Visibility -> (impl : Name) -> (p : ParamTypeInfo) -> Decl
+ordImplClaim v impl p = implClaimVis v impl (implType "Ord" p)
 
 --------------------------------------------------------------------------------
 --          Definitions
@@ -78,20 +78,25 @@ parameters (nms : List Name)
 
 ||| Generate declarations and implementations for `Ord` for a given data type.
 export
-Ord : List Name -> ParamTypeInfo -> Res (List TopLevel)
-Ord nms p = case isEnum p.info of
+OrdVis : Visibility -> List Name -> ParamTypeInfo -> Res (List TopLevel)
+OrdVis vis nms p = case isEnum p.info of
   True  =>
     let impl := implName p "Ord"
         ci   := conIndexName p
-     in Right [ TL (ordImplClaim impl p) (ordEnumDef impl ci) ]
+     in Right [ TL (ordImplClaim vis impl p) (ordEnumDef impl ci) ]
   False =>
     let ci   := conIndexName p
-        pre  := if length p.cons > 1 then ConIndex nms p else Right []
+        pre  := if length p.cons > 1 then ConIndexVis vis nms p else Right []
         fun  := funName p "ord"
         impl := implName p "Ord"
      in sequenceJoin
           [ pre
-          , Right [ TL (ordClaim fun p) (ordDef nms ci fun p.info)
-                  , TL (ordImplClaim impl p) (ordImplDef fun impl)
+          , Right [ TL (ordClaim vis fun p) (ordDef nms ci fun p.info)
+                  , TL (ordImplClaim vis impl p) (ordImplDef fun impl)
                   ]
           ]
+
+||| Alias for `OrdVis Public`
+export %inline
+Ord : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Ord = OrdVis Public

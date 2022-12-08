@@ -11,26 +11,26 @@ import public Language.Reflection.Derive
 ||| Top-level declaration implementing used for `(+)` and `(*)` functions for
 ||| the given data type.
 export
-pmClaim : (fun : Name) -> (p : ParamTypeInfo) -> Decl
-pmClaim fun p =
+pmClaim : Visibility -> (fun : Name) -> (p : ParamTypeInfo) -> Decl
+pmClaim vis fun p =
   let arg := p.applied
       tpe := piAll `(~(arg) -> ~(arg) -> ~(arg)) (allImplicits p "Num")
-   in public' fun tpe
+   in simpleClaim vis fun tpe
 
 ||| Top-level declaration implementing used for the `fromInteger` function for
 ||| the given data type.
 export
-fromIntClaim : (fun : Name) -> (p : ParamTypeInfo) -> Decl
-fromIntClaim fun p =
+fromIntClaim : Visibility -> (fun : Name) -> (p : ParamTypeInfo) -> Decl
+fromIntClaim vis fun p =
   let arg := p.applied
       tpe := piAll `(Integer -> ~(arg)) (allImplicits p "Num")
-   in public' fun tpe
+   in simpleClaim vis fun tpe
 
 ||| Top-level declaration implementing the `Eq` interface for
 ||| the given data type.
 export
-numImplClaim : (impl : Name) -> (p : ParamTypeInfo) -> Decl
-numImplClaim impl p = implClaim impl (implType "Num" p)
+numImplClaim : Visibility -> (impl : Name) -> (p : ParamTypeInfo) -> Decl
+numImplClaim v impl p = implClaimVis v impl (implType "Num" p)
 
 --------------------------------------------------------------------------------
 --          Definitions
@@ -71,16 +71,21 @@ fromIntDef f c = def f [var f .$ `(n) .= injArgs explicit fromInt c]
 ||| Generate declarations and implementations for `Num` for a
 ||| single-constructor data type.
 export
-Num : List Name -> ParamTypeInfo -> Res (List TopLevel)
-Num nms p = case p.info.cons of
+NumVis : Visibility -> List Name -> ParamTypeInfo -> Res (List TopLevel)
+NumVis vis nms p = case p.info.cons of
   [c] =>
     let mult    := funName p "mult"
         plus    := funName p "plus"
         fromInt := funName p "fromInt"
         impl    := implName p "Num"
-     in Right [ TL (pmClaim plus p) (plusDef plus c)
-              , TL (pmClaim mult p) (multDef mult c)
-              , TL (fromIntClaim fromInt p) (fromIntDef fromInt c)
-              , TL (numImplClaim impl p) (numImplDef plus mult fromInt impl)
+     in Right [ TL (pmClaim vis plus p) (plusDef plus c)
+              , TL (pmClaim vis mult p) (multDef mult c)
+              , TL (fromIntClaim vis fromInt p) (fromIntDef fromInt c)
+              , TL (numImplClaim vis impl p) (numImplDef plus mult fromInt impl)
               ]
   _   => failRecord "Num"
+
+||| Alias for `NumVis Public`
+export %inline
+Num : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Num = NumVis Public

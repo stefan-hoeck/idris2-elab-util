@@ -9,17 +9,17 @@ import public Language.Reflection.Derive
 --------------------------------------------------------------------------------
 
 export
-fromChrClaim : (fun : Name) -> (p : ParamTypeInfo) -> Decl
-fromChrClaim fun p =
+fromChrClaim : Visibility -> (fun : Name) -> (p : ParamTypeInfo) -> Decl
+fromChrClaim vis fun p =
   let arg := p.applied
       tpe := piAll `(Char -> ~(arg)) (allImplicits p "FromChar")
-   in public' fun tpe
+   in simpleClaim vis fun tpe
 
 ||| Top-level declaration implementing the `FromChar` interface for
 ||| the given data type.
 export
-chrImplClaim : (impl : Name) -> (p : ParamTypeInfo) -> Decl
-chrImplClaim impl p = implClaim impl (implType "FromChar" p)
+chrImplClaim : Visibility -> (impl : Name) -> (p : ParamTypeInfo) -> Decl
+chrImplClaim v impl p = implClaimVis v impl (implType "FromChar" p)
 
 --------------------------------------------------------------------------------
 --          Definitions
@@ -46,12 +46,17 @@ fromChrDef f c =
 ||| sense for newtypes, but is supported for any single-constructor data type
 ||| to be consistent with restrictions on `Num` and `FromDouble`.
 export
-FromChar : List Name -> ParamTypeInfo -> Res (List TopLevel)
-FromChar nms p = case p.info.cons of
+FromCharVis : Visibility -> List Name -> ParamTypeInfo -> Res (List TopLevel)
+FromCharVis vis nms p = case p.info.cons of
   [c] =>
     let fun  := funName p "fromChar"
         impl := implName p "FromChar"
-     in Right [ TL (fromChrClaim fun p) (fromChrDef fun c)
-              , TL (chrImplClaim impl p) (chrImplDef fun impl)
+     in Right [ TL (fromChrClaim vis fun p) (fromChrDef fun c)
+              , TL (chrImplClaim vis impl p) (chrImplDef fun impl)
               ]
   _   => failRecord "FromChar"
+
+||| Alias for `FromCharVis Public`
+export %inline
+FromChar : List Name -> ParamTypeInfo -> Res (List TopLevel)
+FromChar = FromCharVis Public

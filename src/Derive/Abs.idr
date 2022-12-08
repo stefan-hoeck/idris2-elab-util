@@ -9,15 +9,15 @@ import public Language.Reflection.Derive
 --------------------------------------------------------------------------------
 
 export
-absClaim : (fun : Name) -> (p : ParamTypeInfo) -> Decl
-absClaim fun p =
+absClaim : Visibility -> (fun : Name) -> (p : ParamTypeInfo) -> Decl
+absClaim vis fun p =
   let arg := p.applied
       tpe := piAll `(~(arg) -> ~(arg)) (allImplicits p "Abs")
-   in public' fun tpe
+   in simpleClaim vis fun tpe
 
 export
-absImplClaim : (impl : Name) -> (p : ParamTypeInfo) -> Decl
-absImplClaim impl p = implClaim impl (implType "Abs" p)
+absImplClaim : Visibility -> (impl : Name) -> (p : ParamTypeInfo) -> Decl
+absImplClaim vis impl p = implClaimVis vis impl (implType "Abs" p)
 
 --------------------------------------------------------------------------------
 --          Definitions
@@ -39,14 +39,20 @@ parameters (nms : List Name)
 --------------------------------------------------------------------------------
 
 ||| Generate declarations and implementations for `Abs` for a
-||| single-constructor data type.
+||| single-constructor data type with the given visibility.
 export
-Abs : List Name -> ParamTypeInfo -> Res (List TopLevel)
-Abs nms p = case p.info.cons of
+AbsVis : Visibility -> List Name -> ParamTypeInfo -> Res (List TopLevel)
+AbsVis vis nms p = case p.info.cons of
   [c] =>
     let abs     := funName p "abs"
         impl    := implName p "Abs"
-     in Right [ TL (absClaim abs p) (absDef nms abs c)
-              , TL (absImplClaim impl p) (absImplDef abs impl)
+     in Right [ TL (absClaim vis abs p) (absDef nms abs c)
+              , TL (absImplClaim vis impl p) (absImplDef abs impl)
               ]
   _   => failRecord "Abs"
+
+||| Generate declarations and implementations for `Abs` for a
+||| single-constructor data type with `public export` visibility.
+export %inline
+Abs : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Abs = AbsVis Public

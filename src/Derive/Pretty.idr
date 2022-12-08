@@ -23,10 +23,10 @@ generalPrettyType is arg = piAll `(Prec -> ~(arg) -> Doc ann) is
 ||| Top-level function declaration implementing the `prettyPrec` function for
 ||| the given data type.
 export
-prettyClaim : (p : ParamTypeInfo) -> Decl
-prettyClaim p =
+prettyClaim : Visibility -> (p : ParamTypeInfo) -> Decl
+prettyClaim vis p =
   let tpe := generalPrettyType (allImplicits p "Pretty") p.applied
-   in public' p.prettyName tpe
+   in simpleClaim vis p.prettyName tpe
 
 ||| Name of the derived interface implementation.
 public export
@@ -35,7 +35,7 @@ v.prettyImplName = UN $ Basic "prettyImpl\{v.nameStr}"
 
 ||| Top-level declaration of the `Pretty` implementation for the given data type.
 export
-prettyImplClaim : (p : ParamTypeInfo) -> Decl
-prettyImplClaim p =
+prettyImplClaim : Visibility -> (p : ParamTypeInfo) -> Decl
+prettyImplClaim v p =
   let tpe := piAll (var "Pretty" .$ p.applied) (allImplicits p "Pretty")
-   in implClaim p.prettyImplName tpe
+   in implClaimVis v p.prettyImplName tpe

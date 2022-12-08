@@ -361,8 +361,18 @@ record TopLevel where
 ||| for the interface's implementation and the actual implementation
 ||| just adds those functions to the interface constructor.
 public export %inline
+implClaimVis : Visibility -> Name -> TTImp -> Decl
+implClaimVis vis = interfaceHintOpts vis [Inline]
+
+||| Creates a function declaration with a `%hint` and `%inline`
+||| annotation.
+|||
+||| This is what you want if you use separate top-level function
+||| for the interface's implementation and the actual implementation
+||| just adds those functions to the interface constructor.
+public export %inline
 implClaim : Name -> TTImp -> Decl
-implClaim = interfaceHintOpts Public [Inline]
+implClaim = implClaimVis Public
 
 ||| Creates the function type for an interface implementation including
 ||| the required implicit and auto-implicit arguments.

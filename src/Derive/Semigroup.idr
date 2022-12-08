@@ -9,17 +9,17 @@ import public Language.Reflection.Derive
 ||| Top-level function declaration implementing the append function for
 ||| the given data type.
 export
-appClaim : (fun : Name) -> (p : ParamTypeInfo) -> Decl
-appClaim fun p =
+appClaim : Visibility -> (fun : Name) -> (p : ParamTypeInfo) -> Decl
+appClaim vis fun p =
   let arg := p.applied
       tpe := piAll `(~(arg) -> ~(arg) -> ~(arg)) (allImplicits p "Semigroup")
-   in public' fun tpe
+   in simpleClaim vis fun tpe
 
 ||| Top-level declaration implementing the `Semigroup` interface for
 ||| the given data type.
 export
-semigroupImplClaim : (impl : Name) -> (p : ParamTypeInfo) -> Decl
-semigroupImplClaim impl p = implClaim impl (implType "Semigroup" p)
+semigroupImplClaim : Visibility -> (impl : Name) -> (p : ParamTypeInfo) -> Decl
+semigroupImplClaim v impl p = implClaimVis v impl (implType "Semigroup" p)
 
 --------------------------------------------------------------------------------
 --          Definitions
@@ -45,12 +45,17 @@ appDef f c = def f [appClause f c]
 
 ||| Generate declarations and implementations for `Semigroup` for a given data type.
 export
-Semigroup : List Name -> ParamTypeInfo -> Res (List TopLevel)
-Semigroup nms p = case p.info.cons of
+SemigroupVis : Visibility -> List Name -> ParamTypeInfo -> Res (List TopLevel)
+SemigroupVis vis nms p = case p.info.cons of
   [c] =>
     let fun  := funName p "append"
         impl := implName p "Semigroup"
-     in Right [ TL (appClaim fun p) (appDef fun c)
-              , TL (semigroupImplClaim impl p) (semigroupImplDef fun impl)
+     in Right [ TL (appClaim vis fun p) (appDef fun c)
+              , TL (semigroupImplClaim vis impl p) (semigroupImplDef fun impl)
               ]
   _   => failRecord "Semigroup"
+
+||| Alias for `SemigroupVis Public`
+export %inline
+Semigroup : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Semigroup = SemigroupVis Public

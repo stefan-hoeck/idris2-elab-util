@@ -9,17 +9,17 @@ import public Language.Reflection.Derive
 ||| Top-level function declaration implementing the `neutral` function for
 ||| the given data type.
 export
-neutralClaim : (fun : Name) -> (p : ParamTypeInfo) -> Decl
-neutralClaim fun p =
+neutralClaim : Visibility -> (fun : Name) -> (p : ParamTypeInfo) -> Decl
+neutralClaim vis fun p =
   let arg := p.applied
       tpe := piAll arg (allImplicits p "Monoid")
-   in public' fun tpe
+   in simpleClaim vis fun tpe
 
 ||| Top-level declaration implementing the `Semigroup` interface for
 ||| the given data type.
 export
-monoidImplClaim : (impl : Name) -> (p : ParamTypeInfo) -> Decl
-monoidImplClaim impl p = implClaim impl (implType "Monoid" p)
+monoidImplClaim : Visibility -> (impl : Name) -> (p : ParamTypeInfo) -> Decl
+monoidImplClaim v impl p = implClaimVis v impl (implType "Monoid" p)
 
 --------------------------------------------------------------------------------
 --          Definitions
@@ -44,12 +44,17 @@ neutralDef f c = def f [var f .= rhs c]
 
 ||| Generate declarations and implementations for `Semigroup` for a given data type.
 export
-Monoid : List Name -> ParamTypeInfo -> Res (List TopLevel)
-Monoid nms p = case p.info.cons of
+MonoidVis : Visibility -> List Name -> ParamTypeInfo -> Res (List TopLevel)
+MonoidVis vis nms p = case p.info.cons of
   [c] =>
     let fun  := funName p "neutral"
         impl := implName p "Monoid"
-     in Right [ TL (neutralClaim fun p) (neutralDef fun c)
-              , TL (monoidImplClaim impl p) (monoidImplDef fun impl)
+     in Right [ TL (neutralClaim vis fun p) (neutralDef fun c)
+              , TL (monoidImplClaim vis impl p) (monoidImplDef fun impl)
               ]
   _   => failRecord "Monoid"
+
+||| Alias for `MonoidVis Public`
+export %inline
+Monoid : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Monoid = MonoidVis Public

@@ -9,15 +9,15 @@ import public Language.Reflection.Derive
 --------------------------------------------------------------------------------
 
 export
-dvClaim : (fun : Name) -> (p : ParamTypeInfo) -> Decl
-dvClaim fun p =
+dvClaim : Visibility -> (fun : Name) -> (p : ParamTypeInfo) -> Decl
+dvClaim vis fun p =
   let arg := p.applied
       tpe := piAll `(~(arg) -> ~(arg) -> ~(arg)) (allImplicits p "Integral")
-   in public' fun tpe
+   in simpleClaim vis fun tpe
 
 export
-intImplClaim : (impl : Name) -> (p : ParamTypeInfo) -> Decl
-intImplClaim impl p = implClaim impl (implType "Integral" p)
+intImplClaim : Visibility -> (impl : Name) -> (p : ParamTypeInfo) -> Decl
+intImplClaim v impl p = implClaimVis v impl (implType "Integral" p)
 
 --------------------------------------------------------------------------------
 --          Definitions
@@ -52,14 +52,19 @@ parameters (nms : List Name)
 ||| Generate declarations and implementations for `Integral` for a
 ||| single-constructor data type.
 export
-Integral : List Name -> ParamTypeInfo -> Res (List TopLevel)
-Integral nms p = case p.info.cons of
+IntegralVis : Visibility -> List Name -> ParamTypeInfo -> Res (List TopLevel)
+IntegralVis vis nms p = case p.info.cons of
   [c] =>
     let div  := funName p "div"
         mod  := funName p "mod"
         impl := implName p "Integral"
-     in Right [ TL (dvClaim div p) (divDef nms div c)
-              , TL (dvClaim mod p) (modDef nms mod c)
-              , TL (intImplClaim impl p) (intImplDef div mod impl)
+     in Right [ TL (dvClaim vis div p) (divDef nms div c)
+              , TL (dvClaim vis mod p) (modDef nms mod c)
+              , TL (intImplClaim vis impl p) (intImplDef div mod impl)
               ]
   _   => failRecord "Integral"
+
+||| Alias for `IntegralVis Public`
+export %inline
+Integral : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Integral = IntegralVis Public

@@ -9,17 +9,17 @@ import public Language.Reflection.Derive
 --------------------------------------------------------------------------------
 
 export
-fromStrClaim : (fun : Name) -> (p : ParamTypeInfo) -> Decl
-fromStrClaim fun p =
+fromStrClaim : Visibility -> (fun : Name) -> (p : ParamTypeInfo) -> Decl
+fromStrClaim vis fun p =
   let arg := p.applied
       tpe := piAll `(String -> ~(arg)) (allImplicits p "FromString")
-   in public' fun tpe
+   in simpleClaim vis fun tpe
 
 ||| Top-level declaration implementing the `FromString` interface for
 ||| the given data type.
 export
-strImplClaim : (impl : Name) -> (p : ParamTypeInfo) -> Decl
-strImplClaim impl p = implClaim impl (implType "FromString" p)
+strImplClaim : Visibility -> (impl : Name) -> (p : ParamTypeInfo) -> Decl
+strImplClaim v impl p = implClaimVis v impl (implType "FromString" p)
 
 --------------------------------------------------------------------------------
 --          Definitions
@@ -46,12 +46,17 @@ fromStrDef f c =
 ||| sense for newtypes, but is supported for any single-constructor data type
 ||| to be consistent with restrictions on `Num` and `FromDouble`.
 export
-FromString : List Name -> ParamTypeInfo -> Res (List TopLevel)
-FromString nms p = case p.info.cons of
+FromStringVis : Visibility -> List Name -> ParamTypeInfo -> Res (List TopLevel)
+FromStringVis vis nms p = case p.info.cons of
   [c] =>
     let fun  := funName p "fromString"
         impl := implName p "FromString"
-     in Right [ TL (fromStrClaim fun p) (fromStrDef fun c)
-              , TL (strImplClaim impl p) (strImplDef fun impl)
+     in Right [ TL (fromStrClaim vis fun p) (fromStrDef fun c)
+              , TL (strImplClaim vis impl p) (strImplDef fun impl)
               ]
   _   => failRecord "FromString"
+
+||| Alias for `FromStringVis Public`
+export %inline
+FromString : List Name -> ParamTypeInfo -> Res (List TopLevel)
+FromString = FromStringVis Public
