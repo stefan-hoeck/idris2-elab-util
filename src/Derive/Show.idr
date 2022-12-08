@@ -47,16 +47,16 @@ generalShowType is arg = piAll `(Prec -> ~(arg) -> String) is
 ||| Top-level function declaration implementing the `showPrec` function for
 ||| the given data type.
 export
-showClaim : (fun : Name) -> (p : ParamTypeInfo) -> Decl
-showClaim fun p =
+showClaim : Visibility -> (fun : Name) -> (p : ParamTypeInfo) -> Decl
+showClaim vis fun p =
   let arg := p.applied
       tpe := piAll `(Prec -> ~(arg) -> String) (allImplicits p "Show")
-   in public' fun tpe
+   in simpleClaim vis fun tpe
 
 ||| Top-level declaration of the `Show` implementation for the given data type.
 export
-showImplClaim : (impl : Name) -> (p : ParamTypeInfo) -> Decl
-showImplClaim impl p = implClaim impl (implType "Show" p)
+showImplClaim : Visibility -> (impl : Name) -> (p : ParamTypeInfo) -> Decl
+showImplClaim v impl p = implClaimVis v impl (implType "Show" p)
 
 --------------------------------------------------------------------------------
 --          Definitions
@@ -138,10 +138,15 @@ deriveShow = do
 
 ||| Generate declarations and implementations for `Show` for a given data type.
 export
-Show : List Name -> ParamTypeInfo -> Res (List TopLevel)
-Show nms p =
+ShowVis : Visibility -> List Name -> ParamTypeInfo -> Res (List TopLevel)
+ShowVis vis nms p =
   let fun  := funName p "showPrec"
       impl := implName p "Show"
-   in Right [ TL (showClaim fun p) (showDef nms fun p.info)
-            , TL (showImplClaim impl p) (showImplDef fun impl)
+   in Right [ TL (showClaim vis fun p) (showDef nms fun p.info)
+            , TL (showImplClaim vis impl p) (showImplDef fun impl)
             ]
+
+||| Alias for `ShowVis Public`
+export %inline
+Show : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Show = ShowVis Public

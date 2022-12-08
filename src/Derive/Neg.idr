@@ -9,22 +9,22 @@ import public Language.Reflection.Derive
 --------------------------------------------------------------------------------
 
 export
-minusClaim : (fun : Name) -> (p : ParamTypeInfo) -> Decl
-minusClaim fun p =
+minusClaim : Visibility -> (fun : Name) -> (p : ParamTypeInfo) -> Decl
+minusClaim vis fun p =
   let arg := p.applied
       tpe := piAll `(~(arg) -> ~(arg) -> ~(arg)) (allImplicits p "Neg")
-   in public' fun tpe
+   in simpleClaim vis fun tpe
 
 export
-negClaim : (fun : Name) -> (p : ParamTypeInfo) -> Decl
-negClaim fun p =
+negClaim : Visibility -> (fun : Name) -> (p : ParamTypeInfo) -> Decl
+negClaim vis fun p =
   let arg := p.applied
       tpe := piAll `(~(arg) -> ~(arg)) (allImplicits p "Neg")
-   in public' fun tpe
+   in simpleClaim vis fun tpe
 
 export
-negImplClaim : (impl : Name) -> (p : ParamTypeInfo) -> Decl
-negImplClaim impl p = implClaim impl (implType "Neg" p)
+negImplClaim : Visibility -> (impl : Name) -> (p : ParamTypeInfo) -> Decl
+negImplClaim v impl p = implClaimVis v impl (implType "Neg" p)
 
 --------------------------------------------------------------------------------
 --          Definitions
@@ -58,14 +58,19 @@ negDef fun c =
 ||| Generate declarations and implementations for `Neg` for a
 ||| single-constructor data type.
 export
-Neg : List Name -> ParamTypeInfo -> Res (List TopLevel)
-Neg nms p = case p.info.cons of
+NegVis : Visibility -> List Name -> ParamTypeInfo -> Res (List TopLevel)
+NegVis vis nms p = case p.info.cons of
   [c] =>
     let neg   := funName p "negate"
         minus := funName p "minus"
         impl  := implName p "Neg"
-     in Right [ TL (negClaim neg p) (negDef neg c)
-              , TL (minusClaim minus p) (minusDef minus c)
-              , TL (negImplClaim impl p) (negImplDef neg minus impl)
+     in Right [ TL (negClaim vis neg p) (negDef neg c)
+              , TL (minusClaim vis minus p) (minusDef minus c)
+              , TL (negImplClaim vis impl p) (negImplDef neg minus impl)
               ]
   _   => failRecord "Neg"
+
+||| Alias for `NegVis Public`
+export %inline
+Neg : List Name -> ParamTypeInfo -> Res (List TopLevel)
+Neg = NegVis Public
