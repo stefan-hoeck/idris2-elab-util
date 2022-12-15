@@ -296,6 +296,7 @@ mutual
     prettyPrec _ FirstSuccess      = "FirstSuccess"
     prettyPrec _ Unique            = "Unique"
     prettyPrec p (UniqueDefault x) = apply p "UniqueDefault" [x]
+    prettyPrec _ FirstReflection   = "FirstReflection"
 
   export
   Pretty FnOpt where
