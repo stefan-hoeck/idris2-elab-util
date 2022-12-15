@@ -63,7 +63,7 @@ enumDecl1 name cons = IData EmptyFC Public Nothing dat
         mkCon n = MkTy EmptyFC EmptyFC (UN $ Basic n) (IVar EmptyFC enumName)
 
         dat : Data
-        dat = MkData EmptyFC enumName (IType EmptyFC) [] (map mkCon cons)
+        dat = MkData EmptyFC enumName (Just (IType EmptyFC)) [] (map mkCon cons)
 ```
 
 ## Second Implementation
