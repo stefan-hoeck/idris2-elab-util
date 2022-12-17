@@ -78,12 +78,13 @@ pretty printer is provided:
 
 ```repl
 Language.Reflection.Pretty> :exec putPretty `(2 * x)
-
-  IApp. IVar * $ (IApp. IVar fromInteger $ IPrimVal 2) $ IVar x
-
+IApp fc (IApp fc (IVar fc *) (IApp fc
+                                   (IVar fc fromInteger)
+                                   (IPrimVal fc (BI 2)))) (IVar fc x)
 ```
 
-As can be seen, source locations have been removed and `Name`s
+As can be seen, source locations have been replaced by a
+placeholder (`fc`) and `Name`s
 are rendered without constructors. Function application is
 treated specially: The `TTImp` constructor `IApp` is shown to
 tell users which constructor was used, but nested calls to `IApp`
