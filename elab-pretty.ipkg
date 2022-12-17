@@ -1,4 +1,4 @@
-package elab-util
+package elab-pretty
 
 authors    = "stefan-hoeck"
 brief      = "Pretty printing TTImp and friends, plus auto-deriving pretty printers"
