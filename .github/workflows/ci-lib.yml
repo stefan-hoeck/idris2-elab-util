@@ -32,3 +32,7 @@ jobs:
         run: pack typecheck elab-util
       - name: Build docs
         run: pack typecheck elab-util-docs
+      - name: Run tests
+        run: pack test elab-util
+      - name: Build elab-pretty
+        run: pack build elab-pretty
