@@ -104,7 +104,7 @@ from `Language.Reflection.Syntax`. This holds in general: Pretty printed
 `TTImp` is valid Idris code, otherwise, that's a bug.
 
 A similar layout is used for nested function declarations
-(data constructor `IPi` and infix operator `(.->))
+(data constructor `IPi` and infix operator `(.->)`)
 and lambdas (data constructor `ILam` and infix operator `(.=>)`):
 
 ```repl
