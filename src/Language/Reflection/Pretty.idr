@@ -71,6 +71,22 @@ recordH p str ps = prettyRecord p str $ go ps
         go @{[]}     []             = []
         go @{_ :: _} ((fn,v) :: ps) = prettyField fn v :: go ps
 
+export
+op :
+     {opts : _}
+  -> Prec
+  -> (fixity : Nat)
+  -> (fst  : Doc opts)
+  -> (args : List (String,Doc opts))
+  -> Doc opts
+op p fixity fst args@((o,_) :: _) =
+  let len    := length o
+      opArgs := map (\(x,y) => line {opts} x <++> y) args
+      sngl   := hsep (fst :: opArgs)
+      mult   := vsep (indent (S len) fst :: opArgs)
+   in parenthesise (p >= User fixity) $ ifMultiline sngl mult
+op _ _ fst [] = fst
+
 --------------------------------------------------------------------------------
 --          Pretty instances for TT Types
 --------------------------------------------------------------------------------
@@ -81,11 +97,11 @@ Pretty Namespace where
 
 export
 Pretty Name where
-  prettyPrec _ = line . show
+  prettyPrec _ = dquotes . line . show
 
 export
 Pretty FC where
-  prettyPrec _ _ = line "fc"
+  prettyPrec _ _ = line "emptyFC"
 
 
 %runElab derive "Count" [Pretty]
@@ -110,27 +126,75 @@ Pretty FC where
 export %hint
 prettyImplTTImp : Pretty TTImp
 
+export %hint
+prettyImplArg : Pretty Arg
+
+export %hint
+prettyImplClause : Pretty Clause
+
+export %hint
+prettyImplITy : Pretty ITy
+
 %runElab deriveMutual
   [ "IFieldUpdate"
   , "AltType"
-  , "ITy"
   , "FnOpt"
   , "Data"
   , "IField"
   , "Record"
-  , "Clause"
   , "Decl"
-  , "Language.Reflection.Syntax.Arg"
   ] [Pretty]
+
+prettyImplITy = MkPretty $ \p,v => case v of
+  (MkTy _ _ n ty) => recordH p "mkTy" [("name", n), ("type", ty)]
+
+prettyImplArg = MkPretty $ \p,v =>
+  conH p "MkArg" [v.count, v.piInfo, v.name, v.type]
+
+prettyImplClause = assert_total $ MkPretty $ \p,v => case v of
+  PatClause fc lhs rhs =>
+    op p 3 (prettyPrec (User 3) lhs) [(".=", prettyPrec (User 3) rhs)]
+  WithClause fc lhs rig wval prf flags cls =>
+    recordH p "withClause"
+      [ ("lhs", lhs)
+      , ("rig", rig)
+      , ("wval", wval)
+      , ("prf", prf)
+      , ("flags", flags)
+      , ("clauses", cls)
+      ]
+  ImpossibleClause fc lhs => conH p "impossibleClause" [lhs]
+
+appOp : {opts : _} -> Either String Name -> TTImp -> (String, Doc opts)
+appOp (Left x)  s = (x, prettyPrec (User 6) s)
+appOp (Right x) s = (".!", prettyPrec (User 6) (x,s))
+
+appPairs :
+     {opts : _}
+  -> List (String,Doc opts)
+  -> TTImp
+  -> (Doc opts, List (String,Doc opts))
+appPairs ps (IApp fc s t)     = appPairs (appOp (Left ".$") t :: ps) s
+appPairs ps (IAutoApp fc s t) = appPairs (appOp (Left ".@") t :: ps) s
+appPairs ps (INamedApp fc s nm t) = appPairs (appOp (Right nm) t :: ps) s
+appPairs ps t = (prettyPrec (User 6) t, ps)
 
 prettyImplTTImp = assert_total $ MkPretty $ \p,v => case v of
   IVar _ nm => conH p "var" [nm]
 
   IPi _ rig pinfo mnm argTy retTy =>
-    recordH p "pi" [("arg", MkArg rig pinfo mnm argTy), ("retTy", retTy)]
+    let (args,res) := unPi retTy
+        pargs      := prettyPrec (User 5) <$> args
+        pres       := prettyPrec (User 5) res
+        fst        := prettyPrec (User 5) $ MkArg rig pinfo mnm argTy
+     in op p 5 fst $ (".->",) <$> (pargs ++ [pres])
 
   ILam _ rig pinfo mnm argTy lamTy =>
-    recordH p "lam" [("arg", MkArg rig pinfo mnm argTy), ("lamTy", lamTy)]
+    let (args,res) := unLambda lamTy
+        pargs      := prettyPrec (User 3) <$> args
+        pres       := prettyPrec (User 3) res
+        fst        := prettyPrec (User 3) $ MkArg rig pinfo mnm argTy
+     in op p 3 fst $ (".=>",) <$> (pargs ++ [pres])
 
   ILet _ _ rig nm nTy nVal scope =>
     recordH p "ilet"
@@ -148,12 +212,18 @@ prettyImplTTImp = assert_total $ MkPretty $ \p,v => case v of
 
   IUpdate _ upds s => recordH p "update" [("updates", upds), ("arg", s)]
 
-  IApp _ s t => recordH p "app" [("fun", s), ("arg", t)]
+  IApp _ s t =>
+    let (fst,ps) := appPairs [appOp (Left ".$") t] s
+     in op p 6 fst ps
 
   INamedApp _ s nm t =>
-    recordH p "namedApp" [("fun", s), ("name", nm), ("arg", t)]
+    let (fst,ps) := appPairs [appOp (Right nm) t] s
+     in op p 6 fst ps
 
-  IAutoApp _ s t => recordH p "autoApp" [("fun", s), ("arg", t)]
+  IAutoApp _ s t =>
+    let (fst,ps) := appPairs [appOp (Left ".@") t] s
+     in op p 6 fst ps
+
   IWithApp _ s t => recordH p "withApp" [("fun", s), ("arg", t)]
   ISearch _ depth => conH p "iSearch" [depth]
   IAlternative _ x ss => recordH p "alternative" [("tpe", x), ("alts", ss)]
@@ -173,7 +243,8 @@ prettyImplTTImp = assert_total $ MkPretty $ \p,v => case v of
   IPrimVal _ c => conH p "primVal" [c]
   IType _ => line "type"
   IHole _ str => conH p "hole" [str]
-  Implicit _ b => conH p "Implicit" [b]
+  Implicit _ False => line "implicitFalse"
+  Implicit _ True  => line "implicitTrue"
   IWithUnambigNames fc xs s => conH p "IWithUnambigNames" [fc, xs, s]
 
 --------------------------------------------------------------------------------

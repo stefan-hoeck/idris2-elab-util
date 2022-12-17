@@ -27,21 +27,26 @@ inspect the structure of the function we want to implement:
 
 ```repl
 ...> :exec putPretty `[eq : T -> T -> Bool; eq A A = True; eq B B = True; eq _ _ = False]
-
-
-  [ IClaim MW
-           Private
-           []
-           (MkTy eq
-                 (IPi.  (MW ExplicitArg : IVar T)
-                     -> (MW ExplicitArg : IVar T)
-                     -> IVar Bool))
-  , IDef eq
-         [ PatClause (IApp. IVar eq $ IVar A $ IVar A) (IVar True)
-         , PatClause (IApp. IVar eq $ IVar B $ IVar B) (IVar True)
-         , PatClause (IApp. IVar eq $ Implicit True $ Implicit True)
-                     (IVar False) ] ]
-
+[ IClaim
+    emptyFC
+    MW
+    Private
+    []
+    (mkTy
+       { name = "eq"
+       , type =
+               MkArg MW ExplicitArg Nothing (var "T")
+           .-> MkArg MW ExplicitArg Nothing (var "T")
+           .-> var "Bool"
+       })
+, IDef
+    emptyFC
+    "eq"
+    [ var "eq" .$ var "A" .$ var "A" .= var "True"
+    , var "eq" .$ var "B" .$ var "B" .= var "True"
+    , var "eq" .$ implicitTrue .$ implicitTrue .= var "False"
+    ]
+]
 ```
 
 So, a top-level function consists of two parts:
@@ -126,18 +131,36 @@ Pretty printing the above `TypeInfo` yields the following:
 
 ```repl
 Doc.Enum2> :exec putPretty eqInfo
-
-  MkTypeInfo Prelude.EqOrd.Eq [(MW ExplicitArg ty : IHole _)]
-    MkCon Prelude.EqOrd.MkEq
-          [ (M0 ImplicitArg ty : IType)
-          , (MW ExplicitArg == : IPi.  (MW ExplicitArg {arg:2} : IVar ty)
-                                    -> (MW ExplicitArg {arg:3} : IVar ty)
-                                    -> IVar Prelude.Basics.Bool)
-          , (MW ExplicitArg /= : IPi.  (MW ExplicitArg {arg:4} : IVar ty)
-                                    -> (MW ExplicitArg {arg:5} : IVar ty)
-                                    -> IVar Prelude.Basics.Bool) ]
-          (IApp. IVar Prelude.EqOrd.Eq $ IVar ty)
-
+MkTypeInfo
+  { name = "Prelude.EqOrd.Eq"
+  , arty = 1
+  , args = [MkArg MW ExplicitArg (Just "ty") (hole "_")]
+  , argNames = ["ty"]
+  , cons =
+      [ MkCon
+          { name = "Prelude.EqOrd.MkEq"
+          , arty = 3
+          , args =
+              [ MkArg M0 ImplicitArg (Just "ty") type
+              , MkArg
+                  MW
+                  ExplicitArg
+                  (Just "==")
+                  (    MkArg MW ExplicitArg (Just "{arg:528}") (var "ty")
+                   .-> MkArg MW ExplicitArg (Just "{arg:531}") (var "ty")
+                   .-> var "Prelude.Basics.Bool")
+              , MkArg
+                  MW
+                  ExplicitArg
+                  (Just "/=")
+                  (    MkArg MW ExplicitArg (Just "{arg:538}") (var "ty")
+                   .-> MkArg MW ExplicitArg (Just "{arg:541}") (var "ty")
+                   .-> var "Prelude.Basics.Bool")
+              ]
+          , typeArgs = [Regular (var "ty")]
+          }
+      ]
+  }
 ```
 
 ## Interface Implementation, Part 2

@@ -216,7 +216,7 @@ public export %inline
 app : (fun, arg : TTImp) -> TTImp
 app = IApp EmptyFC
 
-infixl 6 .$
+infixl 6 .$,.@,.!
 
 ||| Infix version of `app`
 |||
@@ -281,6 +281,11 @@ public export %inline
 autoApp : (fun, arg : TTImp) -> TTImp
 autoApp = IAutoApp EmptyFC
 
+||| Infix version of `autoApp`
+public export %inline
+(.@) : TTImp -> TTImp -> TTImp
+(.@) = autoApp
+
 ||| Application in a `with` expression
 |||
 ||| This is an alias for `IWithApp EmptyFC`.
@@ -298,6 +303,11 @@ public export %inline
 namedApp : (fun : TTImp) -> (name : Name) -> (arg : TTImp) -> TTImp
 namedApp = INamedApp EmptyFC
 
+||| Infix version of `namedApp`.
+public export %inline
+(.!) : TTImp -> (Name,TTImp) -> TTImp
+s .! (n,t) = namedApp s n t
+
 ||| Catch-all pattern match on a data constructor.
 |||
 ||| Example: `bindAny "Person"`
@@ -311,6 +321,7 @@ bindAny n = namedApp n.nameVar (UN Underscore) implicitTrue
 public export %inline
 alternative : (tpe : AltType) -> (alts : List TTImp) -> TTImp
 alternative = IAlternative EmptyFC
+
 --------------------------------------------------------------------------------
 --          Function Arguments
 --------------------------------------------------------------------------------
@@ -450,6 +461,20 @@ public export %inline
 patClause : (lhs : TTImp) -> (rhs : TTImp) -> Clause
 patClause = PatClause EmptyFC
 
+||| A with clause.
+|||
+||| This is an alias for `WithClause EmptyFC`.
+public export %inline
+withClause :
+     (lhs     : TTImp)
+  -> (rig     : Count)
+  -> (wval    : TTImp)
+  -> (prf     : Maybe Name)
+  -> (flags   : List WithFlag)
+  -> (clauses : List Clause)
+  -> Clause
+withClause = WithClause EmptyFC
+
 infixr 3 .=
 
 ||| Infix alias for `patClause`
@@ -479,7 +504,7 @@ as = IAs EmptyFC EmptyFC UseLeft
 |||
 ||| This is an alias for `MkTyp EmptyFC`.
 public export %inline
-mkTy : (n : Name) -> (ty : TTImp) -> ITy
+mkTy : (name : Name) -> (type : TTImp) -> ITy
 mkTy = MkTy EmptyFC EmptyFC
 
 ||| Type declaration of a function.
@@ -487,7 +512,13 @@ mkTy = MkTy EmptyFC EmptyFC
 ||| `claim c v opts n tp` is an alias for
 ||| `IClaim EmptyFC c v opts (MkTy EmptyFC n tp)`.
 public export %inline
-claim : Count -> Visibility -> List FnOpt -> Name -> TTImp -> Decl
+claim :
+     (count : Count)
+  -> (vis   : Visibility)
+  -> (opts  : List FnOpt)
+  -> (name  : Name)
+  -> (type  : TTImp)
+  -> Decl
 claim c v opts n tp = IClaim EmptyFC c v opts (mkTy n tp)
 
 ||| `simpleClaim v n t` is an alias for `claim MW v [] (mkTy n t)`
@@ -571,8 +602,8 @@ update = IUpdate EmptyFC
 |||
 ||| This merges constructors `IData` and `MkData`.
 public export
-iData :  Visibility
-      -> Name
+iData :  (vis   : Visibility)
+      -> (name  : Name)
       -> (tycon : TTImp)
       -> (opts  : List DataOpt)
       -> (cons  : List ITy)

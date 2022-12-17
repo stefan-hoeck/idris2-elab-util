@@ -41,18 +41,24 @@ structure of a typical enum type at the REPL:
 
 ```repl
 ...> :exec putPretty `[data Enum = A | B | C]
-
-  [ IData Private
-          (MkData Enum
-                  IType
-                  []
-                  [ MkTy A (IVar Enum)
-                  , MkTy B (IVar Enum)
-                  , MkTy C (IVar Enum) ]) ]
-
+[ IData
+    emptyFC
+    Private
+    Nothing
+    (MkData
+       emptyFC
+       "Enum"
+       (Just type)
+       []
+       [ mkTy {name = "A", type = var "Enum"}
+       , mkTy {name = "B", type = var "Enum"}
+       , mkTy {name = "C", type = var "Enum"}
+       ])
+]
 ```
 
-This leads to the following implementation:
+This leads to the following implementation (using the data constructors
+from `Language.Reflection`):
 
 ```idris
 enumDecl1 name cons = IData EmptyFC Public Nothing dat

@@ -30,15 +30,29 @@ and as an implicit argument to every data constructor.
 
 ```repl
 ...> :exec putPretty maybeInfo
-
-  MkTypeInfo Prelude.Types.Maybe [(MW ExplicitArg ty : IType)]
-    MkCon Prelude.Types.Nothing
-          [(M0 ImplicitArg ty : IType)]
-          (IApp. IVar Prelude.Types.Maybe $ IVar ty)
-    MkCon Prelude.Types.Just
-          [(M0 ImplicitArg ty : IType), (M1 ExplicitArg x : IVar ty)]
-          (IApp. IVar Prelude.Types.Maybe $ IVar ty)
-
+MkTypeInfo
+  { name = "Prelude.Types.Maybe"
+  , arty = 1
+  , args = [MkArg MW ExplicitArg (Just "ty") type]
+  , argNames = ["ty"]
+  , cons =
+      [ MkCon
+          { name = "Prelude.Types.Nothing"
+          , arty = 1
+          , args = [MkArg M0 ImplicitArg (Just "ty") type]
+          , typeArgs = [Regular (var "ty")]
+          }
+      , MkCon
+          { name = "Prelude.Types.Just"
+          , arty = 2
+          , args =
+              [ MkArg M0 ImplicitArg (Just "ty") type
+              , MkArg MW ExplicitArg (Just "x") (var "ty")
+              ]
+          , typeArgs = [Regular (var "ty")]
+          }
+      ]
+  }
 ```
 
 ```idris
@@ -53,21 +67,37 @@ data constructors.
 
 ```repl
 ...> :exec putPretty eitherInfo
-
-
-  MkTypeInfo Prelude.Types.Either
-             [(MW ExplicitArg a : IType), (MW ExplicitArg b : IType)]
-    MkCon Prelude.Types.Left
-          [ (M0 ImplicitArg a : IType)
-          , (M0 ImplicitArg b : IType)
-          , (M1 ExplicitArg x : IVar a) ]
-          (IApp. IVar Prelude.Types.Either $ IVar a $ IVar b)
-    MkCon Prelude.Types.Right
-          [ (M0 ImplicitArg a : IType)
-          , (M0 ImplicitArg b : IType)
-          , (M1 ExplicitArg x : IVar b) ]
-          (IApp. IVar Prelude.Types.Either $ IVar a $ IVar b)
-
+MkTypeInfo
+  { name = "Prelude.Types.Either"
+  , arty = 2
+  , args =
+      [ MkArg MW ExplicitArg (Just "a") type
+      , MkArg MW ExplicitArg (Just "b") type
+      ]
+  , argNames = ["a", "b"]
+  , cons =
+      [ MkCon
+          { name = "Prelude.Types.Left"
+          , arty = 3
+          , args =
+              [ MkArg M0 ImplicitArg (Just "a") type
+              , MkArg M0 ImplicitArg (Just "b") type
+              , MkArg MW ExplicitArg (Just "x") (var "a")
+              ]
+          , typeArgs = [Regular (var "a"), Regular (var "b")]
+          }
+      , MkCon
+          { name = "Prelude.Types.Right"
+          , arty = 3
+          , args =
+              [ MkArg M0 ImplicitArg (Just "a") type
+              , MkArg M0 ImplicitArg (Just "b") type
+              , MkArg MW ExplicitArg (Just "x") (var "b")
+              ]
+          , typeArgs = [Regular (var "a"), Regular (var "b")]
+          }
+      ]
+  }
 ```
 
 But what about indexed types? How can we distinguish those
@@ -81,24 +111,41 @@ vectInfo = getInfo "Vect"
 
 ```repl
 ...> :exec putPretty vectInfo
-
-  MkTypeInfo Data.Vect.Vect
-             [ (MW ExplicitArg len : IVar Prelude.Types.Nat)
-             , (MW ExplicitArg elem : IType) ]
-    MkCon Data.Vect.Nil
-          [(M0 ImplicitArg elem : IType)]
-          (IApp. IVar Data.Vect.Vect $ IVar Prelude.Types.Z $ IVar elem)
-    MkCon Data.Vect.::
-          [ (M0 ImplicitArg len : IVar Prelude.Types.Nat)
-          , (M0 ImplicitArg elem : IType)
-          , (M1 ExplicitArg x : IVar elem)
-          , (M1 ExplicitArg xs : IApp. IVar Data.Vect.Vect
-                               $ IVar len
-                               $ IVar elem) ]
-          (IApp. IVar Data.Vect.Vect
-               $ (IApp. IVar Prelude.Types.S $ IVar len)
-               $ IVar elem)
-
+MkTypeInfo
+  { name = "Data.Vect.Vect"
+  , arty = 2
+  , args =
+      [ MkArg MW ExplicitArg (Just "len") (var "Prelude.Types.Nat")
+      , MkArg MW ExplicitArg (Just "elem") type
+      ]
+  , argNames = ["len", "elem"]
+  , cons =
+      [ MkCon
+          { name = "Data.Vect.Nil"
+          , arty = 1
+          , args = [MkArg M0 ImplicitArg (Just "elem") type]
+          , typeArgs = [Regular (var "Prelude.Types.Z"), Regular (var "elem")]
+          }
+      , MkCon
+          { name = "Data.Vect.(::)"
+          , arty = 4
+          , args =
+              [ MkArg M0 ImplicitArg (Just "len") (var "Prelude.Types.Nat")
+              , MkArg M0 ImplicitArg (Just "elem") type
+              , MkArg MW ExplicitArg (Just "x") (var "elem")
+              , MkArg
+                  MW
+                  ExplicitArg
+                  (Just "xs")
+                  (var "Data.Vect.Vect" .$ var "len" .$ var "elem")
+              ]
+          , typeArgs =
+              [ Regular (var "Prelude.Types.S" .$ var "len")
+              , Regular (var "elem")
+              ]
+          }
+      ]
+  }
 ```
 
 As can be seen, `len` is not the same across data constructors,
@@ -182,21 +229,41 @@ Idris faithfully uses the same parameter names:
 
 ```repl
 ..> :exec putPretty sumInfo
-
-  MkTypeInfo Doc.Generic2.ASum
-             [(MW ExplicitArg a : IType), (MW ExplicitArg b : IType)]
-    MkCon Doc.Generic2.L
-          [ (M0 ImplicitArg y : IType)
-          , (M0 ImplicitArg x : IType)
-          , (MW ExplicitArg {arg:5914} : IVar x) ]
-          (IApp. IVar Doc.Generic2.ASum $ IVar x $ IVar y)
-    MkCon Doc.Generic2.R
-          [ (M0 ImplicitArg s : IType)
-          , (M0 ImplicitArg t : IType)
-          , (MW ExplicitArg {arg:5915} : IApp. IVar Prelude.Types.Maybe
-                                             $ IVar t) ]
-          (IApp. IVar Doc.Generic2.ASum $ IVar s $ IVar t)
-
+MkTypeInfo
+  { name = "Doc.Generic2.ASum"
+  , arty = 2
+  , args =
+      [ MkArg MW ExplicitArg (Just "a") type
+      , MkArg MW ExplicitArg (Just "b") type
+      ]
+  , argNames = ["a", "b"]
+  , cons =
+      [ MkCon
+          { name = "Doc.Generic2.L"
+          , arty = 3
+          , args =
+              [ MkArg M0 ImplicitArg (Just "y") type
+              , MkArg M0 ImplicitArg (Just "x") type
+              , MkArg MW ExplicitArg (Just "{arg:8392}") (var "x")
+              ]
+          , typeArgs = [Regular (var "x"), Regular (var "y")]
+          }
+      , MkCon
+          { name = "Doc.Generic2.R"
+          , arty = 3
+          , args =
+              [ MkArg M0 ImplicitArg (Just "s") type
+              , MkArg M0 ImplicitArg (Just "t") type
+              , MkArg
+                  MW
+                  ExplicitArg
+                  (Just "{arg:8397}")
+                  (var "Prelude.Types.Maybe" .$ var "t")
+              ]
+          , typeArgs = [Regular (var "s"), Regular (var "t")]
+          }
+      ]
+  }
 ```
 
 However, if we want to provide an implementation of `Generic`,
@@ -231,14 +298,11 @@ sumParamInfo = getParamInfo "ASum"
 
 ```repl
 ..> :exec putPretty sumParamInfo
-
-  MkParamTypeInfo Doc.Generic2.ASum [(a, IType), (b, IType)]
-    MkParamCon Doc.Generic2.L [({arg:6784}, IVar a)]
-    MkParamCon Doc.Generic2.R
-               [({arg:6785}, IApp. IVar Prelude.Types.Maybe $ IVar b)]
-
-
+...
 ```
+
+This produces a lot of information, which I'm not going to repeat here.
+Feel free to have a look yourself.
 
 ## What's next
 

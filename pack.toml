@@ -4,6 +4,11 @@ path = "."
 ipkg = "elab-util.ipkg"
 test = "elab-util-test.ipkg"
 
+[custom.all.elab-pretty]
+type = "local"
+path = "."
+ipkg = "elab-pretty.ipkg"
+
 [custom.all.elab-util-docs]
 type = "local"
 path = "."

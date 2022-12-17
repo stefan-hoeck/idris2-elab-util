@@ -55,6 +55,7 @@ install-with-src:
 .PHONY: clean
 clean:
 	${IDRIS2} --clean ${lib_pkg}
+	${IDRIS2} --clean ${test_pkg}
 	${IDRIS2} --clean ${docs_pkg}
 	${RM} -r depends
 	${RM} -r build
