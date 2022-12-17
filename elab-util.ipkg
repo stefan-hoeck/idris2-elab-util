@@ -8,7 +8,7 @@ license    = "BSD-2 Clause"
 
 sourcedir  = "src"
 depends    = base    >= 0.6.0
-           , contrib >= 0.6.0
+           , prettier
 
 modules = Derive.Abs
         , Derive.Eq

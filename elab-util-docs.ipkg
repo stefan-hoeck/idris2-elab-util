@@ -6,7 +6,7 @@ readme     = "README.md"
 license    = "BSD-2 Clause"
 
 sourcedir  = "src"
-depends    = contrib
+depends    = prettier
 
 modules = Doc.Derive
         , Doc.Enum1

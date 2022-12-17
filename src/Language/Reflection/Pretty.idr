@@ -15,474 +15,201 @@
 |||   :exec putPretty `((1 index : Fin n) -> Vect n t -> t)
 module Language.Reflection.Pretty
 
-import public Data.Vect.Quantifiers
+import Derive.Pretty
 import Data.String
-import public Language.Reflection
-import public Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Render.String
 import Language.Reflection.Syntax
 import Language.Reflection.Types
 
+%language ElabReflection
 %default total
 
 --------------------------------------------------------------------------------
 --          Utils
 --------------------------------------------------------------------------------
 
-||| Pretty but uncolored output to the terminal
-export
-putPretty : Pretty t => t -> IO ()
-putPretty t = putDoc (indent 2 $ vsep ["", pretty {ann = ()} t, "",""])
-
-||| Constraint, witnessing that all types in the given
-||| `Vect` of types have a `Pretty` instance.
 public export
-AllPretty : Vect n Type -> Type
-AllPretty []        = ()
-AllPretty (x :: xs) = (Pretty x, AllPretty xs)
+Opts80 : LayoutOpts
+Opts80 = Opts 80
 
-||| Convert all values in a heterogeneous vector
-||| to `Doc`s using their `Pretty` instances.
-export
-prettyPrecAll : AllPretty ts => Prec -> HVect ts -> List (Doc ann)
-prettyPrecAll _ []       = []
-prettyPrecAll p (x :: y) = prettyPrec p x :: prettyPrecAll p y
+||| Pretty but uncolored output to the terminal
+export %inline
+putDoc : HasIO io => Doc Opts80 -> io ()
+putDoc = putStr . render Opts80
 
-||| Alias for `prettyPrecAll Open`
-export
-prettyAll : AllPretty ts => HVect ts -> List (Doc ann)
-prettyAll = prettyPrecAll Open
+||| Pretty but uncolored output to the terminal
+export %inline
+putPretty : HasIO io => Pretty t => t -> io ()
+putPretty = putDoc . pretty
 
-||| Alias for `prettyPrecAll App`
-export
-prettyAppAll : AllPretty ts => HVect ts -> List (Doc ann)
-prettyAppAll = prettyPrecAll App
-
-||| Alias for `hsep . prettyAll`
-export
-hsepH : AllPretty ts => HVect ts -> Doc ann
-hsepH = hsep . prettyAll
-
-||| Alias for `vsep . prettyAll`
-export
-vsepH : AllPretty ts => HVect ts -> Doc ann
-vsepH = vsep . prettyAll
-
-||| Alias for `hcat . prettyAll`
-export
-hcatH : AllPretty ts => HVect ts -> Doc ann
-hcatH = hcat . prettyAll
-
-||| Alias for `vcat . prettyAll`
-export
-vcatH : AllPretty ts => HVect ts -> Doc ann
-vcatH = vcat . prettyAll
-
-||| Alias for `sep . prettyAll`
-export
-sepH : AllPretty ts => HVect ts -> Doc ann
-sepH = sep . prettyAll
-
-||| Prettifies a list of values and concatenates the
-||| results using dots as separators.
-|||
-||| Example: >> `dotted ["a","b","c"]
-|||          "a.b.c"
-export
-dotted : Pretty t => (args : List t) -> Doc ann
-dotted = hcat . punctuate "." . map pretty
-
-||| Alias for `prettyPrec App`
-export
-prettyApp : Pretty t => t -> Doc ann
-prettyApp = prettyPrec App
-
-||| Alias for `prettyPrec Backtick`
-|||
-||| This is used to prettify infixed functions (`IApp`) and
-||| set parentheses correctly.
-export
-prettyBacktick : Pretty t => t -> Doc ann
-prettyBacktick = prettyPrec Backtick
-
-||| Wraps a the given `Doc` in parenthesis if the
-||| boolean flag is `True`.
-export
-docParens : Bool -> Doc ann -> Doc ann
-docParens False doc = doc
-docParens True  doc = parens doc
-
-||| Wraps a the given `Doc` in parenthesis if `p >= App`.
-export
-appParens : (p : Prec) -> Doc ann -> Doc ann
-appParens p = docParens (p >= App)
-
-||| Wraps a the given `Doc` in parenthesis if `p >= Backtick`.
-export
-backtickParens : (p : Prec) -> Doc ann -> Doc ann
-backtickParens p = docParens (p >= Backtick)
-
-||| Data constructor application: Applies the given constructor `con`
-||| to a list of arguments. Arguments will be wrapped in parentheses
-||| if necessary and aligned properly.
-export
-applyDoc : (p : Prec) -> (con : Doc ann) -> (args : List (Doc ann)) -> Doc ann
-applyDoc p con args = appParens p $ con <++> align (sep args)
+public export
+0 WithName : Type -> Type
+WithName = Pair String
 
 export
-apply : Pretty t => (p : Prec) -> (con : Doc ann) -> (args : List t) -> Doc ann
-apply p con args = applyDoc p con (map prettyApp args)
+conH :
+     {opts : _}
+  -> All Pretty ts
+  => Prec
+  -> String
+  -> All Prelude.id ts
+  -> Doc opts
+conH p str ps = prettyCon p str $ go ps
+  where go : All Pretty ss => All Prelude.id ss -> List (Doc opts)
+        go @{[]}     []             = []
+        go @{_ :: _} (v :: ps) = prettyArg v :: go ps
 
 export
-applyH :  AllPretty ts
-       => (p    : Prec)
-       -> (con  : Doc ann)
-       -> (args : HVect ts)
-       -> Doc ann
-applyH p con args = applyDoc p con (prettyAppAll args)
-
-export
-alignInfix :  (fun : String)
-           -> (symbol : String)
-           -> (args : List (Doc ann))
-           -> Doc ann
-alignInfix fun _ []       = pretty fun
-alignInfix fun _ [type]   = pretty fun <++> type
-alignInfix fun symbol (h :: t) =
-  let h' = "." <++> flatAlt (spaces (cast (length symbol) - 1) <+> h) h
-   in pretty fun <+> align (sep (h' :: map (pretty symbol <++>) t))
-
-export
-indentLines : (header : Doc ann) -> (lines : List (Doc ann)) -> Doc ann
-indentLines header lines = align $ vsep [header, indent 2 $ vsep lines]
+recordH :
+     {opts : _}
+  -> All Pretty ts
+  => Prec
+  -> String
+  -> All WithName ts
+  -> Doc opts
+recordH p str ps = prettyRecord p str $ go ps
+  where go : All Pretty ss => All WithName ss -> List (Doc opts)
+        go @{[]}     []             = []
+        go @{_ :: _} ((fn,v) :: ps) = prettyField fn v :: go ps
 
 --------------------------------------------------------------------------------
 --          Pretty instances for TT Types
 --------------------------------------------------------------------------------
 
-export
-Pretty Count where
-  pretty M0 = "M0"
-  pretty M1 = "M1"
-  pretty MW = "MW"
-
-export
-Pretty t => Pretty (PiInfo t) where
-  prettyPrec _ ImplicitArg     = "ImplicitArg"
-  prettyPrec _ ExplicitArg     = "ExplicitArg"
-  prettyPrec _ AutoImplicit    = "AutoImplicit"
-  prettyPrec p (DefImplicit x) = apply p "DefImplicit" [x]
-
-export
-Pretty LazyReason where
-  pretty LInf     = "Inf"
-  pretty LLazy    = "Lazy"
-  pretty LUnknown = "Unknown"
-
-export
-Pretty TotalReq where
-  pretty Total        = "Total"
-  pretty CoveringOnly = "Covering"
-  pretty PartialOK    = "Partial"
-
-export
-Pretty Visibility where
-  pretty Private = "Private"
-  pretty Export  = "Export"
-  pretty Public  = "Public"
-
-export
+public export
 Pretty Namespace where
-  pretty (MkNS xs) = dotted (reverse xs)
+  prettyPrec _ (MkNS xs) = line . concat . intersperse "." $ reverse xs
 
 export
 Pretty Name where
-  pretty = pretty . show
+  prettyPrec _ = line . show
 
 export
-Pretty PrimType where
-  pretty IntType     = "Int"
-  pretty IntegerType = "Integer"
-  pretty Int8Type    = "Int8"
-  pretty Int16Type   = "Int16"
-  pretty Int32Type   = "Int32"
-  pretty Int64Type   = "Int64"
-  pretty Bits8Type   = "Bits8"
-  pretty Bits16Type  = "Bits16"
-  pretty Bits32Type  = "Bits32"
-  pretty Bits64Type  = "Bits64"
-  pretty StringType  = "String"
-  pretty CharType    = "Char"
-  pretty DoubleType  = "Double"
-  pretty WorldType   = "World"
+Pretty FC where
+  prettyPrec _ _ = line "fc"
 
-export
-Pretty Constant where
-  pretty (I x)       = pretty x
-  pretty (BI x)      = pretty x
-  pretty (I8 x)      = pretty x
-  pretty (I16 x)     = pretty x
-  pretty (I32 x)     = pretty x
-  pretty (I64 x)     = pretty x
-  pretty (B8 x)      = pretty x
-  pretty (B16 x)     = pretty x
-  pretty (B32 x)     = pretty x
-  pretty (B64 x)     = pretty x
-  pretty (Str x)     = pretty x
-  pretty (Ch x)      = pretty x
-  pretty (Db x)      = pretty x
-  pretty (PrT t)     = pretty t
-  pretty WorldVal    = "%World"
+
+%runElab derive "Count" [Pretty]
+%runElab derive "PiInfo" [Pretty]
+%runElab derive "LazyReason" [Pretty]
+%runElab derive "TotalReq" [Pretty]
+%runElab derive "Visibility" [Pretty]
+%runElab derive "PrimType" [Pretty]
+%runElab derive "Constant" [Pretty]
 
 --------------------------------------------------------------------------------
 --          Pretty instance for TTImp
 --------------------------------------------------------------------------------
 
+%runElab derive "BindMode" [Pretty]
+%runElab derive "UseSide" [Pretty]
+%runElab derive "DotReason" [Pretty]
+%runElab derive "BuiltinType" [Pretty]
+%runElab derive "WithFlag" [Pretty]
+%runElab derive "DataOpt" [Pretty]
 
-export
-Pretty BindMode where
-  prettyPrec p (PI x)   = apply p "PI" [x]
-  prettyPrec _ PATTERN  = "PATTERN"
-  prettyPrec _ NONE     = "NONE"
-  prettyPrec _ COVERAGE = "COVERAGE"
+export %hint
+prettyImplTTImp : Pretty TTImp
 
-export
-Pretty UseSide where
-  pretty UseLeft  = "UseLeft"
-  pretty UseRight = "UseRight"
+%runElab deriveMutual
+  [ "IFieldUpdate"
+  , "AltType"
+  , "ITy"
+  , "FnOpt"
+  , "Data"
+  , "IField"
+  , "Record"
+  , "Clause"
+  , "Decl"
+  , "Language.Reflection.Syntax.Arg"
+  ] [Pretty]
 
-export
-Pretty DotReason where
-  pretty NonLinearVar    = "NonLinearVar"
-  pretty VarApplied      = "VarApplied"
-  pretty NotConstructor  = "NotConstructor"
-  pretty ErasedArg       = "ErasedArg"
-  pretty UserDotted      = "UserDotted"
-  pretty UnknownDot      = "UnknownDot"
-  pretty UnderAppliedCon = "UnderAppliedCon"
+prettyImplTTImp = assert_total $ MkPretty $ \p,v => case v of
+  IVar _ nm => conH p "var" [nm]
 
-export
-Pretty BuiltinType where
-  pretty BuiltinNatural = "BuiltinNatural"
-  pretty NaturalToInteger = "NaturalToInteger"
-  pretty IntegerToNatural = "IntegerToNatural"
+  IPi _ rig pinfo mnm argTy retTy =>
+    recordH p "pi" [("arg", MkArg rig pinfo mnm argTy), ("retTy", retTy)]
 
-export
-Pretty WithFlag where
-  pretty Syntactic = "Syntactic"
+  ILam _ rig pinfo mnm argTy lamTy =>
+    recordH p "lam" [("arg", MkArg rig pinfo mnm argTy), ("lamTy", lamTy)]
 
-export
-Pretty DataOpt where
-  prettyPrec p (SearchBy xs) = apply p "SearchBy" xs
-  prettyPrec _ NoHints       = "NoHints"
-  prettyPrec _ UniqueSearch  = "UniqueSearch"
-  prettyPrec _ External      = "External"
-  prettyPrec _ NoNewtype     = "NoNewtype"
+  ILet _ _ rig nm nTy nVal scope =>
+    recordH p "ilet"
+      [ ("count", rig)
+      , ("name", nm)
+      , ("type", nTy)
+      , ("val", nVal)
+      , ("scope", scope)
+      ]
 
-mutual
+  ICase _ s ty cls =>
+    recordH p "iCase" [("sc", s), ("ty", ty), ("clauses", cls)]
 
-  %default covering
+  ILocal _ decls s => recordH p "local" [("decls", decls), ("scope", s)]
 
-  export
-  Pretty IFieldUpdate where
-    prettyPrec p (ISetField path x) =
-      applyDoc p "ISetField" [dotted path, prettyApp x]
+  IUpdate _ upds s => recordH p "update" [("updates", upds), ("arg", s)]
 
-    prettyPrec p (ISetFieldApp path x) =
-      applyDoc p "ISetFieldApp" [dotted path, prettyApp x]
+  IApp _ s t => recordH p "app" [("fun", s), ("arg", t)]
 
-  export
-  Pretty AltType where
-    prettyPrec _ FirstSuccess      = "FirstSuccess"
-    prettyPrec _ Unique            = "Unique"
-    prettyPrec p (UniqueDefault x) = apply p "UniqueDefault" [x]
+  INamedApp _ s nm t =>
+    recordH p "namedApp" [("fun", s), ("name", nm), ("arg", t)]
 
-  export
-  Pretty FnOpt where
-    prettyPrec _ Inline         = "Inline"
-    prettyPrec _ NoInline       = "NoInline"
-    prettyPrec _ TCInline       = "TCInline"
-    prettyPrec _ Deprecate      = "Deprecate"
-    prettyPrec p (Hint x)       = apply p "Hint" [x]
-    prettyPrec p (GlobalHint x) = apply p "GlobalHint" [x]
-    prettyPrec _ ExternFn       = "ExternFn"
-    prettyPrec p (ForeignFn xs) = apply p "ForeignFn" xs
-    prettyPrec p (ForeignExport xs) = apply p "ForeignExport" xs
-    prettyPrec _ Invertible     = "Invertible"
-    prettyPrec p (Totality x)   = apply p "Totality" [x]
-    prettyPrec _ Macro          = "Macro"
-    prettyPrec p (SpecArgs xs)  = apply p "SpecArgs" xs
-
-  export
-  Pretty ITy where
-    prettyPrec p (MkTy _ _ n t) = applyH p "MkTy" [n, t]
-
-  export
-  Pretty Data where
-    prettyPrec p (MkData _ n t o cs) = applyH p "MkData" [n,t,o,cs]
-    prettyPrec p (MkLater _ n tycon) = applyH p "MkLater" [n, tycon]
-
-  export
-  Pretty IField where
-    prettyPrec p (MkIField _ c pi n t) = applyH p "MkIField" [c,pi,n,t]
-
-  export
-  Pretty Record where
-    prettyPrec p (MkRecord _ n ps opts c fs) = applyH p "MkRecord" [n,ps,opts,c,fs]
-
-  export
-  Pretty Clause where
-    prettyPrec p (PatClause _ l r) = applyH p "PatClause" [l, r]
-    prettyPrec p (ImpossibleClause _ l) = applyH p "Impossible" [l]
-    prettyPrec p (WithClause _ l r w prf fs cs) = applyH p "WithClause" [l,r,w,prf,fs,cs]
-
-  export
-  Pretty Decl where
-    prettyPrec p (IBuiltin _ b n) = applyH p "IBuiltin" [b,n]
-    prettyPrec p (IRunElabDecl _ t) = applyH p "IRunElabDecl" [t]
-    prettyPrec p (IClaim _ c v o t) = applyH p "IClaim" [c,v,o,t]
-    prettyPrec p (IData _ v d t) = applyH p "IData" [v,d,t]
-    prettyPrec p (IDef _ n cs) = applyH p "IDef" [n,cs]
-    prettyPrec p (IParameters _ ps decs) = applyH p "IParameters" [ps,decs]
-    prettyPrec p (IRecord _ n v t r) = applyH p "IRecord" [n, v, t, r]
-    prettyPrec p (INamespace _ (MkNS ns) ds) =
-      indentLines (applyDoc p "INamespace" [dotted ns]) (map pretty ds)
-
-    prettyPrec p (ITransform _ n a b) = applyH p "ITransform" [n,a,b]
-    prettyPrec p (ILog k) = apply p "ILog" [k]
-
-  export
-  Pretty TTImp where
-    prettyPrec p (IVar _ y) = apply p "IVar" [y]
-
-    prettyPrec p x@(IPi _ _ _ _ _ _) =
-      backtickParens p (alignInfix "IPi" "->" $ args x)
-      where args : TTImp -> List (Doc ann)
-            args (IPi _ c i n at rt) =
-              parens (hsepH [c,i,maybe ":" ((++ " :") . show) n,at]) :: args rt
-
-            args rt = [prettyBacktick rt]
-
-    prettyPrec p x@(ILam _ _ _ _ _ _) =
-      backtickParens p (alignInfix "ILam" "=>" $ args x)
-      where args : TTImp -> List (Doc ann)
-            args (ILam _ c i n at rt) =
-              parens (hsepH [c,i,maybe ":" ((++ " :") . show) n,at]) :: args rt
-
-            args rt = [prettyBacktick rt]
-
-    prettyPrec p (ILet _ _ cnt name nTy nVal scope) =
-      applyH p "ILet" [cnt,name,nTy,nVal,scope]
-
-    prettyPrec p (ICase _ arg ty cs) = applyH p "ICase" [arg,ty,cs]
-
-    prettyPrec p (ILocal _ decls tt) =
-      indentLines (apply p "ILocal" [tt]) (map pretty decls)
-
-    prettyPrec p (IUpdate _ ups tt) = applyH p"IUpdate" [ups,tt]
-
-    prettyPrec p x@(IApp _ _ _) =
-      backtickParens p (alignInfix "IApp" "$" $ reverse (args x))
-      where args : TTImp -> List (Doc ann)
-            args (IApp _ f t) = prettyBacktick t :: args f
-            args t            = [prettyBacktick t]
-
-    prettyPrec p x@(IAutoApp _ f t) = applyH p "IAutoApp" [f,t]
-
-    prettyPrec p (INamedApp _ f n t) = applyH p "INamedApp" [f,n,t]
-
---    prettyPrec p x@(IImplicitApp _ _ _ _) =
---      backtickParens p (alignInfix "IImplicitApp" "$" $ reverse (args x))
---      where args : TTImp -> List (Doc ann)
---            args (IImplicitApp _ f n t) = parens (hsepH[n,":",t]) :: args f
---            args t                      = [prettyBacktick t]
-
-    prettyPrec p x@(IWithApp _ _ _) =
-      backtickParens p (alignInfix "IWithApp" "$" $ reverse (args x))
-      where args : TTImp -> List (Doc ann)
-            args (IWithApp _ f t) = prettyBacktick t :: args f
-            args t                = [prettyBacktick t]
-
-    prettyPrec p (ISearch _ depth) = applyH p "ISearch" [depth]
-
-    prettyPrec p (IAlternative _ alt xs) = applyH p "IAlternative" [alt,xs]
-
-    prettyPrec p (IRewrite _ y z)   = applyH p "IRewrite" [y, z]
-    prettyPrec p (IBindHere _ y z)  = applyH p "IBindHere" [y, z]
-    prettyPrec p (IBindVar _ y)     = apply p "IBindVar" [y]
-    prettyPrec p (IAs _ _ use n w)  = applyH p "IAs" [use,n,w]
-    prettyPrec p (IMustUnify _ y z) = applyH p "IMustUnify" [y,z]
-    prettyPrec p (IDelayed _ y z)   = applyH p "IDelayed" [y,z]
-    prettyPrec p (IDelay _ y)       = apply p "IDelay" [y]
-    prettyPrec p (IForce _ y)       = apply p "IForce" [y]
-    prettyPrec p (IQuote _ y)       = apply p "IQuote" [y]
-    prettyPrec p (IQuoteName _ y)   = apply p "IQuoteName" [y]
-    prettyPrec p (IQuoteDecl _ y)   = apply p "IQuoteDecl" [y]
-    prettyPrec p (IUnquote _ y)     = apply p "IUnquote" [y]
-    prettyPrec p (IPrimVal _ y)     = apply p "IPrimVal" [y]
-    prettyPrec _ (IType _)          = "IType"
-    prettyPrec p (IHole _ y)        = apply p "IHole" [y]
-    prettyPrec p (Implicit _ y)     = apply p "Implicit" [y]
-    prettyPrec p (IWithUnambigNames _ xs y) = applyH p "IWithUnabigNames" [map snd xs,y]
+  IAutoApp _ s t => recordH p "autoApp" [("fun", s), ("arg", t)]
+  IWithApp _ s t => recordH p "withApp" [("fun", s), ("arg", t)]
+  ISearch _ depth => conH p "iSearch" [depth]
+  IAlternative _ x ss => recordH p "alternative" [("tpe", x), ("alts", ss)]
+  IRewrite _ s t => recordH p "iRewrite" [("eq", s), ("scope", t)]
+  IBindHere _ bm s => recordH p "bindHere" [("mode", bm), ("arg", s)]
+  IBindVar _ str => conH p "bindVar" [str]
+  IAs _ _ side nm s =>
+    recordH p "iAs" [("side", side), ("name", nm), ("val", s)]
+  IMustUnify _ dr s => recordH p "mustUnify" [("reason", dr), ("val", s)]
+  IDelayed _ lr s => recordH p "iDelayed" [("reason", lr), ("arg", s)]
+  IDelay _ s => conH p "iDelay" [s]
+  IForce _ s => conH p "iForce" [s]
+  IQuote _ s => conH p "quote" [s]
+  IQuoteName _ nm => conH p "quoteName" [nm]
+  IQuoteDecl _ decls => conH p "quoteName" [decls]
+  IUnquote _ s => conH p "unquote" [s]
+  IPrimVal _ c => conH p "primVal" [c]
+  IType _ => line "type"
+  IHole _ str => conH p "hole" [str]
+  Implicit _ b => conH p "Implicit" [b]
+  IWithUnambigNames fc xs s => conH p "IWithUnambigNames" [fc, xs, s]
 
 --------------------------------------------------------------------------------
 --          Pretty instances for library types
 --------------------------------------------------------------------------------
 
-export covering
+export
 Pretty a => Pretty (Vect n a) where
   prettyPrec p vs = prettyPrec p (toList vs)
 
-export covering
-Pretty Arg where
-  pretty (MkArg count piInfo name type) =
-    parens $ hsepH [count, piInfo, name, ":", type]
+export %inline
+Pretty (Fin n) where
+  prettyPrec _ = line . show
 
-export covering
-Pretty (AppArg a) where
-  prettyPrec _ (NamedApp n s) = braces $ pretty n <++> ":" <++> pretty s
-  prettyPrec _ (AutoApp s)    = "@" <+> braces (pretty s)
-  prettyPrec p (Regular s)    = prettyPrec p s
-  prettyPrec p (Missing x)    = "<implicit>"
+%runElab deriveIndexed "MissingInfo" [Pretty]
+%runElab deriveIndexed "AppArg" [Pretty]
 
-export covering
+export
 Pretty (All AppArg vs) where
-  pretty vs = list $ go vs
-    where go : All AppArg bs -> List (Doc ann)
+  prettyPrec _ vs = list $ go vs
+    where go : All AppArg bs -> List (Doc opts)
           go []       = []
           go (x :: y) = pretty x :: go y
 
-export covering
-Pretty (Con n vs) where
-  prettyPrec p (MkCon n arty args tpe) = applyH p "MkCon" [n, arty, args, tpe]
-
-export covering
-Pretty TypeInfo where
-  pretty (MkTypeInfo name arty rgs ns cons) =
-    let head = applyH Open "MkTypeInfo" [name, arty, rgs]
-        cons = indent 2 $ vsep (map pretty cons)
-     in vsep [head,cons]
-
+%runElab deriveIndexed "Con" [Pretty]
+%runElab deriveIndexed "TypeInfo" [Pretty]
+%runElab deriveIndexed "ParamTag" [Pretty]
 
 export
-Vect n Name => Pretty (PArg n) where
-  prettyPrec p v = prettyPrec p $ ttimp %search v
+Pretty (ParamPattern m n) where
+  prettyPrec _ vs = list $ go vs
+    where go : ParamPattern x y -> List (Doc opts)
+          go []       = []
+          go (x :: y) = pretty x :: go y
 
-export
-Vect n Name => Pretty (ConArg n) where
-  prettyPrec p (ParamArg x s)         = angles (pretty $ finToNat x)
-  prettyPrec p (CArg mnm rig pinfo x) =
-    parens $ hsepH [rig, pinfo, mnm, ":", x]
-
-export covering
-Vect n Name => Pretty (ParamCon n) where
-  prettyPrec p (MkParamCon n arty args) =
-    applyH p "MkParamCon" [n, arty, args]
-
-export covering
-Pretty ParamTypeInfo where
-  pretty (MkParamTypeInfo info _ names cons pargs) =
-    let head = applyH Open "MkParamTypeInfo" [info.name, names]
-        cons = indent 2 $ vsep (map pretty cons)
-        args = indent 2 $ vsep (map pretty pargs)
-     in vsep [head,"Constructors",cons,"Param args",args]
+%runElab deriveIndexed "PArg" [Pretty]
+%runElab deriveIndexed "ConArg" [Pretty]
+%runElab deriveIndexed "ParamCon" [Pretty]
+%runElab deriveIndexed "ParamTypeInfo" [Pretty]
