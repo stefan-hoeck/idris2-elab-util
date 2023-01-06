@@ -129,9 +129,10 @@ deriveShow = do
     | Nothing => fail "Invalid goal type: \{show tpe}"
   ti <- getInfo' nm
 
-  let impl :=  lambdaArg {a = Name} "p"
-           .=> lambdaArg {a = Name} "x"
-           .=> iCase `(x) implicitFalse (showClauses [ti.name] Nothing ti)
+  let impl :=
+           lam (lambdaArg {a = Name} "p") $
+           lam (lambdaArg {a = Name} "x") $
+           iCase `(x) implicitFalse (showClauses [ti.name] Nothing ti)
 
   logMsg "derive.definitions" 1 $ show impl
   check $ var "mkShowPrec" .$ impl

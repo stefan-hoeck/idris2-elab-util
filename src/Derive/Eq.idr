@@ -159,9 +159,10 @@ deriveEq = do
     | Nothing => fail "Invalid goal type: \{show tpe}"
   ti <- getInfo' nm
 
-  let impl :=  lambdaArg {a = Name} "x"
-           .=> lambdaArg {a = Name} "y"
-           .=> iCase `(MkPair x y) implicitFalse (eqClauses [ti.name] "MkPair" ti)
+  let impl :=
+           lam (lambdaArg {a = Name} "x") $
+           lam (lambdaArg {a = Name} "y") $
+           iCase `(MkPair x y) implicitFalse (eqClauses [ti.name] "MkPair" ti)
 
   logMsg "derive.definitions" 1 $ show impl
   check $ var "mkEq" .$ impl
