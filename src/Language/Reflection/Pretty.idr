@@ -15,7 +15,7 @@
 |||   :exec putPretty `((1 index : Fin n) -> Vect n t -> t)
 module Language.Reflection.Pretty
 
-import public Data.HVect
+import public Data.Vect.Quantifiers
 import Data.String
 import public Language.Reflection
 import public Text.PrettyPrint.Prettyprinter
