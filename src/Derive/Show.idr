@@ -49,9 +49,7 @@ generalShowType is arg = piAll `(Prec -> ~(arg) -> String) is
 export
 showClaim : Visibility -> (fun : Name) -> (p : ParamTypeInfo) -> Decl
 showClaim vis fun p =
-  let arg := p.applied
-      tpe := piAll `(Prec -> ~(arg) -> String) (allImplicits p "Show")
-   in simpleClaim vis fun tpe
+  simpleClaim vis fun (generalShowType (allImplicits p "Show") p.applied)
 
 ||| Top-level declaration of the `Show` implementation for the given data type.
 export

@@ -1,5 +1,12 @@
 # Inspecting the Structure of Idris Expressions
 
+```idris
+module Doc.Inspect
+
+import Language.Reflection.Pretty
+import Language.Reflection.Syntax
+```
+
 In this section of the tutorial, we will learn how
 to look at the underlying structure of Idris expressions.
 Most of the examples can be run from the REPL.
@@ -10,6 +17,10 @@ are provided for all public
 data types in modules `Language.Reflection.TT` and
 `Language.Reflection.TTImp`.
 
+Before we begin, make sure you have the [prettier](https://github.com/Z-snails/prettier)
+package installed, either by using the [pack](https://github.com/stefan-hoeck/idris2-pack)
+package manager (the recommended way), or by running `make deps`.
+
 Since the Idris REPL does not yet support scrolling
 through its command history, I suggest using the
 command-line utility [rlwrap](https://github.com/hanslub42/rlwrap)
@@ -17,7 +28,7 @@ to provide this functionality. The following
 command sets up our REPL for the experiments in this section:
 
 ```repl
-> rlwrap idris2 --find-ipkg src/Language/Reflection/Pretty.idr
+> rlwrap idris2 --find-ipkg src/Doc/Inspect.idr
 ```
 
 ## Quotes
@@ -33,7 +44,7 @@ constructors, functions, parameters, and variables.
 They can be quoted by putting an identifier in curly braces:
 
 ```repl
-Language.Reflection.Pretty> :t `{ Just }
+Doc.Inspect> :t `{ Just }
 UN (Basic "Just") : Name
 ```
 
@@ -42,7 +53,7 @@ data structure of the interpreted value. We can also
 prefix names with a namespace:
 
 ```repl
-Language.Reflection.Pretty> `{ Prelude.Types.Either }
+Doc.Inspect> `{ Prelude.Types.Either }
 NS (MkNS ["Types", "Prelude"]) (UN (Basic "Either"))
 ```
 
@@ -63,10 +74,10 @@ instance for `Name`.
 
 Probably the most important quoting facility
 is the ability to quote expressions. This
-results in values of type `Language.Reflection.TTImp.TTImp`
+results in values of type `Language.Reflection.TTImp.TTImp`.
 
 ```repl
-Language.Reflection.Pretty> :t `(2 * x)
+Doc.Inspect> :t `(2 * x)
 ```
 
 This will print an impressive amount of information about the structure
@@ -77,132 +88,119 @@ trying to make the underlying tree structure visible, a
 pretty printer is provided:
 
 ```repl
-Language.Reflection.Pretty> :exec putPretty `(2 * x)
-
-  IApp. IVar * $ (IApp. IVar fromInteger $ IPrimVal 2) $ IVar x
-
+Doc.Inspect> :exec putPretty `(2 * x)
+var "*" .$ (var "fromInteger" .$ primVal (BI 2)) .$ var "x"
 ```
-
-As can be seen, source locations have been removed and `Name`s
-are rendered without constructors. Function application is
-treated specially: The `TTImp` constructor `IApp` is shown to
-tell users which constructor was used, but nested calls to `IApp`
-are then replaced with an infix operator (`$`) to enhance readability
-and reduce the amount of parentheses. While this somewhat obfuscates
-how cascades of function application result in nested calls
-to `IApp`, it helps when verifying the correct structure of our own
-manually written `TTImp` values. In addition, `Language.Reflection.Syntax`
-provides infix operator `(.$)`, which can be used to
-conveniently define nested function applications.
+As can be seen, source locations have been removed and `Name`s are rendered
+without constructors (because there is a `FromString Name` implementation
+in `Language.Reflection.Syntax`). The data constructors `IVar` and `IPrimVal`
+have been replaced with functions `var` and `primVal`, respectively.
+Function application is treated specially:
+The TTImp constructor `IApp` has been replaced with infix operator
+`(.$)` to enhance readability and reduce the amount of parentheses.
+While this somewhat obfuscates how cascades of function application result in nested
+calls to IApp, it is still valid Idris code, because the operator comes
+from `Language.Reflection.Syntax`. This holds in general: Pretty printed
+`TTImp` is valid Idris code, otherwise, that's a bug.
 
 A similar layout is used for nested function declarations
-(data constructor `IPi` and nesting operator `->` with
-available infix operator `(.->)`)
-and lambdas (data constructor `ILam` and nesting
-operator `=>`; infix operator `(.=>)`):
+(data constructor `IPi` and infix operator `(.->)`)
+and lambdas (data constructor `ILam` and infix operator `(.=>)`):
 
 ```repl
-Language.Reflection.Pretty> :exec putPretty `(Show a => (val : a) -> String)
-
-  IPi.  (MW AutoImplicit : IApp. IVar Show $ IVar a)
-     -> (MW ExplicitArg val : IVar a)
-     -> IPrimVal String
-
+Doc.Inspect> :exec putPretty `(Show a => (val : a) -> String)
+    MkArg MW AutoImplicit Nothing (var "Show" .$ var "a")
+.-> MkArg MW ExplicitArg (Just "val") (var "a")
+.-> primVal (PrT StringType)
 ```
 
 ```repl
-Language.Reflection.Pretty> :exec putPretty `(\x,y => x ++ reverse y)
-
-  ILam.  (MW ExplicitArg x : IImplicit False)
-      => (MW ExplicitArg y : IImplicit False)
-      => (IApp. IVar ++ $ IVar x $ (IApp. IVar reverse $ IVar y))
-
+Doc.Inspect> :exec putPretty `(\x,y => x ++ reverse y)
+    MkArg MW ExplicitArg (Just "x") implicitFalse
+.=> MkArg MW ExplicitArg (Just "y") implicitFalse
+.=> var "++" .$ var "x" .$ (var "reverse" .$ var "y")
 ```
 
 Again, this gives a pretty clear picture about the data constructors
-involved while trying to make things somewhat more readable.
+involved while trying to make things somewhat more readable. And again, both
+examples are valid Idris syntax:
 
-Below follow some more examples, including some
-syntactic sugar dissections.
+```idris
+test : TTImp
+test =
+      MkArg MW ExplicitArg (Just "x") implicitFalse
+  .=> MkArg MW ExplicitArg (Just "y") implicitFalse
+  .=> var "++" .$ var "x" .$ (var "reverse" .$ var "y")
+```
+
+Below follow some more examples, including some syntactic sugar dissections.
 
 Case expressions:
 
 ```repl
-Language.Reflection.Pretty> :exec putPretty `(case x of { EQ => "eq"; LT => "lt"; GT => "gt" })
-
-  ICase (IVar x)
-        (IImplicit False)
-        [ PatClause (IVar EQ) (IApp. IVar fromString $ IPrimVal eq)
-        , PatClause (IVar LT) (IApp. IVar fromString $ IPrimVal lt)
-        , PatClause (IVar GT) (IApp. IVar fromString $ IPrimVal gt) ]
-
+Doc.Inspect> :exec putPretty `(case x of { EQ => "eq"; LT => "lt"; GT => "gt" })
+iCase
+  { sc = var "x"
+  , ty = implicitFalse
+  , clauses =
+      [ var "EQ" .= var "fromString" .$ primVal (Str "eq")
+      , var "LT" .= var "fromString" .$ primVal (Str "lt")
+      , var "GT" .= var "fromString" .$ primVal (Str "gt")
+      ]
+  }
 ```
 
 Let expressions:
 
 ```repl
-Language.Reflection.Pretty> :exec putPretty `(let val = show x in val == reverse val)
-
-  ILet MW
-       val
-       (Implicit True)
-       (IApp. IVar show $ IVar x)
-       (IApp. IVar == $ IVar val $ (IApp. IVar reverse $ IVar val))
-
+Doc.Inspect> :exec putPretty `(let val = show x in val == reverse val)
+iLet
+  { count = MW
+  , name = "val"
+  , type = implicitTrue
+  , val = var "show" .$ var "x"
+  , scope = var "==" .$ var "val" .$ (var "reverse" .$ var "val")
+  }
 ```
 
 If-then-else:
 
 ```repl
-Language.Reflection.Pretty> :exec putPretty `(if x then y else z)
-
-  ICase (IVar x)
-        (IVar Bool)
-        [PatClause (IVar True) (IVar y), PatClause (IVar False) (IVar z)]
-
+Doc.Inspect> :exec putPretty `(if x then y else z)
+iCase
+  { sc = var "x"
+  , ty = var "Bool"
+  , clauses = [var "True" .= var "y", var "False" .= var "z"]
+  }
 ```
 
 Idiom brackets:
 
 ```repl
-Language.Reflection.Pretty> :exec putPretty `([| fun x y |])
-
-  IApp. IVar <*>
-      $ (IApp. IVar <*> $ (IApp. IVar pure $ IVar fun) $ IVar x)
-      $ IVar y
-
-
+Doc.Inspect> :exec putPretty `([| fun x y |])
+var "<*>" .$ (var "<*>" .$ (var "pure" .$ var "fun") .$ var "x") .$ var "y"
 ```
 
 Do notation:
 
 ```repl
-Language.Reflection.Pretty> :exec putPretty `(do x <- run; action x; pure x)
-
-App. IVar >>=
-   $ IVar run
-   $ (ILam.  (MW ExplicitArg x : IImplicit False)
-          => (IApp. IVar >>=
-                  $ (IApp. IVar action $ IVar x)
-                  $ (ILam.  (MW ExplicitArg : IImplicit False)
-                         => (IApp. IVar pure $ IVar x))))
-
+Doc.Inspect> :exec putPretty `(do x <- run; action x; pure x)
+   var ">>="
+.$ var "run"
+.$ (    MkArg MW ExplicitArg (Just "x") implicitFalse
+    .=> var ">>" .$ (var "action" .$ var "x") .$ (var "pure" .$ var "x"))
 ```
 
 Monad comprehensions:
 
 ```repl
-Language.Reflection.Pretty> :exec putPretty `([x * x | x <- xs, even x])
-
-  IApp. IVar >>=
-      $ IVar xs
-      $ (ILam.  (MW ExplicitArg x : Implicit False)
-             => (IApp. IVar >>=
-                     $ (IApp. IVar guard $ (IApp. IVar even $ IVar x))
-                     $ (ILam.  (MW ExplicitArg : Implicit False)
-                            => (IApp. IVar pure
-                                    $ (IApp. IVar * $ IVar x $ IVar x)))))
-
+Doc.Inspect> :exec putPretty `([x * x | x <- xs, even x])
+   var ">>="
+.$ var "xs"
+.$ (    MkArg MW ExplicitArg (Just "x") implicitFalse
+    .=>    var ">>"
+        .$ (var "guard" .$ (var "even" .$ var "x"))
+        .$ (var "pure" .$ (var "*" .$ var "x" .$ var "x")))
 ```
 
 The syntactic sugar examples show that we can use these
@@ -218,10 +216,6 @@ by putting them in quoted brackets. In syntax files, multiline
 quotes are supported:
 
 ```idris
-module Doc.Inspect
-
-import Language.Reflection
-
 testDecl : List Decl
 testDecl = `[ export %inline
               test : Int -> Int
@@ -232,15 +226,22 @@ In the REPL, we have to separate lines by using semicolons:
 
 ```repl
 ...> :exec putPretty `[export %inline test : Int -> Int; test n = n + n]
-
-  [ IClaim MW
-           Export
-           [Inline]
-           (MkTy test (IPi. (MW ExplicitArg : IPrimVal Int) -> IPrimVal Int))
-  , IDef test
-         [ PatClause (IApp. IVar test $ IBindVar n)
-                     (IApp. IVar + $ IVar n $ IVar n) ] ]
-
+[ IClaim
+    emptyFC
+    MW
+    Export
+    [Inline]
+    (MkTy
+       emptyFC
+       emptyFC
+       "test"
+       (    MkArg MW ExplicitArg Nothing (primVal (PrT IntType))
+        .-> primVal (PrT IntType)))
+, IDef
+    emptyFC
+    "test"
+    [var "test" .$ bindVar "n" .= var "+" .$ var "n" .$ var "n"]
+]
 ```
 
 As can be seen, a top-level function consists of an `IClaim`
@@ -250,16 +251,24 @@ Inspecting quoted data declarations is also possible:
 
 ```repl
 ...> :exec putPretty `[ data Foo t = A t | B ]
-
-  [ IData Private
-          (MkData Foo
-                  (IPi. (M1 ExplicitArg : IType) -> IType)
-                  []
-                  [ MkTy A
-                         (IPi.  (M1 ExplicitArg : IBindVar t)
-                             -> (IApp. IVar Foo $ IBindVar t))
-                  , MkTy B (IApp. IVar Foo $ IBindVar t)] ]
-
+[ IData
+    emptyFC
+    Private
+    Nothing
+    (MkData
+       emptyFC
+       "Foo"
+       (Just (MkArg MW ExplicitArg Nothing type .-> type))
+       []
+       [ MkTy
+           emptyFC
+           emptyFC
+           "A"
+           (    MkArg MW ExplicitArg Nothing (bindVar "t")
+            .-> var "Foo" .$ bindVar "t")
+       , MkTy emptyFC emptyFC "B" (var "Foo" .$ bindVar "t")
+       ])
+]
 ```
 
 ## What's next

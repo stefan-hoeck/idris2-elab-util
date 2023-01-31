@@ -120,7 +120,7 @@ x.nameStr = nameStr x.getName
 ||| Likewise, if the name is already known at the time of
 ||| writing, use quotes for defining variables directly: `(AName)
 public export %inline
-var : Name -> TTImp
+var : (name : Name) -> TTImp
 var = IVar EmptyFC
 
 ||| Creates a variable with the name of the given value.
@@ -173,13 +173,19 @@ public export %inline
 (.namePrim) : Named a => a -> TTImp
 x.namePrim = primVal $ Str x.nameStr
 
-
 ||| The type `Type`.
 |||
 ||| This is an alias for `IType EmptyFC`.
 public export %inline
 type :  TTImp
 type = IType EmptyFC
+
+||| A named hole.
+|||
+||| This is an alias for `IHole EmptyFC`.
+public export %inline
+hole :  String -> TTImp
+hole = IHole EmptyFC
 
 ||| Tries to extract a variable name from a `TTImp`.
 |||
@@ -188,6 +194,13 @@ public export
 unVar : TTImp -> Maybe Name
 unVar (IVar _ n) = Just n
 unVar _          = Nothing
+
+||| Proof search
+|||
+||| This is an alias for `ISearch EmptyFC`
+public export %inline
+iSearch : (depth : Nat) -> TTImp
+iSearch = ISearch EmptyFC
 
 --------------------------------------------------------------------------------
 --          Application
@@ -200,10 +213,10 @@ unVar _          = Nothing
 ||| Example: ```app (var "Just") (var "x")```
 |||          is equivalent to `(Just x)
 public export %inline
-app : TTImp -> TTImp -> TTImp
+app : (fun, arg : TTImp) -> TTImp
 app = IApp EmptyFC
 
-infixl 6 .$
+infixl 6 .$,.@,.!
 
 ||| Infix version of `app`
 |||
@@ -243,6 +256,21 @@ public export %inline
 bindAll : (fun : Name) -> (args : List String) -> TTImp
 bindAll fun = appAll fun . map bindVar
 
+||| Alias for `IBindHere EmptyFC`
+public export %inline
+bindHere : (mode : BindMode) -> (val : TTImp) -> TTImp
+bindHere = IBindHere EmptyFC
+
+||| Alias for `IMustUnify EmptyFC`
+public export %inline
+mustUnify : (reason : DotReason) -> (val : TTImp) -> TTImp
+mustUnify = IMustUnify EmptyFC
+
+||| Alias for `IAs EmptyFC EmptyFC`
+public export %inline
+iAs : (side : UseSide) -> (name : Name) -> (val : TTImp) -> TTImp
+iAs = IAs EmptyFC EmptyFC
+
 ||| Applying an auto-implicit.
 |||
 ||| This is an alias for `IAutoApp EmptyFC`.
@@ -250,8 +278,20 @@ bindAll fun = appAll fun . map bindVar
 ||| Example: `autoApp (var "traverse") (var "MyApp")`
 |||          is equivalent to `(traverse @{MyApp})
 public export %inline
-autoApp : TTImp -> TTImp -> TTImp
+autoApp : (fun, arg : TTImp) -> TTImp
 autoApp = IAutoApp EmptyFC
+
+||| Infix version of `autoApp`
+public export %inline
+(.@) : TTImp -> TTImp -> TTImp
+(.@) = autoApp
+
+||| Application in a `with` expression
+|||
+||| This is an alias for `IWithApp EmptyFC`.
+public export %inline
+withApp : (fun, arg : TTImp) -> TTImp
+withApp = IWithApp EmptyFC
 
 ||| Named function application.
 |||
@@ -260,8 +300,13 @@ autoApp = IAutoApp EmptyFC
 ||| Example: `namedApp (var "traverse") "f" (var "MyApp")`
 |||          is equivalent to `(traverse {f = MyApp})
 public export %inline
-namedApp : TTImp -> Name -> TTImp -> TTImp
+namedApp : (fun : TTImp) -> (name : Name) -> (arg : TTImp) -> TTImp
 namedApp = INamedApp EmptyFC
+
+||| Infix version of `namedApp`.
+public export %inline
+(.!) : TTImp -> (Name,TTImp) -> TTImp
+s .! (n,t) = namedApp s n t
 
 ||| Catch-all pattern match on a data constructor.
 |||
@@ -271,6 +316,11 @@ namedApp = INamedApp EmptyFC
 public export %inline
 bindAny : Named a => a -> TTImp
 bindAny n = namedApp n.nameVar (UN Underscore) implicitTrue
+
+||| Alias for `IAlternative EmptyFC`
+public export %inline
+alternative : (tpe : AltType) -> (alts : List TTImp) -> TTImp
+alternative = IAlternative EmptyFC
 
 --------------------------------------------------------------------------------
 --          Function Arguments
@@ -348,7 +398,7 @@ unLambda tpe                  = ([],tpe)
 |||
 ||| This passes the fields of `Arg` to `ILam EmptyFC`
 public export
-lam : Arg -> (lamTy : TTImp) -> TTImp
+lam : (arg : Arg) -> (lamTy : TTImp) -> TTImp
 lam (MkArg c p n t) = ILam EmptyFC c p n t
 
 infixr 3 .=>
@@ -366,7 +416,7 @@ public export %inline
 |||
 ||| This passes the fields of `Arg` to `IPi EmptyFC`
 public export
-pi : Arg -> (retTy : TTImp) -> TTImp
+pi : (arg : Arg) -> (retTy : TTImp) -> TTImp
 pi (MkArg c p n t) = IPi EmptyFC c p n t
 
 infixr 5 .->
@@ -411,6 +461,20 @@ public export %inline
 patClause : (lhs : TTImp) -> (rhs : TTImp) -> Clause
 patClause = PatClause EmptyFC
 
+||| A with clause.
+|||
+||| This is an alias for `WithClause EmptyFC`.
+public export %inline
+withClause :
+     (lhs     : TTImp)
+  -> (rig     : Count)
+  -> (wval    : TTImp)
+  -> (prf     : Maybe Name)
+  -> (flags   : List WithFlag)
+  -> (clauses : List Clause)
+  -> Clause
+withClause = WithClause EmptyFC
+
 infixr 3 .=
 
 ||| Infix alias for `patClause`
@@ -422,7 +486,7 @@ public export %inline
 |||
 ||| This is an alias for `ICase EmptyFC`.
 public export %inline
-iCase : TTImp -> (ty : TTImp) -> List Clause -> TTImp
+iCase : (sc : TTImp) -> (ty : TTImp) -> (clauses : List Clause) -> TTImp
 iCase = ICase EmptyFC
 
 ||| "as"-pattern.
@@ -440,7 +504,7 @@ as = IAs EmptyFC EmptyFC UseLeft
 |||
 ||| This is an alias for `MkTyp EmptyFC`.
 public export %inline
-mkTy : (n : Name) -> (ty : TTImp) -> ITy
+mkTy : (name : Name) -> (type : TTImp) -> ITy
 mkTy = MkTy EmptyFC EmptyFC
 
 ||| Type declaration of a function.
@@ -448,7 +512,13 @@ mkTy = MkTy EmptyFC EmptyFC
 ||| `claim c v opts n tp` is an alias for
 ||| `IClaim EmptyFC c v opts (MkTy EmptyFC n tp)`.
 public export %inline
-claim : Count -> Visibility -> List FnOpt -> Name -> TTImp -> Decl
+claim :
+     (count : Count)
+  -> (vis   : Visibility)
+  -> (opts  : List FnOpt)
+  -> (name  : Name)
+  -> (type  : TTImp)
+  -> Decl
 claim c v opts n tp = IClaim EmptyFC c v opts (mkTy n tp)
 
 ||| `simpleClaim v n t` is an alias for `claim MW v [] (mkTy n t)`
@@ -493,12 +563,36 @@ public export %inline
 def : Name -> List Clause -> Decl
 def = IDef EmptyFC
 
+--------------------------------------------------------------------------------
+--          Local Defs and Let
+--------------------------------------------------------------------------------
+
+||| Let bindings.
+|||
+||| This is an alias for `ILet EmptyFC`.
+public export %inline
+iLet :
+     (count : Count)
+  -> (name  : Name)
+  -> (type  : TTImp)
+  -> (val   : TTImp)
+  -> (scope : TTImp)
+  -> TTImp
+iLet = ILet EmptyFC EmptyFC
+
 ||| Local definitions
 |||
 ||| This is an alias for `ILocal EmptyFC`.
 public export %inline
-local : List Decl -> TTImp -> TTImp
+local : (decls : List Decl) -> (scope : TTImp) -> TTImp
 local = ILocal EmptyFC
+
+||| Field updates
+|||
+||| This is an alias for `IUpdate EmptyFC`.
+public export %inline
+update : (updates : List IFieldUpdate) -> (arg : TTImp) -> TTImp
+update = IUpdate EmptyFC
 
 --------------------------------------------------------------------------------
 --          Data Declarations
@@ -508,8 +602,8 @@ local = ILocal EmptyFC
 |||
 ||| This merges constructors `IData` and `MkData`.
 public export
-iData :  Visibility
-      -> Name
+iData :  (vis   : Visibility)
+      -> (name  : Name)
       -> (tycon : TTImp)
       -> (opts  : List DataOpt)
       -> (cons  : List ITy)
@@ -536,21 +630,56 @@ simpleDataExport : Name -> (cons : List ITy) -> Decl
 simpleDataExport = simpleData Export
 
 --------------------------------------------------------------------------------
---          Local Definitions
+--          Rewrite
 --------------------------------------------------------------------------------
 
-||| Let bindings.
-|||
-||| This is an alias for `ILet EmptyFC`.
+||| Alias for `IRewrite EmptyFC`
 public export %inline
-iLet :
-     Count
-  -> Name
-  -> (nTy   : TTImp)
-  -> (nVal  : TTImp)
-  -> (scope : TTImp)
-  -> TTImp
-iLet = ILet EmptyFC EmptyFC
+iRewrite : (eq,scope : TTImp) -> TTImp
+iRewrite = IRewrite EmptyFC
+
+--------------------------------------------------------------------------------
+--          Laziness
+--------------------------------------------------------------------------------
+
+||| Alias for `IDelayed EmptyFC`
+public export %inline
+iDelayed : (reason : LazyReason) -> (arg : TTImp) -> TTImp
+iDelayed = IDelayed EmptyFC
+
+||| Alias for `IDelay EmptyFC`
+public export %inline
+iDelay : (arg : TTImp) -> TTImp
+iDelay = IDelay EmptyFC
+
+||| Alias for `IForce EmptyFC`
+public export %inline
+iForce : (arg : TTImp) -> TTImp
+iForce = IForce EmptyFC
+
+--------------------------------------------------------------------------------
+--          Quotation
+--------------------------------------------------------------------------------
+
+||| Alias for `IQuote EmptyFC`
+public export %inline
+quote : TTImp -> TTImp
+quote = IQuote EmptyFC
+
+||| Alias for `IQuoteName EmptyFC`
+public export %inline
+quoteName : Name -> TTImp
+quoteName = IQuoteName EmptyFC
+
+||| Alias for `IQuoteDecl EmptyFC`
+public export %inline
+quoteDecl : List Decl -> TTImp
+quoteDecl = IQuoteDecl EmptyFC
+
+||| Alias for `IUnquote EmptyFC`
+public export %inline
+unquote : TTImp -> TTImp
+unquote = IUnquote EmptyFC
 
 --------------------------------------------------------------------------------
 --          Recursion

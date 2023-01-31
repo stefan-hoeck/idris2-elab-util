@@ -1,0 +1,14 @@
+package elab-pretty
+
+authors    = "stefan-hoeck"
+brief      = "Pretty printing TTImp and friends, plus auto-deriving pretty printers"
+version    = 0.6.0
+readme     = "README.md"
+license    = "BSD-2 Clause"
+
+sourcedir  = "src"
+depends    = elab-util
+           , prettier
+
+modules = Derive.Pretty
+        , Language.Reflection.Pretty

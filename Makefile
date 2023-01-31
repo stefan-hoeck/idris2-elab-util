@@ -6,8 +6,24 @@ docs_pkg = elab-util-docs.ipkg
 
 test_pkg = elab-util-test.ipkg
 
+PRETTIER_VERSION = 0.0.0
+
+PRETTIER_RELATIVE_DIR = prettier-${PRETTIER_VERSION}
+
 .PHONY: all
-all: lib docs test
+all: deps lib docs test
+
+./depends/${PRETTIER_RELATIVE_DIR}:
+	mkdir -p ./build/deps
+	mkdir -p ./depends
+	cd ./build/deps && \
+	git clone https://github.com/Z-snails/prettier && \
+	cd prettier && \
+	${IDRIS2} --build prettier.ipkg && \
+	cp -R ./build/ttc ../../../depends/${PRETTIER_RELATIVE_DIR}/
+
+.PHONY: deps
+deps: ./depends/${PRETTIER_RELATIVE_DIR}
 
 .PHONY: clean-install
 clean-install: clean install
@@ -39,7 +55,9 @@ install-with-src:
 .PHONY: clean
 clean:
 	${IDRIS2} --clean ${lib_pkg}
+	${IDRIS2} --clean ${test_pkg}
 	${IDRIS2} --clean ${docs_pkg}
+	${RM} -r depends
 	${RM} -r build
 
 # Start a REPL in rlwrap
