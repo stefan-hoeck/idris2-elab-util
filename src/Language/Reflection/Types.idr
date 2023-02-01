@@ -259,11 +259,6 @@ public export
 public export
 (.applied) : TypeInfo -> TTImp
 (.applied) p = appNames p.name p.explicitArgs
-  where
-    go : TTImp -> Vect k Arg -> Vect k Name -> TTImp
-    go t []        []                              = t
-    go t (MkArg _ ExplicitArg _ _ :: xs) (n :: ns) = go (t .$ var n) xs ns
-    go t (_                       :: xs) (n :: ns) = go t xs ns
 
 ||| Returns a list of implicit arguments corresponding
 ||| to the data type's explicit arguments.
