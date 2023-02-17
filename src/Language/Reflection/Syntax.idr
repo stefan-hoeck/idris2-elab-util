@@ -404,7 +404,10 @@ lam (MkArg c p n t) = ILam EmptyFC c p n t
 infixr 3 .=>
 
 ||| Infix alias for `lam`.
-public export %inline
+|||
+||| @deprecation: This is in conflict with a similar operator from
+||| `Syntax.PreorderReasoning`. It will be removed in a later commit.
+public export %inline %deprecate
 (.=>) : Arg -> TTImp -> TTImp
 (.=>) = lam
 
