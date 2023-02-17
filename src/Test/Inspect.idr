@@ -16,9 +16,9 @@ ex2 =
 
 ex3 : TTImp
 ex3 =
-      MkArg MW ExplicitArg (Just "x") implicitFalse
-  .=> MkArg MW ExplicitArg (Just "y") implicitFalse
-  .=> var "++" .$ var "x" .$ (var "reverse" .$ var "y")
+  lam (MkArg MW ExplicitArg (Just "x") implicitFalse) $
+  lam (MkArg MW ExplicitArg (Just "y") implicitFalse) $
+  var "++" .$ var "x" .$ (var "reverse" .$ var "y")
 
 ex4 : TTImp
 ex4 =
@@ -58,17 +58,17 @@ ex8 : TTImp
 ex8 =
      var ">>="
   .$ var "run"
-  .$ (    MkArg MW ExplicitArg (Just "x") implicitFalse
-      .=> var ">>" .$ (var "action" .$ var "x") .$ (var "pure" .$ var "x"))
+  .$ (lam (MkArg MW ExplicitArg (Just "x") implicitFalse) $
+      var ">>" .$ (var "action" .$ var "x") .$ (var "pure" .$ var "x"))
 
 ex9 : TTImp
 ex9 =
      var ">>="
   .$ var "xs"
-  .$ (    MkArg MW ExplicitArg (Just "x") implicitFalse
-      .=>    var ">>"
-          .$ (var "guard" .$ (var "even" .$ var "x"))
-          .$ (var "pure" .$ (var "*" .$ var "x" .$ var "x")))
+  .$ (lam (MkArg MW ExplicitArg (Just "x") implicitFalse) $
+       var ">>"
+    .$ (var "guard" .$ (var "even" .$ var "x"))
+    .$ (var "pure" .$ (var "*" .$ var "x" .$ var "x")))
 
 ex10 : List Decl
 ex10 =
