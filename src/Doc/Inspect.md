@@ -128,9 +128,9 @@ examples are valid Idris syntax:
 ```idris
 test : TTImp
 test =
-      MkArg MW ExplicitArg (Just "x") implicitFalse
-  .=> MkArg MW ExplicitArg (Just "y") implicitFalse
-  .=> var "++" .$ var "x" .$ (var "reverse" .$ var "y")
+  lam (MkArg MW ExplicitArg (Just "x") implicitFalse) $
+  lam (MkArg MW ExplicitArg (Just "y") implicitFalse) $
+  var "++" .$ var "x" .$ (var "reverse" .$ var "y")
 ```
 
 Below follow some more examples, including some syntactic sugar dissections.
