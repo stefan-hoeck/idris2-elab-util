@@ -2,6 +2,8 @@ module Derive.Eq
 
 import public Language.Reflection.Derive
 
+import Language.Reflection.BugFixity
+
 %default total
 
 --------------------------------------------------------------------------------
@@ -159,10 +161,9 @@ deriveEq = do
     | Nothing => fail "Invalid goal type: \{show tpe}"
   ti <- getInfo' nm
 
-  let impl :=
-           lam (lambdaArg {a = Name} "x") $
-           lam (lambdaArg {a = Name} "y") $
-           iCase `(MkPair x y) implicitFalse (eqClauses [ti.name] "MkPair" ti)
+  let impl :=  lambdaArg {a = Name} "x"
+           .=> lambdaArg {a = Name} "y"
+           .=> iCase `(MkPair x y) implicitFalse (eqClauses [ti.name] "MkPair" ti)
 
   logMsg "derive.definitions" 1 $ show impl
   check $ var "mkEq" .$ impl

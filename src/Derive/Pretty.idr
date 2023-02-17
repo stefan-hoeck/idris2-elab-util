@@ -3,6 +3,8 @@ module Derive.Pretty
 import public Text.PrettyPrint.Bernardy
 import public Derive.Show
 
+import Language.Reflection.BugFixity
+
 %default total
 
 public export
