@@ -251,10 +251,6 @@ prettyImplTTImp = assert_total $ MkPretty $ \p,v => case v of
 --          Pretty instances for library types
 --------------------------------------------------------------------------------
 
-export
-Pretty a => Pretty (Vect n a) where
-  prettyPrec p vs = prettyPrec p (toList vs)
-
 export %inline
 Pretty (Fin n) where
   prettyPrec _ = line . show

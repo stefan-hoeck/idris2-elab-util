@@ -18,3 +18,9 @@ ipkg = "elab-util-docs.ipkg"
 type = "local"
 path = "."
 ipkg = "elab-util-test.ipkg"
+
+[custom.all.prettier]
+type   = "git"
+url    = "https://github.com/Z-snails/prettier"
+commit = "latest:main"
+ipkg   = "prettier.ipkg"
