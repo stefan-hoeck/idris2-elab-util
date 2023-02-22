@@ -1,6 +1,7 @@
 module Derive.Pretty
 
 import public Text.PrettyPrint.Bernardy
+import Language.Reflection.Util
 import public Derive.Show
 
 %default total
@@ -43,7 +44,7 @@ prettyImplClaim v impl p = implClaimVis v impl (implType "Pretty" p)
 ||| Top-level definition of the `Pretty` implementation for the given data type.
 export
 prettyImplDef : (fun, impl : Name) -> Decl
-prettyImplDef f i = def i [var i .= var "MkPretty" .$ var f]
+prettyImplDef f i = def i [patClause (var i) (var "MkPretty" `app` var f)]
 
 pvar : TTImp
 pvar = var "p"
@@ -75,7 +76,7 @@ parameters (nms : List Name)
   prettyClauses fun ti = map clause ti.cons
     where
       lhs : TTImp -> TTImp
-      lhs bc = maybe bc ((.$ pvar .$ bc) . var) fun
+      lhs bc = maybe bc (\x => `(~(var x) ~(pvar) ~(bc))) fun
 
       clause : Con ti.arty ti.args -> Clause
       clause c = case all namedArg c.args of
@@ -109,7 +110,7 @@ derivePretty = do
         iCase `(x) implicitFalse (prettyClauses [ti.name] Nothing ti)
 
   logTerm "derive.definitions" 1 "pretty implementation" impl
-  check $ var "MkPretty" .$ impl
+  check $ var "MkPretty" `app` impl
 
 ||| Generate declarations and implementations for `Pretty` for a given data type.
 export

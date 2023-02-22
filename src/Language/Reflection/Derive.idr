@@ -5,10 +5,13 @@
 ||| using the functionality provided here.
 module Language.Reflection.Derive
 
+import Data.DPair
+import Data.List1
+import Data.Vect
 import Decidable.Equality
-import public Data.DPair
-import public Language.Reflection.Syntax
-import public Language.Reflection.Types
+import Language.Reflection
+import Language.Reflection.Syntax
+import Language.Reflection.Types
 
 %language ElabReflection
 
@@ -210,7 +213,7 @@ accumArgs f lhs rhs arg c =
   let xs := freshNames "x" c.arty
       cx := bindCon c xs
       sx := map arg (boundArgs f c.args [xs])
-   in lhs cx .= rhs sx
+   in patClause (lhs cx) (rhs sx)
 
 ||| Generates a pattern clause for accumulating the arguments
 ||| of two equivalent data constructors.
@@ -250,7 +253,7 @@ accumArgs2 f lhs rhs arg c =
       cx := bindCon c xs
       cy := bindCon c ys
       sx := map arg (boundArgs f c.args [xs,ys])
-   in lhs cx cy .= rhs sx
+   in patClause (lhs cx cy) (rhs sx)
 
 ||| Generates a pattern clause for mapping the arguments
 ||| of a data constructors over a unary function.
@@ -282,7 +285,7 @@ mapArgs f lhs arg c =
   let xs := freshNames "x" c.arty
       cx := bindCon c xs
       sx := map arg (boundArgs f c.args [xs])
-   in lhs cx .= appAll c.name (sx <>> [])
+   in patClause (lhs cx) (appAll c.name $ sx <>> [])
 
 ||| Generates a pattern clause for mapping the arguments
 ||| of two data constructors over a binary function.
@@ -317,7 +320,7 @@ mapArgs2 f lhs arg c =
       cx := bindCon c xs
       cy := bindCon c ys
       sx := map arg (boundArgs f c.args [xs,ys])
-   in lhs cx cy .= appAll c.name (sx <>> [])
+   in patClause (lhs cx cy) (appAll c.name $ sx <>> [])
 
 ||| Generates a pattern clause for creating and applying
 ||| constructor arguments.
@@ -386,7 +389,7 @@ implClaim = implClaimVis Public
 ||| ```
 export
 implType : Name -> ParamTypeInfo -> TTImp
-implType n p = piAll (var n .$ p.applied) (allImplicits p n)
+implType n p = piAll (var n `app` p.applied) (allImplicits p n)
 
 ||| Extracts the innermost target of a function application.
 ||| For instance, for `Foo @{bar} baz {n = 12}`, this will extract `Foo`.

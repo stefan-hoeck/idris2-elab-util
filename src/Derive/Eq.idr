@@ -1,6 +1,6 @@
 module Derive.Eq
 
-import public Language.Reflection.Derive
+import Language.Reflection.Util
 
 %default total
 
@@ -28,7 +28,8 @@ conIndexClauses : Named a => Name -> List a -> List Clause
 conIndexClauses n ns = go 0 (fst $ conIndexTypes $ length ns) ns
   where go : Bits32 -> (Bits32 -> TTImp) -> List a -> List Clause
         go _  _ []        = []
-        go ix f (c :: cs) = (var n .$ bindAny c .= f ix) :: go (ix + 1) f cs
+        go ix f (c :: cs) =
+          patClause(var n `app` bindAny c) (f ix) :: go (ix + 1) f cs
 
 ||| Declaration of a function returning the constructor index
 ||| for a value of the given data type.
@@ -103,17 +104,18 @@ eqImplClaim vis impl p = implClaimVis vis impl (implType "Eq" p)
 --------------------------------------------------------------------------------
 
 eqImplDef : (fun, impl : Name) -> Decl
-eqImplDef fun impl = def impl [var impl .= var "mkEq" .$ var fun]
+eqImplDef fun impl = def impl [patClause (var impl) (var "mkEq" `app` var fun)]
 
 eqEnumDef : (impl, ci : Name) -> Decl
-eqEnumDef i c = def i [var i .= `(mkEq $ \x,y => ~(var c) x == ~(var c) y)]
+eqEnumDef i c =
+  def i [patClause (var i) `(mkEq $ \x,y => ~(var c) x == ~(var c) y)]
 
 -- catch-all pattern clause for data types with more than
 -- one data constructor
 catchAll : (fun : Name) -> TypeInfo -> List Clause
 catchAll fun ti =
   if length ti.cons > 1
-     then [`(~(var fun) _ _) .= `(False)]
+     then [patClause `(~(var fun) _ _) `(False)]
      else []
 
 -- accumulate right-hand side of a single pattern clause
@@ -134,7 +136,7 @@ parameters (nms : List Name)
   eqClauses fun ti = map clause ti.cons ++ catchAll fun ti
    where
      clause : Con ti.arty ti.args -> Clause
-     clause = accumArgs2 regular (\x,y => var fun .$ x .$ y) rhs arg
+     clause = accumArgs2 regular (\x,y => `(~(var fun) ~(x) ~(y))) rhs arg
 
   ||| Definition of a (local or top-level) function implementing
   ||| the equality check for the given data type.
@@ -165,7 +167,7 @@ deriveEq = do
            iCase `(MkPair x y) implicitFalse (eqClauses [ti.name] "MkPair" ti)
 
   logMsg "derive.definitions" 1 $ show impl
-  check $ var "mkEq" .$ impl
+  check $ var "mkEq" `app` impl
 
 ||| Generate declarations and implementations for `Eq` for a given data type.
 export

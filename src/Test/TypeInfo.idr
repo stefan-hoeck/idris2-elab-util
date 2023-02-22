@@ -1,7 +1,8 @@
 module Test.TypeInfo
 
 import Data.List
-import Language.Reflection.Types
+import Language.Reflection.Syntax.Ops
+import Language.Reflection.Util
 
 %language ElabReflection
 %default total

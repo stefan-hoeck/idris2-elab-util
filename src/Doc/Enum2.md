@@ -5,10 +5,10 @@ First, again, some module setup stuff.
 ```idris
 module Doc.Enum2
 
+import Data.Vect.Quantifiers
 import Doc.Enum1
-import Language.Reflection
-import Language.Reflection.Syntax
-import public Language.Reflection.Types
+import Language.Reflection.Syntax.Ops
+import Language.Reflection.Util
 
 %language ElabReflection
 ```
@@ -76,7 +76,7 @@ eqDecl1 enumName cons =
 ```
 
 We make use of several new syntactic utilities from
-`Language.Reflection.Syntax`. `(.$)` is an infix operator for
+`Language.Reflection.Syntax.Ops`. `(.$)` is an infix operator for
 function application (`Language.Reflection.Syntax.app`),
 `.->` is used to declare function types. Both are chosen
 to look similar to the corresponding Idris keywords `$` and `->`.
@@ -351,3 +351,6 @@ Now that we got a first taste of automatic interface derivation, wouldn't
 it be nice, if we could not only do this for enums but for
 any feasible data type? In the [next section](Generic1.md) we look into a generic
 representations for algebraic data types.
+
+<!-- vi: filetype=idris2:syntax=markdown
+-->

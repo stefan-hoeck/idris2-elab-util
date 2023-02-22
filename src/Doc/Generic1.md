@@ -21,9 +21,8 @@ Below is a simplified version:
 ```idris
 module Doc.Generic1
 
-import public Language.Reflection.Pretty
-import public Language.Reflection.Syntax
-import public Language.Reflection.Types
+import Language.Reflection.Pretty
+import Language.Reflection.Util
 
 %language ElabReflection
 
@@ -203,8 +202,8 @@ to this index.
 ||| of arguments. `k` is the level of nesting used
 export
 mkSOP1 : (k : Nat) -> (arg : TTImp) -> TTImp
-mkSOP1 0     arg = `(Z) .$ arg
-mkSOP1 (S k) arg = `(S) .$ mkSOP1 k arg
+mkSOP1 0     arg = `(Z ~(arg))
+mkSOP1 (S k) arg = `(S ~(mkSOP1 k arg))
 
 ||| Applies the proper n-ary sum constructor to a list
 ||| of arguments. `k` is the level of nesting used.
@@ -241,11 +240,12 @@ conNames c =
 
 export
 fromClause : (Nat,ConNames) -> Clause
-fromClause (k,(con,ns,vars)) = bindAll con ns .= mkSOP k vars
+fromClause (k,(con,ns,vars)) = patClause (bindAll con ns) (mkSOP k vars)
 
 export
 toClause : (Nat,ConNames) -> Clause
-toClause (k,(con,ns,vars)) = mkSOP k (map bindVar ns) .= appAll con vars
+toClause (k,(con,ns,vars)) =
+  patClause (mkSOP k $ map bindVar ns) (appAll con vars)
 
 export
 toClauses : List (Nat,ConNames) -> List Clause
@@ -271,7 +271,7 @@ genericDecl ti =
       function  = UN . Basic $ "implGeneric" ++ camelCase (name ti)
 
       -- type of implementation function
-      funType = `(Generic) .$ var (name ti) .$ mkCode ti
+      funType = `(Generic ~(var $ name ti) ~(mkCode ti))
 
       -- implementation of from and to as anonymous functions
       x       = lambdaArg {a = Name} "x"
@@ -280,7 +280,8 @@ genericDecl ti =
       to      = lam x $ iCase varX implicitFalse (toClauses names)
 
    in [ interfaceHint Public function funType
-      , def function [ var function .= appAll "MkGeneric" [from,to] ] ]
+      , def function [patClause (var function) (appAll "MkGeneric" [from,to])]
+      ]
 ```
 
 Let's break this down a bit: We first get access
@@ -376,3 +377,6 @@ argument names to derive instances for `Show` or JSON
 marshallers. In the [next part](Generic2.md), we will
 first analyze the challenges coming with parameterized
 and indexed types.
+
+<!-- vi: filetype=idris2:syntax=markdown
+-->

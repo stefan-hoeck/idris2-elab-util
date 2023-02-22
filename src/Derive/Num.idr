@@ -1,6 +1,6 @@
 module Derive.Num
 
-import public Language.Reflection.Derive
+import Language.Reflection.Util
 
 %default total
 
@@ -37,7 +37,8 @@ numImplClaim v impl p = implClaimVis v impl (implType "Num" p)
 --------------------------------------------------------------------------------
 
 numImplDef : (p, m, fi, impl : Name) -> Decl
-numImplDef p m fi impl = def impl [var impl .= appNames "MkNum" [p,m,fi]]
+numImplDef p m fi impl =
+  def impl [patClause (var impl) (appNames "MkNum" [p,m,fi])]
 
 plus : BoundArg 2 Explicit -> TTImp
 plus (BA arg [x,y] _)  = `(~(varStr x) + ~(varStr y))
@@ -51,18 +52,19 @@ fromInt _ = `(fromInteger n)
 export
 plusDef : Name -> Con n vs -> Decl
 plusDef fun c =
-  let clause := mapArgs2 explicit (\x,y => var fun .$ x .$ y) plus c
+  let clause := mapArgs2 explicit (\x,y => `(~(var fun) ~(x) ~(y))) plus c
    in def fun [clause]
 
 export
 multDef : Name -> Con n vs -> Decl
 multDef fun c =
-  let clause := mapArgs2 explicit (\x,y => var fun .$ x .$ y) mult c
+  let clause := mapArgs2 explicit (\x,y => `(~(var fun) ~(x) ~(y))) mult c
    in def fun [clause]
 
 export
 fromIntDef : Name -> Con n vs -> Decl
-fromIntDef f c = def f [var f .$ `(n) .= injArgs explicit fromInt c]
+fromIntDef f c =
+  def f [patClause `(~(var f) n) (injArgs explicit fromInt c)]
 
 --------------------------------------------------------------------------------
 --          Deriving

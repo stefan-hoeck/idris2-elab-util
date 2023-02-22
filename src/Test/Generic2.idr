@@ -3,8 +3,8 @@
 ||| pretty printer must be fixed and the example in `Doc.Generic2` adjusted.
 module Test.Generic2
 
-import Language.Reflection.Syntax
-import Language.Reflection.Types
+import Language.Reflection.Syntax.Ops
+import Language.Reflection.Util
 
 ex1 : TypeInfo
 ex1 =

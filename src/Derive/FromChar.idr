@@ -1,6 +1,6 @@
 module Derive.FromChar
 
-import public Language.Reflection.Derive
+import Language.Reflection.Util
 
 %default total
 
@@ -26,13 +26,14 @@ chrImplClaim v impl p = implClaimVis v impl (implType "FromChar" p)
 --------------------------------------------------------------------------------
 
 chrImplDef : (fd, impl : Name) -> Decl
-chrImplDef fd impl = def impl [var impl .= appNames "MkFromChar" [fd]]
+chrImplDef fd impl =
+  def impl [patClause (var impl) (appNames "MkFromChar" [fd])]
 
 export
 fromChrDef : Name -> Con n vs -> Decl
 fromChrDef f c =
   let t := `(fromChar n)
-   in def f [var f .$ bindVar "n" .= injArgs explicit (const t) c]
+   in def f [patClause (var f `app` bindVar "n") (injArgs explicit (const t) c)]
 
 --------------------------------------------------------------------------------
 --          Deriving

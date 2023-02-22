@@ -1,6 +1,6 @@
 module Derive.Neg
 
-import public Language.Reflection.Derive
+import Language.Reflection.Util
 
 %default total
 
@@ -31,7 +31,8 @@ negImplClaim v impl p = implClaimVis v impl (implType "Neg" p)
 --------------------------------------------------------------------------------
 
 negImplDef : (neg, min, impl : Name) -> Decl
-negImplDef neg min impl = def impl [var impl .= appNames "MkNeg" [neg, min]]
+negImplDef neg min impl =
+  def impl [patClause (var impl) (appNames "MkNeg" [neg, min])]
 
 minus : BoundArg 2 Explicit -> TTImp
 minus (BA arg [x,y] _)  = `(~(varStr x) - ~(varStr y))
@@ -42,13 +43,13 @@ neg (BA arg [x] _)  = `(negate ~(varStr x))
 export
 minusDef : Name -> Con n vs -> Decl
 minusDef fun c =
-  let clause := mapArgs2 explicit (\x,y => var fun .$ x .$ y) minus c
+  let clause := mapArgs2 explicit (\x,y => `(~(var fun) ~(x) ~(y))) minus c
    in def fun [clause]
 
 export
 negDef : Name -> Con n vs -> Decl
 negDef fun c =
-  let clause := mapArgs explicit (var fun .$) neg c
+  let clause := mapArgs explicit (var fun `app`) neg c
    in def fun [clause]
 
 --------------------------------------------------------------------------------

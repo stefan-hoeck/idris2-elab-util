@@ -28,4 +28,6 @@ modules = Derive.Abs
         , Language.Reflection.Refined
         , Language.Reflection.Refined.Util
         , Language.Reflection.Syntax
+        , Language.Reflection.Syntax.Ops
         , Language.Reflection.Types
+        , Language.Reflection.Util

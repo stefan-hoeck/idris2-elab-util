@@ -49,6 +49,7 @@ errors that occurred (if any).
 module Doc.Derive
 
 import Language.Reflection.Pretty
+import Data.Vect
 import Derive.Prelude
 
 %language ElabReflection
@@ -443,10 +444,13 @@ arguments are indices and which are parameters. Function `derivePattern`
 lets us do exactly that:
 
 ```idris
-%runElab derivePattern "Tree" [I,P] [Show]
+-- %runElab derivePattern "Tree" [I,P] [Show]
 ```
 
 The pattern passed to `derivePattern` makes it clear that the first
 type argument should be considered an index (or it should just be
 *i*gnored when coming up with the necessary constraints) and the
 second should be treated as a parameter.
+
+<!-- vi: filetype=idris2:syntax=markdown
+-->

@@ -3,8 +3,11 @@
 ```idris
 module Doc.Inspect
 
+import Data.List1
+import Language.Reflection
 import Language.Reflection.Pretty
 import Language.Reflection.Syntax
+import Language.Reflection.Syntax.Ops
 ```
 
 In this section of the tutorial, we will learn how
@@ -100,7 +103,7 @@ The TTImp constructor `IApp` has been replaced with infix operator
 `(.$)` to enhance readability and reduce the amount of parentheses.
 While this somewhat obfuscates how cascades of function application result in nested
 calls to IApp, it is still valid Idris code, because the operator comes
-from `Language.Reflection.Syntax`. This holds in general: Pretty printed
+from `Language.Reflection.Syntax.Ops`. This holds in general: Pretty printed
 `TTImp` is valid Idris code, otherwise, that's a bug.
 
 A similar layout is used for nested function declarations
@@ -277,3 +280,6 @@ Now that we now how Idris expressions can be defined
 by means of `TTImp` and `Decl`, we can start
 building them programmatically. As a first example,
 we will write a [macro for defining enumerations](Enum1.md).
+
+<!-- vi: filetype=idris2:syntax=markdown
+-->

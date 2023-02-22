@@ -1,6 +1,7 @@
 module Test.NameLookup
 
-import Language.Reflection.Syntax
+import Language.Reflection.Syntax.Ops
+import Language.Reflection.Util
 
 %language ElabReflection
 %default total

@@ -1,6 +1,6 @@
 module Derive.FromDouble
 
-import public Language.Reflection.Derive
+import Language.Reflection.Util
 
 %default total
 
@@ -26,13 +26,14 @@ dblImplClaim v impl p = implClaimVis v impl (implType "FromDouble" p)
 --------------------------------------------------------------------------------
 
 dblImplDef : (fd, impl : Name) -> Decl
-dblImplDef fd impl = def impl [var impl .= appNames "MkFromDouble" [fd]]
+dblImplDef fd impl =
+  def impl [patClause (var impl) (appNames "MkFromDouble" [fd])]
 
 export
 fromDblDef : Name -> Con n vs -> Decl
 fromDblDef f c =
   let t := `(fromDouble n)
-   in def f [var f .$ bindVar "n" .= injArgs explicit (const t) c]
+   in def f [patClause (var f `app` bindVar "n") (injArgs explicit (const t) c)]
 
 --------------------------------------------------------------------------------
 --          Deriving
