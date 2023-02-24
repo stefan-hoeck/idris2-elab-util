@@ -1,6 +1,6 @@
 module Derive.Show
 
-import public Language.Reflection.Derive
+import Language.Reflection.Util
 
 %default total
 
@@ -63,7 +63,7 @@ showImplClaim v impl p = implClaimVis v impl (implType "Show" p)
 ||| Top-level definition of the `Show` implementation for the given data type.
 export
 showImplDef : (fun, impl : Name) -> Decl
-showImplDef f i = def i [var i .= var "mkShowPrec" .$ var f]
+showImplDef f i = def i [patClause (var i) (var "mkShowPrec" `app` var f)]
 
 pvar : TTImp
 pvar = var "p"
@@ -99,7 +99,7 @@ parameters (nms : List Name)
   showClauses fun ti = map clause ti.cons
     where
       lhs : TTImp -> TTImp
-      lhs bc = maybe bc ((.$ pvar .$ bc) . var) fun
+      lhs bc = maybe bc (\x => `(~(var x) ~(pvar) ~(bc))) fun
 
       clause : Con ti.arty ti.args -> Clause
       clause c = case all namedArg c.args of
@@ -133,7 +133,7 @@ deriveShow = do
            iCase `(x) implicitFalse (showClauses [ti.name] Nothing ti)
 
   logMsg "derive.definitions" 1 $ show impl
-  check $ var "mkShowPrec" .$ impl
+  check $ var "mkShowPrec" `app` impl
 
 ||| Generate declarations and implementations for `Show` for a given data type.
 export

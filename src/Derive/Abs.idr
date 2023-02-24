@@ -1,6 +1,6 @@
 module Derive.Abs
 
-import public Language.Reflection.Derive
+import Language.Reflection.Util
 
 %default total
 
@@ -24,7 +24,7 @@ absImplClaim vis impl p = implClaimVis vis impl (implType "Abs" p)
 --------------------------------------------------------------------------------
 
 absImplDef : (abs, impl : Name) -> Decl
-absImplDef abs impl = def impl [var impl .= appNames "MkAbs" [abs]]
+absImplDef abs impl = def impl [patClause (var impl) (appNames "MkAbs" [abs])]
 
 parameters (nms : List Name)
   abs : BoundArg 1 Explicit -> TTImp
@@ -32,7 +32,7 @@ parameters (nms : List Name)
 
   export
   absDef : Name -> Con n vs -> Decl
-  absDef fun c = def fun [mapArgs explicit (var fun .$) abs c]
+  absDef fun c = def fun [mapArgs explicit (var fun `app`) abs c]
 
 --------------------------------------------------------------------------------
 --          Deriving

@@ -3,7 +3,7 @@
 module Language.Reflection.Refined
 
 import public Language.Reflection.Refined.Util
-import public Language.Reflection.Derive
+import Language.Reflection.Util
 
 %default total
 

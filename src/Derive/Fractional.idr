@@ -1,6 +1,6 @@
 module Derive.Fractional
 
-import public Language.Reflection.Derive
+import Language.Reflection.Util
 
 %default total
 
@@ -31,7 +31,8 @@ fractionalImplClaim v i p = implClaimVis v i (implType "Fractional" p)
 --------------------------------------------------------------------------------
 
 fractionalImplDef : (div, recip, impl : Name) -> Decl
-fractionalImplDef d r i = def i [var i .= appNames "MkFractional" [d, r]]
+fractionalImplDef d r i =
+  def i [patClause (var i) (appNames "MkFractional" [d, r])]
 
 div : BoundArg 2 Explicit -> TTImp
 div (BA arg [x,y] _)  = `(~(varStr x) / ~(varStr y))
@@ -42,13 +43,13 @@ recip (BA arg [x] _)  = `(recip ~(varStr x))
 export
 divDef : Name -> Con n vs -> Decl
 divDef fun c =
-  let clause := mapArgs2 explicit (\x,y => var fun .$ x .$ y) div c
+  let clause := mapArgs2 explicit (\x,y => `(~(var fun) ~(x) ~(y))) div c
    in def fun [clause]
 
 export
 recipDef : Name -> Con n vs -> Decl
 recipDef fun c =
-  let clause := mapArgs explicit (var fun .$) recip c
+  let clause := mapArgs explicit (var fun `app`) recip c
    in def fun [clause]
 
 --------------------------------------------------------------------------------

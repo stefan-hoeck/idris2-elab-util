@@ -537,3 +537,6 @@ Going via a well-structured data type resolves all these issues.
 And that's it for this first part. We are now ready to automatically
 derive provably correct interface implementations. That second part will
 [follow shortly](Generic7.md).
+
+<!-- vi: filetype=idris2:syntax=markdown
+-->

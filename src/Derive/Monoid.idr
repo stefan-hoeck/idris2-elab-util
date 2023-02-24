@@ -1,6 +1,6 @@
 module Derive.Monoid
 
-import public Language.Reflection.Derive
+import Language.Reflection.Util
 
 --------------------------------------------------------------------------------
 --          Claims
@@ -27,7 +27,7 @@ monoidImplClaim v impl p = implClaimVis v impl (implType "Monoid" p)
 
 export
 monoidImplDef : (fun, impl : Name) -> Decl
-monoidImplDef f i = def i [var i .= var "MkMonoid" .$ var f]
+monoidImplDef f i = def i [patClause (var i) (var "MkMonoid" `app` var f)]
 
 rhs : Con n vs -> TTImp
 rhs = injArgs explicit (const `(neutral))
@@ -36,7 +36,7 @@ rhs = injArgs explicit (const `(neutral))
 ||| the neutral operation.
 export
 neutralDef : Name -> Con n vs -> Decl
-neutralDef f c = def f [var f .= rhs c]
+neutralDef f c = def f [patClause (var f) (rhs c)]
 
 --------------------------------------------------------------------------------
 --          Deriving

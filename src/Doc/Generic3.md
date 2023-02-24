@@ -7,9 +7,8 @@ types.
 ```idris
 module Doc.Generic3
 
-import public Language.Reflection.Pretty
-import public Language.Reflection.Syntax
-import public Language.Reflection.Types
+import Language.Reflection.Pretty
+import Language.Reflection.Util
 import Doc.Generic1
 
 %language ElabReflection
@@ -57,7 +56,7 @@ genericDecl p =
 
       -- Applies parameters to type constructor, i.e. `Either a b`
       appType  = p.applied
-      genType  = `(Generic) .$ appType .$ mkCode p
+      genType  = `(Generic ~(appType) ~(mkCode p))
 
       -- Prefixes function type with implicit arguments for
       -- type parameters:
@@ -70,7 +69,8 @@ genericDecl p =
       to      = lam x $ iCase varX implicitFalse (toClauses names)
 
    in [ interfaceHint Public function funType
-      , def function [ var function .= appAll "MkGeneric" [from,to] ] ]
+      , def function [patClause (var function) (appAll "MkGeneric" [from,to])]
+      ]
 
 export
 deriveGeneric : Name -> Elab ()
@@ -119,3 +119,6 @@ treeTest5 = Refl
 This was pretty straight forward. In the [next post](Generic4.md) I'll
 have a look at
 automating the writing of `Eq` and `Ord` instances.
+
+<!-- vi: filetype=idris2:syntax=markdown
+-->

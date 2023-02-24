@@ -1,6 +1,6 @@
 module Derive.Integral
 
-import public Language.Reflection.Derive
+import Language.Reflection.Util
 
 %default total
 
@@ -24,7 +24,8 @@ intImplClaim v impl p = implClaimVis v impl (implType "Integral" p)
 --------------------------------------------------------------------------------
 
 intImplDef : (div, mod, impl : Name) -> Decl
-intImplDef d m impl = def impl [var impl .= appNames "MkIntegral" [d,m]]
+intImplDef d m impl =
+  def impl [patClause (var impl) (appNames "MkIntegral" [d,m])]
 
 parameters (nms : List Name)
   div : BoundArg 2 Explicit -> TTImp
@@ -36,13 +37,13 @@ parameters (nms : List Name)
   export
   divDef : Name -> Con n vs -> Decl
   divDef fun c =
-    let clause := mapArgs2 explicit (\x,y => var fun .$ x .$ y) div c
+    let clause := mapArgs2 explicit (\x,y => `(~(var fun) ~(x) ~(y))) div c
      in def fun [clause]
 
   export
   modDef : Name -> Con n vs -> Decl
   modDef fun c =
-    let clause := mapArgs2 explicit (\x,y => var fun .$ x .$ y) mod c
+    let clause := mapArgs2 explicit (\x,y => `(~(var fun) ~(x) ~(y))) mod c
      in def fun [clause]
 
 --------------------------------------------------------------------------------

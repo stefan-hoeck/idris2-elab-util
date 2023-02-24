@@ -9,7 +9,8 @@ module Doc.Generic7
 
 import Doc.Generic6
 
-import Language.Reflection.Derive
+import Data.Vect.Quantifiers
+import Language.Reflection.Util
 
 %language ElabReflection
 ```
@@ -79,8 +80,8 @@ mkGeneric = singleCon "Generic"
 
 private
 mkSOP1 : (k : Nat) -> (arg : TTImp) -> TTImp
-mkSOP1 0     arg = `(Z) .$ arg
-mkSOP1 (S k) arg = `(S) .$ mkSOP1 k arg
+mkSOP1 0     arg = `(Z ~(arg))
+mkSOP1 (S k) arg = `(S ~(mkSOP1 k arg))
 
 mkSOP : Foldable t => (k : Nat) -> (args : t TTImp) -> TTImp
 mkSOP k = mkSOP1 k . listOf
@@ -98,19 +99,20 @@ mkCode p = listOf $ map (\c => listOf $ explicits c.args) p.cons
 
 private
 fromClause : (Nat,ConNames) -> Clause
-fromClause (k,(con,ns,vars)) = bindAll con ns .= mkSOP k vars
+fromClause (k,(con,ns,vars)) = patClause (bindAll con ns) (mkSOP k vars)
 
 private
 fromToIdClause : (Nat,ConNames) -> Clause
-fromToIdClause (k,(con,ns,vars)) = bindAll con ns .= `(Refl)
+fromToIdClause (k,(con,ns,vars)) = patClause (bindAll con ns) `(Refl)
 
 private
 toClause : (Nat,ConNames) -> Clause
-toClause (k,(con,ns,vars)) = mkSOP k (map bindVar ns) .= appAll con vars
+toClause (k,(con,ns,vars)) =
+  patClause (mkSOP k $ map bindVar ns) (appAll con vars)
 
 private
 toFromIdClause : (Nat,ConNames) -> Clause
-toFromIdClause (k,(con,ns,vars)) = mkSOP k (map bindVar ns) .= `(Refl)
+toFromIdClause (k,(con,ns,vars)) = patClause (mkSOP k $ map bindVar ns) `(Refl)
 
 private
 zipWithIndex : List a -> List (Nat,a)
@@ -134,7 +136,7 @@ GenericVis vis _ p =
       fun      = UN . Basic $ "implGeneric" ++ camelCase p.info.name
 
       appType  = p.applied
-      genType  = `(Generic) .$ appType .$ mkCode p
+      genType  = `(Generic ~(appType) ~(mkCode p))
       funType  = piAll genType p.implicits
 
       x        = lambdaArg {a = Name} "x"
@@ -146,7 +148,9 @@ GenericVis vis _ p =
 
       impl     = appAll mkGeneric [from,to,fromToId,toFromId]
 
-   in Right [ TL (interfaceHint vis fun funType) (def fun [var fun .= impl])]
+   in Right
+        [ TL (interfaceHint vis fun funType)
+             (def fun [patClause (var fun) impl])]
 
 ||| Alias for `GenericVis Public`.
 export
@@ -233,13 +237,13 @@ mkEqV = %runElab check (var $ singleCon "EqV")
 Eq' : List Name -> ParamTypeInfo -> Res (List TopLevel)
 Eq' _ p =
   let nm := implName p "Eq"
-      cl := var nm .= `(mkEq genEq)
+      cl := patClause (var nm) `(mkEq genEq)
    in Right [TL (implClaim nm (implType "Eq" p)) (def nm [cl])]
 
 EqV' : List Name -> ParamTypeInfo -> Res (List TopLevel)
 EqV' _ p =
   let nm := implName p "EqV"
-      cl := var nm .= `(mkEqV genEqRefl genEqSym genEqTrans (\_,_ => Refl))
+      cl := patClause (var nm) `(mkEqV genEqRefl genEqSym genEqTrans (\_,_ => Refl))
    in Right [TL (implClaim nm (implType "EqV" p)) (def nm [cl])]
 
 data AnotherSum : Type where
@@ -283,3 +287,6 @@ There will of course also be other use cases for elaborator
 reflection. I'm looking forward to learning something about
 using the technique for proof searching, for instance.
 Interesting results will be posted here, promise. :-)
+
+<!-- vi: filetype=idris2:syntax=markdown
+-->

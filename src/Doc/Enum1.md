@@ -6,8 +6,7 @@ therefore need some module noise to get started.
 ```idris
 module Doc.Enum1
 
-import Language.Reflection
-import Language.Reflection.Syntax
+import Language.Reflection.Util
 
 %language ElabReflection
 ```
@@ -145,3 +144,6 @@ first metaprogram. However, the implementation of `Eq Gender`
 above quickly identifies the next opportunity: Implementing
 interface instances automatically. In the [next section](Enum2.md)
 we'll give this a try.
+
+<!-- vi: filetype=idris2:syntax=markdown
+-->

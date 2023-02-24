@@ -1,6 +1,7 @@
 module Derive.Ord
 
-import public Derive.Eq
+import Derive.Eq
+import Language.Reflection.Util
 
 %default total
 
@@ -29,11 +30,12 @@ ordImplClaim v impl p = implClaimVis v impl (implType "Ord" p)
 
 export
 ordImplDef : (fun, impl : Name) -> Decl
-ordImplDef fun impl = def impl [var impl .= var "mkOrd" .$ var fun]
+ordImplDef fun impl =
+  def impl [patClause (var impl) (var "mkOrd" `app` var fun)]
 
 ordEnumDef : (impl, ci : Name) -> Decl
 ordEnumDef i c =
-  def i [var i .= `(mkOrd $ \x,y => compare (~(var c) x) (~(var c) y))]
+  def i [patClause (var i) `(mkOrd $ \x,y => compare (~(var c) x) (~(var c) y))]
 
 -- Generates the right-hand side of the ordering test on a single
 -- pair of (identical) data constructors based on the given list of
@@ -48,7 +50,7 @@ catchAll : (ci : Name) -> (fun : Name) -> TypeInfo -> List Clause
 catchAll ci fun ti =
   let civ      := var ci
   in if length ti.cons > 1
-       then [`(~(var fun) x y) .= `(compare (~(civ) x) (~(civ) y))]
+       then [patClause `(~(var fun) x y) `(compare (~(civ) x) (~(civ) y))]
        else []
 
 parameters (nms : List Name)
@@ -64,7 +66,7 @@ parameters (nms : List Name)
   ordClauses ci fun ti = map clause ti.cons ++ catchAll ci fun ti
    where
      clause : Con ti.arty ti.args -> Clause
-     clause = accumArgs2 regular (\x,y => var fun .$ x .$ y) rhs arg
+     clause = accumArgs2 regular (\x,y => `(~(var fun) ~(x) ~(y))) rhs arg
 
   ||| Definition of a (local or top-level) function implementing
   ||| the ordering check for the given data type.

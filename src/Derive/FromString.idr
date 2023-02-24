@@ -1,6 +1,6 @@
 module Derive.FromString
 
-import public Language.Reflection.Derive
+import Language.Reflection.Util
 
 %default total
 
@@ -26,13 +26,14 @@ strImplClaim v impl p = implClaimVis v impl (implType "FromString" p)
 --------------------------------------------------------------------------------
 
 strImplDef : (fd, impl : Name) -> Decl
-strImplDef fd impl = def impl [var impl .= appNames "MkFromString" [fd]]
+strImplDef fd impl =
+  def impl [patClause (var impl) (appNames "MkFromString" [fd])]
 
 export
 fromStrDef : Name -> Con n vs -> Decl
 fromStrDef f c =
   let t := `(fromString n)
-   in def f [var f .$ bindVar "n" .= injArgs explicit (const t) c]
+   in def f [patClause (var f `app` bindVar "n") (injArgs explicit (const t) c)]
 
 --------------------------------------------------------------------------------
 --          Deriving

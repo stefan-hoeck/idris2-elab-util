@@ -2,10 +2,10 @@ module Language.Reflection.Types
 
 -- inspired by https://github.com/MarcelineVQ/idris2-elab-deriving/
 
-import public Language.Reflection.Syntax
-import public Language.Reflection
-import public Data.Vect.Quantifiers
-import public Data.Vect
+import Data.Vect
+import Data.Vect.Quantifiers
+import Language.Reflection
+import Language.Reflection.Syntax
 
 %language ElabReflection
 
@@ -194,7 +194,7 @@ bindCon : (c : Con n vs) -> Vect c.arty String -> TTImp
 bindCon c ns = go c.nameVar (map piInfo c.args) ns
   where go : TTImp -> Vect k (PiInfo TTImp) -> Vect k String -> TTImp
         go t []                  []        = t
-        go t (ExplicitArg :: xs) (n :: ns) = go (t .$ bindVar n) xs ns
+        go t (ExplicitArg :: xs) (n :: ns) = go (t `app` bindVar n) xs ns
         go t (_           :: xs) (n :: ns) = go t xs ns
 
 ||| Applies a constructor to variables of the given name.
@@ -203,7 +203,7 @@ applyCon : (c : Con n vs) -> Vect c.arty Name -> TTImp
 applyCon c ns = go c.nameVar (map piInfo c.args) ns
   where go : TTImp -> Vect k (PiInfo TTImp) -> Vect k Name -> TTImp
         go t []                  []        = t
-        go t (ExplicitArg :: xs) (n :: ns) = go (t .$ var n) xs ns
+        go t (ExplicitArg :: xs) (n :: ns) = go (t `app` var n) xs ns
         go t (_           :: xs) (n :: ns) = go t xs ns
 
 ||| Tries to lookup a data constructor by name, based on the
@@ -458,7 +458,7 @@ namespace PArg
   ttimp : Vect n Name -> PArg n -> TTImp
   ttimp ns (PPar x)          = var (index x ns)
   ttimp ns (PVar nm)         = var nm
-  ttimp ns (PApp x y)        = ttimp ns x .$ ttimp ns y
+  ttimp ns (PApp x y)        = ttimp ns x `app` ttimp ns y
   ttimp ns (PNamedApp x n y) = INamedApp EmptyFC (ttimp ns x) n (ttimp ns y)
   ttimp ns (PAutoApp x y)    = IAutoApp EmptyFC (ttimp ns x) (ttimp ns y)
   ttimp ns (PWithApp x y)    = IWithApp EmptyFC (ttimp ns x) (ttimp ns y)
@@ -597,7 +597,7 @@ export
 constraints : ParamTypeInfo -> (iname : Name) -> List Arg
 constraints p iname = map (toCon p.paramNames) p.pargs
   where toCon : Vect k Name ->  PArg k -> Arg
-        toCon ns pa = MkArg MW AutoImplicit Nothing . (var iname .$) $
+        toCon ns pa = MkArg MW AutoImplicit Nothing . (app $ var iname) $
                    ttimp ns pa
 
 namespace ParamTypeInfo

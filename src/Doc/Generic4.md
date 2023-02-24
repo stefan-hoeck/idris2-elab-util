@@ -8,11 +8,15 @@ duplication.
 ```idris
 module Doc.Generic4
 
-import public Language.Reflection.Pretty
-import public Language.Reflection.Syntax
-import public Language.Reflection.Types
+import Data.List1
+import Data.Vect
+import Data.Vect.Quantifiers
 import Doc.Generic1
 import Doc.Generic3
+import Language.Reflection
+import Language.Reflection.Pretty
+import Language.Reflection.Syntax
+import Language.Reflection.Types
 
 %language ElabReflection
 ```
@@ -101,7 +105,7 @@ Generic' p =
       function = implName p "Generic"
 
       appType  = p.applied
-      genType  = `(Generic) .$ appType .$ mkCode p
+      genType  = `(Generic ~(appType) ~(mkCode p))
       funType  = piAll genType p.implicits
 
       x       = lambdaArg {a = Name} "x"
@@ -111,7 +115,7 @@ Generic' p =
       impl    = appAll "MkGeneric" [from,to]
 
    in TL (interfaceHint Public function funType)
-         (def function [var function .= impl])
+         (def function [patClause (var function) impl])
 
 ```
 
@@ -131,7 +135,7 @@ use of it via the following utility function:
 export
 implementationType : (iface : Name) -> ParamTypeInfo -> TTImp
 implementationType iface p =
-  let appIface = var iface .$ p.applied
+  let appIface = var iface `app` p.applied
    in piAll appIface (allImplicits p iface)
 ```
 
@@ -148,7 +152,7 @@ Eq' : ParamTypeInfo -> TopLevel
 Eq' p =
   let function := implName p "Eq"
    in TL (interfaceHint Public function $ implementationType "Eq" p)
-         (def function [var function .= mkEq])
+         (def function [patClause (var function) mkEq])
 ```
 
 Same for `Ord`:
@@ -171,7 +175,7 @@ Ord' : ParamTypeInfo -> TopLevel
 Ord' p =
   let function := implName p "Ord"
    in TL (interfaceHint Public function $ implementationType "Ord" p)
-         (def function [var function .= mkOrd])
+         (def function [patClause (var function) mkOrd])
 ```
 
 ## Interface Implementations for `TTImp` and Friends
@@ -268,3 +272,6 @@ Now that we have the means to derive some of the core interface
 implementations with pretty clean syntax, let us look into
 compile-time verification of these implementations.
 But first, we will try and [get back some type safety](Generic5.md).
+
+<!-- vi: filetype=idris2:syntax=markdown
+-->

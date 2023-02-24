@@ -11,11 +11,10 @@ types, to figure out a normalization strategy.
 ```idris
 module Doc.Generic2
 
-import public Language.Reflection.Pretty
-import public Language.Reflection.Syntax
-import public Language.Reflection.Types
+import Data.Vect.Quantifiers
+import Language.Reflection.Pretty
+import Language.Reflection.Util
 import Doc.Generic1
-import Data.Vect
 
 %language ElabReflection
 
@@ -308,3 +307,6 @@ Feel free to have a look yourself.
 
 Now we should be ready to derive `Generic` instances
 for arbitrary parameterized types. [Let's go](Generic3.md).
+
+<!-- vi: filetype=idris2:syntax=markdown
+-->

@@ -1,12 +1,13 @@
 ||| Pretty Printing of Elab Data-Types
 |||
-||| This has not been cleaned-up so, it actually might not
-||| look very pretty.
-|||
 ||| This module can be used in the repl to evaluate, how
 ||| syntax is translated to TTImp and Decl representations.
 ||| Use `putPretty` together with a quoted expression and
 ||| inspect the underlying implementation.
+|||
+||| Note, to improve readability, some constructs are pretty printed
+||| as infix operator chains. The operators in question can be found in
+||| module `Language.Reflection.Syntax.Ops`.
 |||
 ||| REPL Examples:
 |||
@@ -17,8 +18,8 @@ module Language.Reflection.Pretty
 
 import Derive.Pretty
 import Data.String
-import Language.Reflection.Syntax
-import Language.Reflection.Types
+import Data.Vect.Quantifiers
+import Language.Reflection.Util
 
 %language ElabReflection
 %default total

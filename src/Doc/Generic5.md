@@ -6,7 +6,7 @@ some of our beloved type safety when writing elaborator scripts.
 ```idris
 module Doc.Generic5
 
-import public Language.Reflection.Derive
+import Language.Reflection.Util
 import Doc.Generic1
 
 %hide Language.Reflection.Derive.mkEq
@@ -61,7 +61,7 @@ mkEq eq = mkEq' eq (\a,b => not $ eq a b)
 Eq' : List Name -> ParamTypeInfo -> Res (List TopLevel)
 Eq' _ p =
   let nm := implName p "Eq" -- name of implementation function
-      cl := var nm .= `(mkEq genEq) -- single clause of the function
+      cl := patClause (var nm) `(mkEq genEq) -- single clause of the function
    in Right [TL (implClaim nm (implType "Eq" p)) (def nm [cl])]
 ```
 
@@ -94,7 +94,7 @@ mkOrd comp = mkOrd' comp
 Ord' : List Name -> ParamTypeInfo -> Res (List TopLevel)
 Ord' _ p =
   let nm := implName p "Ord" -- name of implementation function
-      cl := var nm .= `(mkOrd genCompare) -- single clause of the function
+      cl := patClause (var nm) `(mkOrd genCompare) -- single clause of the function
    in Right [TL (implClaim nm (implType "Ord" p)) (def nm [cl])]
 ```
 
@@ -174,3 +174,6 @@ data type's name and type parameters.
 It was, however, possible for record constructors
 whose types we already knew but whose names we had
 to look up using elaborator reflection.
+
+<!-- vi: filetype=idris2:syntax=markdown
+-->

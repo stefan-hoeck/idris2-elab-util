@@ -10,7 +10,7 @@ module Doc.Primitives
 
 import Data.Maybe
 import Data.So
-import Language.Reflection.Derive
+import Language.Reflection.Util
 
 %language ElabReflection
 
@@ -218,3 +218,6 @@ This concludes this tutorial post. As can be seen, if we know the structure
 of data types in advance, coming up with simple elaborator
 scripts is very easy. The syntax to do so is lightweight,
 especially in cases where we can quote most of the code directly.
+
+<!-- vi: filetype=idris2:syntax=markdown
+-->

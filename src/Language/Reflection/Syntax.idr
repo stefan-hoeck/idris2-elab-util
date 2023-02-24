@@ -9,9 +9,9 @@
 ||| Expressions can be quoted like so: `(\x => x * x)
 module Language.Reflection.Syntax
 
-import public Data.String
-import public Data.List1
-import public Language.Reflection
+import Data.String
+import Data.List1
+import Language.Reflection
 
 %default total
 
@@ -216,15 +216,6 @@ public export %inline
 app : (fun, arg : TTImp) -> TTImp
 app = IApp EmptyFC
 
-infixl 6 .$,.@,.!
-
-||| Infix version of `app`
-|||
-||| Example: ```var "Just" .$ var "x"```
-public export %inline
-(.$) : TTImp -> TTImp -> TTImp
-(.$) = IApp EmptyFC
-
 export
 unApp : TTImp -> (TTImp,List TTImp)
 unApp = run []
@@ -237,7 +228,7 @@ unApp = run []
 ||| See `appNames` for an example
 public export %inline
 appAll : Name -> List TTImp -> TTImp
-appAll fun = foldl (.$) (var fun)
+appAll fun = foldl app (var fun)
 
 ||| Applies a list of variable names to a function.
 |||
@@ -302,11 +293,6 @@ withApp = IWithApp EmptyFC
 public export %inline
 namedApp : (fun : TTImp) -> (name : Name) -> (arg : TTImp) -> TTImp
 namedApp = INamedApp EmptyFC
-
-||| Infix version of `namedApp`.
-public export %inline
-(.!) : TTImp -> (Name,TTImp) -> TTImp
-s .! (n,t) = namedApp s n t
 
 ||| Catch-all pattern match on a data constructor.
 |||
@@ -401,16 +387,6 @@ public export
 lam : (arg : Arg) -> (lamTy : TTImp) -> TTImp
 lam (MkArg c p n t) = ILam EmptyFC c p n t
 
-infixr 3 .=>
-
-||| Infix alias for `lam`.
-|||
-||| @deprecation: This is in conflict with a similar operator from
-||| `Syntax.PreorderReasoning`. It will be removed in a later commit.
-public export %inline %deprecate
-(.=>) : Arg -> TTImp -> TTImp
-(.=>) = lam
-
 --------------------------------------------------------------------------------
 --          Function Types
 --------------------------------------------------------------------------------
@@ -422,17 +398,10 @@ public export
 pi : (arg : Arg) -> (retTy : TTImp) -> TTImp
 pi (MkArg c p n t) = IPi EmptyFC c p n t
 
-infixr 5 .->
-
-||| Infix alias for `pi`.
-public export %inline
-(.->) : Arg -> TTImp -> TTImp
-(.->) = pi
-
 ||| Defines a function type taking the given arguments.
 public export %inline
 piAll : TTImp -> List Arg -> TTImp
-piAll res = foldr (.->) res
+piAll res = foldr pi res
 
 ||| Defines a function type taking implicit arguments of the
 ||| given names.
@@ -477,13 +446,6 @@ withClause :
   -> (clauses : List Clause)
   -> Clause
 withClause = WithClause EmptyFC
-
-infixr 3 .=
-
-||| Infix alias for `patClause`
-public export %inline
-(.=) : TTImp -> TTImp -> Clause
-(.=) = patClause
 
 ||| A case expression.
 |||
@@ -705,7 +667,7 @@ rec nms t                    = False
 export
 assertIfRec : List Name -> (tpe : TTImp) -> (expr : TTImp) -> TTImp
 assertIfRec nms tpe expr =
-  if rec nms tpe then var "assert_total" .$ expr else expr
+  if rec nms tpe then var "assert_total" `app` expr else expr
 
 --------------------------------------------------------------------------------
 --          Elab Utils

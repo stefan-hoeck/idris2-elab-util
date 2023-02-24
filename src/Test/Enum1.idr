@@ -3,7 +3,7 @@
 ||| pretty printer must be fixed and the example in `Doc.Enum1` adjusted.
 module Test.Enum1
 
-import Language.Reflection.Syntax
+import Language.Reflection.Util
 
 ex1 : List Decl
 ex1 =

@@ -3,7 +3,8 @@
 ||| pretty printer must be fixed and the example in `Doc.Inspect` adjusted.
 module Test.Inspect
 
-import Language.Reflection.Syntax
+import Language.Reflection.Syntax.Ops
+import Language.Reflection.Util
 
 ex1 : TTImp
 ex1 = var "*" .$ (var "fromInteger" .$ primVal (BI 2)) .$ var "x"
