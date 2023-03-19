@@ -91,3 +91,18 @@ NumVis vis nms p = case p.info.cons of
 export %inline
 Num : List Name -> ParamTypeInfo -> Res (List TopLevel)
 Num = NumVis Public
+
+||| Generate a single `fromInteger` function for the given type
+export
+FromIntegerVis : Visibility -> List Name -> ParamTypeInfo -> Res (List TopLevel)
+FromIntegerVis vis nms p = case p.info.cons of
+  [c] =>
+    let fun := the Name "fromInteger"
+     in Right [ TL (fromIntClaim vis fun p) (fromIntDef fun c) ]
+  _   => failRecord "fromInteger"
+
+||| Generate a single `fromInteger` function with `public export`
+||| visibility for the given type
+export %inline
+FromInteger : List Name -> ParamTypeInfo -> Res (List TopLevel)
+FromInteger = FromIntegerVis Public
