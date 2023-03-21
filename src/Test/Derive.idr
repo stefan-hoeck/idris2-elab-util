@@ -77,10 +77,6 @@ record Barbie a b (f : Type -> Type) where
   name : f b
   age  : f Nat
 
-info : TypeInfo
-info = getInfo "Barbie"
-
--- %logging "derive.claims" 1
 %runElab derive "Barbie" [Show, Eq, Ord]
 
 test : Barbie Bits64 String Prelude.id
