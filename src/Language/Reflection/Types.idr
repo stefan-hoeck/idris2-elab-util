@@ -258,13 +258,31 @@ public export
 ||| applied to the names of its explicit arguments
 public export
 (.applied) : TypeInfo -> TTImp
-(.applied) p = appNames p.name p.explicitArgs
+(.applied) p = go p.nameVar p.args p.argNames
+  where
+    go : TTImp -> Vect n Arg -> Vect n Name -> TTImp
+    go t []        []          = t
+    go t (MkArg _ AutoImplicit _ _ :: xs) (_ :: nms) = go t xs nms
+    go t (MkArg _ _ (Just no) _ :: xs) (nm :: nms) =
+      go (namedApp t no (var nm)) xs nms
+    go t (MkArg _ _ Nothing   _ :: xs) (nm :: nms) =
+      go (t `app` var nm) xs nms
 
 ||| Returns a list of implicit arguments corresponding
-||| to the data type's explicit arguments.
+||| to the data type's implicit and explicit arguments.
 public export %inline
 (.implicits) : TypeInfo -> List Arg
-(.implicits) p = implicits p.explicitArgs
+(.implicits) p = go Lin p.args
+  where
+    toArg : Maybe Name -> TTImp -> Arg
+    toArg mn (IHole _ _) = MkArg M0 ImplicitArg mn implicitFalse
+    toArg mn t           = MkArg M0 ImplicitArg mn t
+
+    go : SnocList Arg -> Vect k Arg -> List Arg
+    go sn []                               = sn <>> []
+    go sn (MkArg _ ExplicitArg mn t :: xs) = go (sn :< toArg mn t) xs
+    go sn (MkArg _ ImplicitArg mn t :: xs) = go (sn :< toArg mn t) xs
+    go sn (_                        :: xs) = go sn xs
 
 
 ||| True if the given type has only constant constructors and

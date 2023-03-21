@@ -1,5 +1,6 @@
 module Test.Derive
 
+import Language.Reflection.Pretty
 import Derive.Prelude
 
 %default total
@@ -211,3 +212,14 @@ record V4 a where
 %runElab deriveIndexed "Language.Reflection.Types.MissingInfo" [Show,Eq,Ord]
 
 %runElab deriveIndexed "Language.Reflection.Types.AppArg" [Show]
+
+--------------------------------------------------------------------------------
+--          Tagged
+--------------------------------------------------------------------------------
+
+record Id (v : k) where
+  constructor MkId
+  value : Nat
+
+namespace Id
+  %runElab derive "Id" [Show,Eq,Ord,FromInteger]
