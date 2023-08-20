@@ -52,9 +52,10 @@ FromCharVis vis nms p = case p.info.cons of
   [c] =>
     let fun  := funName p "fromChar"
         impl := implName p "FromChar"
-     in Right [ TL (fromChrClaim vis fun p) (fromChrDef fun c)
-              , TL (chrImplClaim vis impl p) (chrImplDef fun impl)
-              ]
+     in Right
+          [ TL (fromChrClaim vis fun p) (fromChrDef fun c)
+          , TL (chrImplClaim vis impl p) (chrImplDef fun impl)
+          ]
   _   => failRecord "FromChar"
 
 ||| Alias for `FromCharVis Public`

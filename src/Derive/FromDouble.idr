@@ -47,9 +47,10 @@ FromDoubleVis vis nms p = case p.info.cons of
   [c] =>
     let fun  := funName p "fromDouble"
         impl := implName p "FromDouble"
-     in Right [ TL (fromDblClaim vis fun p) (fromDblDef fun c)
-              , TL (dblImplClaim vis impl p) (dblImplDef fun impl)
-              ]
+     in Right
+          [ TL (fromDblClaim vis fun p) (fromDblDef fun c)
+          , TL (dblImplClaim vis impl p) (dblImplDef fun impl)
+          ]
   _   => failRecord "FromDouble"
 
 ||| Alias for `FromDoubleVis Public`

@@ -49,9 +49,10 @@ MonoidVis vis nms p = case p.info.cons of
   [c] =>
     let fun  := funName p "neutral"
         impl := implName p "Monoid"
-     in Right [ TL (neutralClaim vis fun p) (neutralDef fun c)
-              , TL (monoidImplClaim vis impl p) (monoidImplDef fun impl)
-              ]
+     in Right
+          [ TL (neutralClaim vis fun p) (neutralDef fun c)
+          , TL (monoidImplClaim vis impl p) (monoidImplDef fun impl)
+          ]
   _   => failRecord "Monoid"
 
 ||| Alias for `MonoidVis Public`
