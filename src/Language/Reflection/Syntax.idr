@@ -22,11 +22,13 @@ import Language.Reflection
 public export
 FromString Name where
   fromString s = run (split ('.' ==) s) []
-    where run : List1 String -> List String -> Name
-          run (h ::: []) []        = UN $ Basic h
-          run (h ::: []) ns        = NS (MkNS ns) (UN $ Basic h)
-          run ll@(h ::: (y :: ys)) xs =
-            run (assert_smaller ll $ y ::: ys) (h :: xs)
+
+    where
+      run : List1 String -> List String -> Name
+      run (h ::: []) []        = UN $ Basic h
+      run (h ::: []) ns        = NS (MkNS ns) (UN $ Basic h)
+      run ll@(h ::: (y :: ys)) xs =
+        run (assert_smaller ll $ y ::: ys) (h :: xs)
 
 export
 Interpolation Name where
@@ -219,9 +221,11 @@ app = IApp EmptyFC
 export
 unApp : TTImp -> (TTImp,List TTImp)
 unApp = run []
-  where run : List TTImp -> TTImp -> (TTImp,List TTImp)
-        run xs (IApp _ y z) = run (z :: xs) y
-        run xs t            = (t,xs)
+
+  where
+    run : List TTImp -> TTImp -> (TTImp,List TTImp)
+    run xs (IApp _ y z) = run (z :: xs) y
+    run xs t            = (t,xs)
 
 ||| Applies a list of variables to a function.
 |||
@@ -317,10 +321,10 @@ alternative = IAlternative EmptyFC
 public export
 record Arg where
   constructor MkArg
-  count   : Count
-  piInfo  : PiInfo TTImp
-  name    : Maybe Name
-  type    : TTImp
+  count  : Count
+  piInfo : PiInfo TTImp
+  name   : Maybe Name
+  type   : TTImp
 
 ||| Creates an explicit unnamed argument of the given type.
 public export %inline
@@ -567,12 +571,13 @@ update = IUpdate EmptyFC
 |||
 ||| This merges constructors `IData` and `MkData`.
 public export
-iData :  (vis   : Visibility)
-      -> (name  : Name)
-      -> (tycon : TTImp)
-      -> (opts  : List DataOpt)
-      -> (cons  : List ITy)
-      -> Decl
+iData :
+     (vis   : Visibility)
+  -> (name  : Name)
+  -> (tycon : TTImp)
+  -> (opts  : List DataOpt)
+  -> (cons  : List ITy)
+  -> Decl
 iData v n tycon opts cons =
   IData EmptyFC v Nothing (MkData EmptyFC n (Just tycon) opts cons)
 
@@ -685,7 +690,7 @@ listOf = foldr (\e,acc => `(~(e) :: ~(acc))) `( Nil )
 private errMsg : Name -> List (Name,TTImp) -> String
 errMsg n [] = show n ++ " is not in scope."
 errMsg n xs =
-  let rest = concat $ intersperse ", " $ map (show . fst) xs
+  let rest := concat $ intersperse ", " $ map (show . fst) xs
    in show n ++ " is not unique: " ++ rest
 
 ||| Looks up a name in the current namespace.
@@ -695,5 +700,7 @@ lookupName n = do
   pairs <- getType n
   case (pairs,n) of
     ([p],_)     => pure p
-    (ps,UN str) => inCurrentNS (UN str) >>= \m => assert_total {-now argument is NS, not UN-} $ lookupName m
+    (ps,UN str) => do
+      m <- inCurrentNS (UN str)
+      assert_total $ lookupName m --now argument is NS, not UN
     (ps,_)      => fail $ errMsg n ps
