@@ -37,5 +37,5 @@ and this library.
 ## Contributors
 
 Contributions are highly welcome. Please adhere to the
-[style-guide](https://github.com/stefan-hoeck/idris2-style-guide)
+[style guide](https://github.com/stefan-hoeck/idris2-style-guide)
 I use for my projects.
