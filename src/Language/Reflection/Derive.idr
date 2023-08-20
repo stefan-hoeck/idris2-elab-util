@@ -86,16 +86,17 @@ boundArgs :
   -> Vect k (Vect n String)
   -> SnocList (BoundArg k p)
 boundArgs f = go Lin
-  where go :  SnocList (BoundArg k p)
-           -> Vect m Arg
-           -> Vect k (Vect m String)
-           -> SnocList (BoundArg k p)
-        go sx (x :: xs) ns =
-          let (y, ys) := split ns
-           in case f x of
-                Just prf => go (sx :< BA x y prf) xs ys
-                Nothing  => go sx xs ys
-        go sx []        _  = sx
+  where
+    go :  SnocList (BoundArg k p)
+       -> Vect m Arg
+       -> Vect k (Vect m String)
+       -> SnocList (BoundArg k p)
+    go sx (x :: xs) ns =
+      let (y, ys) := split ns
+       in case f x of
+            Just prf => go (sx :< BA x y prf) xs ys
+            Nothing  => go sx xs ys
+    go sx []        _  = sx
 
 public export
 data Explicit : Arg -> Type where
@@ -464,6 +465,7 @@ allIndices n = Just $ Evidence _ $ indicesOnly n
 export
 match : ParamPattern m k -> (n : Nat) -> Maybe (Exists $ ParamPattern n)
 match p n = map (\v => Evidence _ v) $ go n p
+
   where
     go : (z : Nat) -> ParamPattern x y -> Maybe (ParamPattern z y)
     go 0 []           = Just []

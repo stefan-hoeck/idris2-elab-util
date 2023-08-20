@@ -49,28 +49,32 @@ WithName = Pair String
 export
 conH :
      {opts : _}
-  -> All Pretty ts
-  => Prec
+  -> {auto _ : All Pretty ts}
+  -> Prec
   -> String
   -> All Prelude.id ts
   -> Doc opts
 conH p str ps = prettyCon p str $ go ps
-  where go : All Pretty ss => All Prelude.id ss -> List (Doc opts)
-        go @{[]}     []             = []
-        go @{_ :: _} (v :: ps) = prettyArg v :: go ps
+
+  where
+    go : All Pretty ss => All Prelude.id ss -> List (Doc opts)
+    go @{[]}     []             = []
+    go @{_ :: _} (v :: ps) = prettyArg v :: go ps
 
 export
 recordH :
      {opts : _}
-  -> All Pretty ts
-  => Prec
+  -> {auto _ : All Pretty ts}
+  -> Prec
   -> String
   -> All WithName ts
   -> Doc opts
 recordH p str ps = prettyRecord p str $ go ps
-  where go : All Pretty ss => All WithName ss -> List (Doc opts)
-        go @{[]}     []             = []
-        go @{_ :: _} ((fn,v) :: ps) = prettyField fn v :: go ps
+
+  where
+    go : All Pretty ss => All WithName ss -> List (Doc opts)
+    go @{[]}     []             = []
+    go @{_ :: _} ((fn,v) :: ps) = prettyField fn v :: go ps
 
 export
 op :
@@ -262,9 +266,11 @@ Pretty (Fin n) where
 export
 Pretty (All AppArg vs) where
   prettyPrec _ vs = list $ go vs
-    where go : All AppArg bs -> List (Doc opts)
-          go []       = []
-          go (x :: y) = pretty x :: go y
+
+    where
+      go : All AppArg bs -> List (Doc opts)
+      go []       = []
+      go (x :: y) = pretty x :: go y
 
 %runElab deriveIndexed "Con" [Pretty]
 %runElab deriveIndexed "TypeInfo" [Pretty]
@@ -273,9 +279,11 @@ Pretty (All AppArg vs) where
 export
 Pretty (ParamPattern m n) where
   prettyPrec _ vs = list $ go vs
-    where go : ParamPattern x y -> List (Doc opts)
-          go []       = []
-          go (x :: y) = pretty x :: go y
+
+    where
+      go : ParamPattern x y -> List (Doc opts)
+      go []       = []
+      go (x :: y) = pretty x :: go y
 
 %runElab deriveIndexed "PArg" [Pretty]
 %runElab deriveIndexed "ConArg" [Pretty]
