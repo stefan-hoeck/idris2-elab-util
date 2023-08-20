@@ -17,13 +17,14 @@ We often use sum types like `Weekday` below to define
 well-typed choices of constant values.
 
 ```idris
-data Weekday = Monday
-             | Tuesday
-             | Wednesday
-             | Thursday
-             | Friday
-             | Saturday
-             | Sunday
+data Weekday =
+    Monday
+  | Tuesday
+  | Wednesday
+  | Thursday
+  | Friday
+  | Saturday
+  | Sunday
 ```
 
 We will now write a metaprogram that generates similar
@@ -61,14 +62,16 @@ from `Language.Reflection`):
 
 ```idris
 enumDecl1 name cons = IData EmptyFC Public Nothing dat
-  where enumName : Name
-        enumName = UN $ Basic name
 
-        mkCon : String -> ITy
-        mkCon n = MkTy EmptyFC EmptyFC (UN $ Basic n) (IVar EmptyFC enumName)
+  where
+    enumName : Name
+    enumName = UN $ Basic name
 
-        dat : Data
-        dat = MkData EmptyFC enumName (Just (IType EmptyFC)) [] (map mkCon cons)
+    mkCon : String -> ITy
+    mkCon n = MkTy EmptyFC EmptyFC (UN $ Basic n) (IVar EmptyFC enumName)
+
+    dat : Data
+    dat = MkData EmptyFC enumName (Just (IType EmptyFC)) [] (map mkCon cons)
 ```
 
 ## Second Implementation
@@ -90,8 +93,10 @@ the string passed whether the name is fully qualified or not.
 export
 enumDecl : (name : String) -> (cons : List String) -> Decl
 enumDecl name = simpleData Public (UN $ Basic name) . map mkCon
-  where mkCon : String -> ITy
-        mkCon n = mkTy (UN $ Basic n) (varStr name)
+
+  where
+    mkCon : String -> ITy
+    mkCon n = mkTy (UN $ Basic n) (varStr name)
 ```
 
 Here, we used functions `simpleData`, `mkTy`, and `varStr`

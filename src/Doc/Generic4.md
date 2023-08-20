@@ -67,9 +67,9 @@ all kinds of definitions:
 
 ```idris
 derive1 :
-     Elaboration m
-  => Elaborateable t
-  => Name
+     {auto _ : Elaboration m}
+  -> {auto _ : Elaborateable t}
+  -> Name
   -> List (t -> TopLevel)
   -> m ()
 derive1 ns fs = do
@@ -101,18 +101,18 @@ conNames c =
 export
 Generic' : ParamTypeInfo -> TopLevel
 Generic' p =
-  let names    = zipWithIndex (map conNames p.cons)
-      function = implName p "Generic"
+  let names    := zipWithIndex (map conNames p.cons)
+      function := implName p "Generic"
 
-      appType  = p.applied
-      genType  = `(Generic ~(appType) ~(mkCode p))
-      funType  = piAll genType p.implicits
+      appType  := p.applied
+      genType  := `(Generic ~(appType) ~(mkCode p))
+      funType  := piAll genType p.implicits
 
-      x       = lambdaArg {a = Name} "x"
-      varX    = var "x"
-      from    = lam x $ iCase varX implicitFalse (map fromClause names)
-      to      = lam x $ iCase varX implicitFalse (toClauses names)
-      impl    = appAll "MkGeneric" [from,to]
+      x        := lambdaArg {a = Name} "x"
+      varX     := var "x"
+      from     := lam x $ iCase varX implicitFalse (map fromClause names)
+      to       := lam x $ iCase varX implicitFalse (toClauses names)
+      impl     := appAll "MkGeneric" [from,to]
 
    in TL (interfaceHint Public function funType)
          (def function [patClause (var function) impl])
@@ -222,9 +222,9 @@ of `deriveMutual`:
 ```idris
 export
 deriveGeneral :
-     Elaboration m
-  => Elaborateable t
-  => List Name
+     {auto _ : Elaboration m}
+  -> {auto _ : Elaborateable t}
+  -> List Name
   -> List (t -> TopLevel)
   -> m ()
 deriveGeneral ns fs = do

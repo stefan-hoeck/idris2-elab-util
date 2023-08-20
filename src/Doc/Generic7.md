@@ -91,11 +91,13 @@ mkSOP k = mkSOP1 k . listOf
 export
 mkCode : (p : ParamTypeInfo) -> TTImp
 mkCode p = listOf $ map (\c => listOf $ explicits c.args) p.cons
-  where explicits : Vect n (ConArg p.numParams) -> List TTImp
-        explicits [] = []
-        explicits (CArg _ _ ExplicitArg t :: as) =
-          ttimp p.paramNames t :: explicits as
-        explicits (_ :: as) = explicits as
+
+  where
+    explicits : Vect n (ConArg p.numParams) -> List TTImp
+    explicits [] = []
+    explicits (CArg _ _ ExplicitArg t :: as) =
+      ttimp p.paramNames t :: explicits as
+    explicits (_ :: as) = explicits as
 
 private
 fromClause : (Nat,ConNames) -> Clause
@@ -132,19 +134,19 @@ conNames c =
 export
 GenericVis : Visibility -> List Name -> ParamTypeInfo -> Res (List TopLevel)
 GenericVis vis _ p =
-  let names    = zipWithIndex (map conNames p.cons)
-      fun      = UN . Basic $ "implGeneric" ++ camelCase p.info.name
+  let names    := zipWithIndex (map conNames p.cons)
+      fun      := UN . Basic $ "implGeneric" ++ camelCase p.info.name
 
-      appType  = p.applied
-      genType  = `(Generic ~(appType) ~(mkCode p))
-      funType  = piAll genType p.implicits
+      appType  := p.applied
+      genType  := `(Generic ~(appType) ~(mkCode p))
+      funType  := piAll genType p.implicits
 
-      x        = lambdaArg {a = Name} "x"
-      varX     = var "x"
-      from     = lam x $ iCase varX implicitFalse (map fromClause names)
-      to       = lam x $ iCase varX implicitFalse (map toClause names)
-      fromToId = lam x $ iCase varX implicitFalse (map fromToIdClause names)
-      toFromId = lam x $ iCase varX implicitFalse (map toFromIdClause names)
+      x        := lambdaArg {a = Name} "x"
+      varX     := var "x"
+      from     := lam x $ iCase varX implicitFalse (map fromClause names)
+      to       := lam x $ iCase varX implicitFalse (map toClause names)
+      fromToId := lam x $ iCase varX implicitFalse (map fromToIdClause names)
+      toFromId := lam x $ iCase varX implicitFalse (map toFromIdClause names)
 
       impl     = appAll mkGeneric [from,to,fromToId,toFromId]
 
@@ -179,24 +181,32 @@ already know the laws hold for the `Eq` instance of `SOP`:
 
 ```idris
 export total
-genEqRefl :  Generic t code => EqV (SOP I code)
-          => (x : t) -> genEq x x = True
+genEqRefl :
+     {auto _ : Generic t code}
+  -> {auto _ : EqV (SOP I code)}
+  -> (x : t)
+  -> genEq x x = True
 genEqRefl x with (from x)
   genEqRefl x | gx = eqRefl gx
 
 export total
-genEqSym :  Generic t code => EqV (SOP I code)
-         => (x,y : t) -> genEq x y = genEq y x
+genEqSym :
+     {auto _ : Generic t code}
+  -> {auto _ : EqV (SOP I code)}
+  -> (x,y : t)
+  -> genEq x y = genEq y x
 genEqSym x y with (from x)
   genEqSym x y | gx with (from y)
     genEqSym x y | gx | gy = eqSym gx gy
 
 export total
-genEqTrans :  Generic t code => EqV (SOP I code)
-           => (x,y,z : t)
-           -> genEq x y = True
-           -> genEq y z = True
-           -> genEq x z = True
+genEqTrans :
+     {auto _ : Generic t code}
+  -> {auto _ : EqV (SOP I code)}
+  -> (x,y,z : t)
+  -> genEq x y = True
+  -> genEq y z = True
+  -> genEq x z = True
 genEqTrans x y z xy yz with (from x)
   genEqTrans x y z xy yz | gx with (from y)
     genEqTrans x y z xy yz | gx | gy with (from z)
@@ -207,9 +217,10 @@ With this we are able to trivially implement `EqV` for
 generically derived instances of `Eq`:
 
 ```idris
-data TestSum  = A Int String
-              | B Bool
-              | C String
+data TestSum =
+    A Int String
+  | B Bool
+  | C String
 
 %runElab derive "TestSum" [Generic']
 
@@ -226,12 +237,13 @@ And thus, we can derive provably lawful instances of `Eq`
 automatically from a data type's generic representation:
 
 ```idris
-mkEqV :  Eq a
-      => (eqRefl   : (x : a) -> IsEq x x)
-      -> (eqSym    : (x,y : a) -> (x == y) = (y == x))
-      -> (eqTrans  : (x,y,z : a) -> IsEq x y -> IsEq y z -> IsEq x z)
-      -> (neqNotEq : (x,y : a) -> (x /= y) = not (x == y))
-      -> EqV a
+mkEqV :
+     {auto _ : Eq a}
+  -> (eqRefl   : (x : a) -> IsEq x x)
+  -> (eqSym    : (x,y : a) -> (x == y) = (y == x))
+  -> (eqTrans  : (x,y,z : a) -> IsEq x y -> IsEq y z -> IsEq x z)
+  -> (neqNotEq : (x,y : a) -> (x /= y) = not (x == y))
+  -> EqV a
 mkEqV = %runElab check (var $ singleCon "EqV")
 
 Eq' : List Name -> ParamTypeInfo -> Res (List TopLevel)

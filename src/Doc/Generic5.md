@@ -71,25 +71,28 @@ constructor, forcing us to get access to its implementation function
 by means of `implName`. This is no longer necessary:
 
 ```idris
-mkOrd' :  Eq a
-       => (compare : a -> a -> Ordering)
-       -> (lt : a -> a -> Bool)
-       -> (gt : a -> a -> Bool)
-       -> (leq : a -> a -> Bool)
-       -> (geq : a -> a -> Bool)
-       -> (max : a -> a -> a)
-       -> (min : a -> a -> a)
-       -> Ord a
+mkOrd' :
+     {auto _ : Eq a}
+  -> (compare : a -> a -> Ordering)
+  -> (lt : a -> a -> Bool)
+  -> (gt : a -> a -> Bool)
+  -> (leq : a -> a -> Bool)
+  -> (geq : a -> a -> Bool)
+  -> (max : a -> a -> a)
+  -> (min : a -> a -> a)
+  -> Ord a
 mkOrd' = %runElab check (var $ singleCon "Ord")
 
 mkOrd : Eq a => (comp : a -> a -> Ordering) -> Ord a
-mkOrd comp = mkOrd' comp
-                    (\a,b => comp a b == LT)
-                    (\a,b => comp a b == GT)
-                    (\a,b => comp a b /= GT)
-                    (\a,b => comp a b /= LT)
-                    (\a,b => if comp a b == GT then a else b)
-                    (\a,b => if comp a b == LT then a else b)
+mkOrd comp =
+  mkOrd'
+    comp
+    (\a,b => comp a b == LT)
+    (\a,b => comp a b == GT)
+    (\a,b => comp a b /= GT)
+    (\a,b => comp a b /= LT)
+    (\a,b => if comp a b == GT then a else b)
+    (\a,b => if comp a b == LT then a else b)
 
 Ord' : List Name -> ParamTypeInfo -> Res (List TopLevel)
 Ord' _ p =

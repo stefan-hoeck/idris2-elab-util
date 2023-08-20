@@ -30,11 +30,13 @@ paramConNames c =
 export
 mkCode : (p : ParamTypeInfo) -> TTImp
 mkCode p = listOf $ map (\c => listOf $ explicits c.args) p.cons
-  where explicits : Vect n (ConArg p.numParams) -> List TTImp
-        explicits [] = []
-        explicits (CArg _ _ ExplicitArg t :: as) =
-          ttimp p.paramNames t :: explicits as
-        explicits (_ :: as) = explicits as
+
+  where
+    explicits : Vect n (ConArg p.numParams) -> List TTImp
+    explicits [] = []
+    explicits (CArg _ _ ExplicitArg t :: as) =
+      ttimp p.paramNames t :: explicits as
+    explicits (_ :: as) = explicits as
 ```
 
 Note, that in order to convert the argument types back to `TTImp`,
@@ -51,22 +53,22 @@ The utility function `piAllImplicit` helps with this part.
 export
 genericDecl : (p : ParamTypeInfo) -> List Decl
 genericDecl p =
-  let names    = zipWithIndex (map paramConNames p.cons)
-      function   = UN . Basic $ "implGeneric" ++ camelCase p.info.name
+  let names    := zipWithIndex (map paramConNames p.cons)
+      function := UN . Basic $ "implGeneric" ++ camelCase p.info.name
 
       -- Applies parameters to type constructor, i.e. `Either a b`
-      appType  = p.applied
-      genType  = `(Generic ~(appType) ~(mkCode p))
+      appType  := p.applied
+      genType  := `(Generic ~(appType) ~(mkCode p))
 
       -- Prefixes function type with implicit arguments for
       -- type parameters:
       -- `{0 a : _} -> {0 b : _} -> Generic (Either a b) [[a],[b]]`
-      funType  = piAll genType p.implicits
+      funType  := piAll genType p.implicits
 
-      x       = lambdaArg {a = Name} "x"
-      varX    = var "x"
-      from    = lam x $ iCase varX implicitFalse (map fromClause names)
-      to      = lam x $ iCase varX implicitFalse (toClauses names)
+      x        := lambdaArg {a = Name} "x"
+      varX     := var "x"
+      from     := lam x $ iCase varX implicitFalse (map fromClause names)
+      to       := lam x $ iCase varX implicitFalse (toClauses names)
 
    in [ interfaceHint Public function funType
       , def function [patClause (var function) (appAll "MkGeneric" [from,to])]

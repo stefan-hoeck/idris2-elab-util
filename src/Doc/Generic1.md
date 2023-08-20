@@ -104,10 +104,11 @@ genEq : Generic t code => All2 Eq code => t -> t -> Bool
 genEq a b = from a == from b
 
 public export total
-genCompare :  Generic t code
-           => All2 Eq code
-           => All2 Ord code
-           => t -> t -> Ordering
+genCompare :
+     {auto _ : Generic t code}
+  -> {auto _ : All2 Eq code}
+  -> {auto _ : All2 Ord code}
+  -> t -> t -> Ordering
 -- We don't use `comparing` here, since for the time being
 -- it is not publicly exported, which makes type-level
 -- testing more difficult
@@ -149,9 +150,10 @@ Another example, this time with a sum-type:
 
 ```idris
 public export
-data ParseErr = EOF
-              | ReadErr Int Int String
-              | UnmatchedParen Int Int
+data ParseErr =
+    EOF
+  | ReadErr Int Int String
+  | UnmatchedParen Int Int
 
 public export
 Generic ParseErr [[],[Int,Int,String],[Int,Int]] where
@@ -214,9 +216,11 @@ mkSOP k = mkSOP1 k . listOf
 export
 zipWithIndex : List a -> List (Nat,a)
 zipWithIndex as = run 0 as
-  where run : Nat -> List a -> List (Nat,a)
-        run _ []     = []
-        run k (h::t) = (k,h) :: run (S k) t
+
+  where
+    run : Nat -> List a -> List (Nat,a)
+    run _ []     = []
+    run k (h::t) = (k,h) :: run (S k) t
 ```
 
 For the implementations of functions `from` and `to`,
@@ -249,11 +253,12 @@ toClause (k,(con,ns,vars)) =
 
 export
 toClauses : List (Nat,ConNames) -> List Clause
-toClauses cs = map toClause cs ++
-               -- in certain pathological cases, the coverage checker can not
-               -- determine on its own that the above list of clauses is covering.
-               -- we therefore append an explicit `impossible` clause.
-               [impossibleClause $ mkSOP1 (length cs) implicitTrue]
+toClauses cs =
+  map toClause cs ++
+  -- in certain pathological cases, the coverage checker can not
+  -- determine on its own that the above list of clauses is covering.
+  -- we therefore append an explicit `impossible` clause.
+  [impossibleClause $ mkSOP1 (length cs) implicitTrue]
 ```
 
 A quick note about function `nameStr`: Idris does not accept
@@ -265,19 +270,19 @@ private
 genericDecl : TypeInfo -> List Decl
 genericDecl ti =
   let -- constructor names
-      names     = zipWithIndex (map conNames ti.cons)
+      names    := zipWithIndex (map conNames ti.cons)
 
       -- name of implementation function
-      function  = UN . Basic $ "implGeneric" ++ camelCase (name ti)
+      function := UN . Basic $ "implGeneric" ++ camelCase (name ti)
 
       -- type of implementation function
-      funType = `(Generic ~(var $ name ti) ~(mkCode ti))
+      funType := `(Generic ~(var $ name ti) ~(mkCode ti))
 
       -- implementation of from and to as anonymous functions
-      x       = lambdaArg {a = Name} "x"
-      varX    = var "x"
-      from    = lam x $ iCase varX implicitFalse (map fromClause names)
-      to      = lam x $ iCase varX implicitFalse (toClauses names)
+      x       := lambdaArg {a = Name} "x"
+      varX    := var "x"
+      from    := lam x $ iCase varX implicitFalse (map fromClause names)
+      to      := lam x $ iCase varX implicitFalse (toClauses names)
 
    in [ interfaceHint Public function funType
       , def function [patClause (var function) (appAll "MkGeneric" [from,to])]
@@ -333,8 +338,8 @@ empTest1 : let emp = MkEmployee "" 20 1.2 Nothing in (emp == emp) = True
 empTest1 = Refl
 
 private
-empTest2 :  ( MkEmployee "" 20 1.2 Nothing
-            < MkEmployee "" 21 1.2 Nothing) = True
+empTest2 :
+  ( MkEmployee "" 20 1.2 Nothing < MkEmployee "" 21 1.2 Nothing) = True
 empTest2 = Refl
 ```
 
@@ -342,10 +347,11 @@ And with a sum type:
 
 ```idris
 private
-data Request = Login String String
-             | Add Employee
-             | Delete Employee
-             | Logout
+data Request =
+    Login String String
+  | Add Employee
+  | Delete Employee
+  | Logout
 
 %runElab (deriveGeneric "Request")
 

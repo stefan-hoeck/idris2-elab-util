@@ -220,9 +220,10 @@ quotes are supported:
 
 ```idris
 testDecl : List Decl
-testDecl = `[ export %inline
-              test : Int -> Int
-              test n = n + n ]
+testDecl =
+  `[ export %inline
+     test : Int -> Int
+     test n = n + n ]
 ```
 
 In the REPL, we have to separate lines by using semicolons:

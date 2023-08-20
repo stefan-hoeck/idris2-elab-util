@@ -91,21 +91,23 @@ maybeSo : (b : Bool) -> Maybe (So b)
 maybeSo True  = Just Oh
 maybeSo False = Nothing
 
-refineSo :  {f : a -> Bool}
-         -> (make : (v : a) -> (0 prf : So $ f v) -> b)
-         -> (val : a)
-         -> Maybe b
+refineSo :
+     {f : a -> Bool}
+  -> (make : (v : a) -> (0 prf : So $ f v) -> b)
+  -> (val : a)
+  -> Maybe b
 refineSo make val = case maybeSo (f val) of
-                         Just oh => Just $ make val oh
-                         Nothing => Nothing
+  Just oh => Just $ make val oh
+  Nothing => Nothing
 
 namespace AtomicNr
   refine : Int -> Maybe AtomicNr
   refine = refineSo MkAtomicNr
 
-  fromInteger :  (v : Integer)
-              -> {auto 0 _: IsJust (refine $ fromInteger v)}
-              -> AtomicNr
+  fromInteger :
+       (v : Integer)
+    -> {auto 0 _: IsJust (refine $ fromInteger v)}
+    -> AtomicNr
   fromInteger v = fromJust (refine $ fromInteger v)
 ```
 
@@ -146,11 +148,11 @@ are just quoted versions of what we wrote above:
 export covering
 refinedEqOrdShow : String -> List Decl
 refinedEqOrdShow n =
-  let eqFun   = UN . Basic $ "implEq"   ++ n
-      ordFun  = UN . Basic $ "implOrd"  ++ n
-      showFun = UN . Basic $ "implShow" ++ n
+  let eqFun   := UN . Basic $ "implEq"   ++ n
+      ordFun  := UN . Basic $ "implOrd"  ++ n
+      showFun := UN . Basic $ "implShow" ++ n
 
-      tpe     = varStr n
+      tpe     := varStr n
 
    in [ interfaceHint Public eqFun `(Eq ~(tpe))
       , def eqFun [patClause (var eqFun) `(mkEq ((==) `on` value))]
@@ -170,13 +172,13 @@ Only for the type and constructor names we will have to use unquotes:
 export covering
 refinedInt : String -> Elab ()
 refinedInt n =
-  let con  = varStr $ "Mk" ++ n
-      ns   = MkNS [n]
+  let con  := varStr $ "Mk" ++ n
+      ns   := MkNS [n]
 
       -- this has to be namespaced
       -- to avoid disambiguities when being used
       -- in fromInteger
-      refineNS = var $ NS ns (UN $ Basic "refine")
+      refineNS := var $ NS ns (UN $ Basic "refine")
 
    in declare $ refinedEqOrdShow n ++
         [ INamespace EmptyFC ns
@@ -185,9 +187,10 @@ refinedInt n =
              refine = refineSo ~(con)
 
              public export
-             fromInteger :  (n : Integer)
-                         -> {auto 0 _: IsJust (~(refineNS) $ fromInteger n)}
-                         -> ~(varStr n)
+             fromInteger :
+                  (n : Integer)
+               -> {auto 0 _: IsJust (~(refineNS) $ fromInteger n)}
+               -> ~(varStr n)
              fromInteger n = fromJust (refine $ fromInteger n)
            ]
         ]

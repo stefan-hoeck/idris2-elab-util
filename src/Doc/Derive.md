@@ -201,9 +201,9 @@ Unfortunately, we can't get this to work with auto-implicit proofs:
 %hint
 0 autoApp :
      {xs,ys : List a}
-  -> NonEmpty xs
-  => NonEmpty ys
-  => NonEmpty (xs <+> ys)
+  -> {auto _ : NonEmpty xs}
+  -> {auto _ : NonEmpty ys}
+  -> NonEmpty (xs <+> ys)
 autoApp @{IsNonEmpty} = IsNonEmpty
 
 record NE2 where
