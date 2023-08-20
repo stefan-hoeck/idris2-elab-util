@@ -33,3 +33,9 @@ it is suggested to use
 a package manager like [pack](https://github.com/stefan-hoeck/idris2-pack)
 to install and maintain matching versions of the Idris compiler
 and this library.
+
+## Contributors
+
+Contributions are highly welcome. Please adhere to the
+[style guide](https://github.com/stefan-hoeck/idris2-style-guide)
+I use for my projects.

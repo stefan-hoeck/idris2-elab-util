@@ -65,10 +65,11 @@ FractionalVis vis nms p = case p.info.cons of
     let recip := funName p "recip"
         div   := funName p "divide"
         impl  := implName p "Fractional"
-     in Right [ TL (recipClaim vis recip p) (recipDef recip c)
-              , TL (divClaim vis div p) (divDef div c)
-              , TL (fractionalImplClaim vis impl p) (fractionalImplDef div recip impl)
-              ]
+     in Right
+          [ TL (recipClaim vis recip p) (recipDef recip c)
+          , TL (divClaim vis div p) (divDef div c)
+          , TL (fractionalImplClaim vis impl p) (fractionalImplDef div recip impl)
+          ]
   _   => failRecord "Fractional"
 
 ||| Alias for `FractionalVis Public`

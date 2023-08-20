@@ -74,6 +74,7 @@ parameters (nms : List Name)
   export
   prettyClauses : (fun : Maybe Name) -> TypeInfo -> List Clause
   prettyClauses fun ti = map clause ti.cons
+
     where
       lhs : TTImp -> TTImp
       lhs bc = maybe bc (\x => `(~(var x) ~(pvar) ~(bc))) fun
@@ -118,9 +119,10 @@ PrettyVis : Visibility -> List Name -> ParamTypeInfo -> Res (List TopLevel)
 PrettyVis vis nms p =
   let fun  := funName p "prettyPrec"
       impl := implName p "Pretty"
-   in Right [ TL (prettyClaim vis fun p) (prettyDef nms fun p.info)
-            , TL (prettyImplClaim vis impl p) (prettyImplDef fun impl)
-            ]
+   in Right
+        [ TL (prettyClaim vis fun p) (prettyDef nms fun p.info)
+        , TL (prettyImplClaim vis impl p) (prettyImplDef fun impl)
+        ]
 
 ||| Alias for `PrettyVis Public`
 export %inline

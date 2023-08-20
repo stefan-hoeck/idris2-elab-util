@@ -44,11 +44,12 @@ export
 AbsVis : Visibility -> List Name -> ParamTypeInfo -> Res (List TopLevel)
 AbsVis vis nms p = case p.info.cons of
   [c] =>
-    let abs     := funName p "abs"
-        impl    := implName p "Abs"
-     in Right [ TL (absClaim vis abs p) (absDef nms abs c)
-              , TL (absImplClaim vis impl p) (absImplDef abs impl)
-              ]
+    let abs  := funName p "abs"
+        impl := implName p "Abs"
+     in Right
+          [ TL (absClaim vis abs p) (absDef nms abs c)
+          , TL (absImplClaim vis impl p) (absImplDef abs impl)
+          ]
   _   => failRecord "Abs"
 
 ||| Generate declarations and implementations for `Abs` for a

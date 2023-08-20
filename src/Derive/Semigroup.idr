@@ -53,9 +53,10 @@ SemigroupVis vis nms p = case p.info.cons of
   [c] =>
     let fun  := funName p "append"
         impl := implName p "Semigroup"
-     in Right [ TL (appClaim vis fun p) (appDef fun c)
-              , TL (semigroupImplClaim vis impl p) (semigroupImplDef fun impl)
-              ]
+     in Right
+          [ TL (appClaim vis fun p) (appDef fun c)
+          , TL (semigroupImplClaim vis impl p) (semigroupImplDef fun impl)
+          ]
   _   => failRecord "Semigroup"
 
 ||| Alias for `SemigroupVis Public`

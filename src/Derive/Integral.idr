@@ -59,10 +59,11 @@ IntegralVis vis nms p = case p.info.cons of
     let div  := funName p "div"
         mod  := funName p "mod"
         impl := implName p "Integral"
-     in Right [ TL (dvClaim vis div p) (divDef nms div c)
-              , TL (dvClaim vis mod p) (modDef nms mod c)
-              , TL (intImplClaim vis impl p) (intImplDef div mod impl)
-              ]
+     in Right
+          [ TL (dvClaim vis div p) (divDef nms div c)
+          , TL (dvClaim vis mod p) (modDef nms mod c)
+          , TL (intImplClaim vis impl p) (intImplDef div mod impl)
+          ]
   _   => failRecord "Integral"
 
 ||| Alias for `IntegralVis Public`

@@ -30,10 +30,10 @@ import Language.Reflection.Util
 ||| %runElab refinedEq "AtomicNr" `(AtomicNr a) `{{value}}
 ||| ```
 export
-refinedEq : (dataType : String) -> (dt : TTImp) -> (accessor : Name) -> Elab ()
+refinedEq : (type : String) -> (dt : TTImp) -> (accessor : Name) -> Elab ()
 refinedEq dt t accessor =
-  let eqFun   = UN $ Basic $ "implEq"   ++ dt
-      acc     = var accessor
+  let eqFun := UN $ Basic $ "implEq" ++ dt
+      acc   := var accessor
 
    in declare
         [ interfaceHint Public eqFun `(Eq ~(t))
@@ -57,8 +57,8 @@ refinedEq dt t accessor =
 export
 refinedOrd : (dataType : String) -> (dt : TTImp) -> (accessor : Name) -> Elab ()
 refinedOrd dt t accessor =
-  let ordFun  = UN $ Basic $ "implOrd"  ++ dt
-      acc     = var accessor
+  let ordFun := UN $ Basic $ "implOrd"  ++ dt
+      acc    := var accessor
 
    in declare
         [ interfaceHint Public ordFun `(Ord ~(t))
@@ -80,27 +80,29 @@ refinedOrd dt t accessor =
 ||| %runElab refinedShow "AtomicNr" `(AtomicNr a) `{{value}}
 ||| ```
 export
-refinedShow : (dataType : String) -> (dt : TTImp) -> (accessor : Name) -> Elab ()
+refinedShow : (type : String) -> (dt : TTImp) -> (accessor : Name) -> Elab ()
 refinedShow dt t accessor =
-  let showFun = UN $ Basic $ "implShow" ++ dt
-      acc     = var accessor
+  let showFun := UN $ Basic $ "implShow" ++ dt
+      acc     := var accessor
 
    in declare
         [ interfaceHint Public showFun `(Show ~(t))
-        , def showFun [patClause (var showFun)
-                       `(mkShowPrec (\p => showPrec p . ~(acc)))]
+        , def showFun
+            [patClause (var showFun) `(mkShowPrec (\p => showPrec p . ~(acc)))]
         ]
 
 ||| Convenience function combining `refinedEq`, `refinedOrd`,
 ||| and `refinedShow`.
 export
-refinedEqOrdShow :  (dataType : String)
-                 -> (dt : TTImp)
-                 -> (accessor : Name)
-                 -> Elab ()
-refinedEqOrdShow dt t acc = do refinedEq dt t acc
-                               refinedOrd dt t acc
-                               refinedShow dt t acc
+refinedEqOrdShow :
+     (type : String)
+  -> (dt : TTImp)
+  -> (accessor : Name)
+  -> Elab ()
+refinedEqOrdShow dt t acc = do
+  refinedEq dt t acc
+  refinedOrd dt t acc
+  refinedShow dt t acc
 
 ||| This creates `Eq`, `Ord`, and `Show` implementations as
 ||| well as conversion functions for a refined integral number.
@@ -138,25 +140,27 @@ refinedEqOrdShow dt t acc = do refinedEq dt t acc
 |||   refine : Int -> Maybe AtomicNr
 |||   refine = refineSo MkAtomicNr
 |||
-|||   fromInteger :  (v : Integer)
-|||               -> {auto 0 _: IsJust (refine $ fromInteger v)}
-|||               -> AtomicNr
+|||   fromInteger :
+|||        (v : Integer)
+|||     -> {auto 0 _: IsJust (refine $ fromInteger v)}
+|||     -> AtomicNr
 |||   fromInteger v = fromJust (refine $ fromInteger v)
 ||| ```
 export
-refinedIntegral :  (dataType : String)
-                -> (dt       : TTImp)
-                -> (con      : Name)
-                -> (accessor : Name)
-                -> (tpe      : TTImp)
-                -> Elab ()
+refinedIntegral :
+     (type : String)
+  -> (dt       : TTImp)
+  -> (con      : Name)
+  -> (accessor : Name)
+  -> (tpe      : TTImp)
+  -> Elab ()
 refinedIntegral dt t con acc tpe =
-  let ns   = MkNS [dt]
+  let ns := MkNS [dt]
 
       -- this has to be namespaced
       -- to avoid disambiguities when being used
       -- in fromInteger
-      refineNS = var $ NS ns (UN $ Basic "refine")
+      refineNS := var $ NS ns (UN $ Basic "refine")
 
    in refinedEqOrdShow dt t acc >>
       declare
@@ -166,15 +170,16 @@ refinedIntegral dt t con acc tpe =
              refine = refineSo ~(var con)
 
              public export
-             fromInteger :  (n : Integer)
-                         -> {auto 0 _: IsJust (~(refineNS) $ fromInteger n)}
-                         -> ~(t)
+             fromInteger :
+                  (n : Integer)
+               -> {auto 0 _: IsJust (~(refineNS) $ fromInteger n)}
+               -> ~(t)
              fromInteger n = fromJust (refine $ fromInteger n)
            ]
         ]
 
 export
-refinedIntegralDflt : (dataType : String) -> (tpe : TTImp) -> Elab ()
+refinedIntegralDflt : (type : String) -> (tpe : TTImp) -> Elab ()
 refinedIntegralDflt dt tpe =
   refinedIntegral dt (varStr dt) (UN $ Basic $ "Mk" ++ dt) `{value} tpe
 
@@ -194,7 +199,7 @@ refinedIntegralDflt dt tpe =
 ||| %runElab refinedInt "AtomicNr"
 ||| ```
 export
-refinedInt : (dataType : String) -> Elab ()
+refinedInt : (type : String) -> Elab ()
 refinedInt dt = refinedIntegralDflt dt `(Int)
 
 ||| Specialized version of `refinedIntegral` for data types,
@@ -204,7 +209,7 @@ refinedInt dt = refinedIntegralDflt dt `(Int)
 |||  * The field accessor of the wrapped Int is named `value`.
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
-refinedBits8 : (dataType : String) -> Elab ()
+refinedBits8 : (type : String) -> Elab ()
 refinedBits8 dt = refinedIntegralDflt dt `(Bits8)
 
 ||| Specialized version of `refinedIntegral` for data types,
@@ -214,7 +219,7 @@ refinedBits8 dt = refinedIntegralDflt dt `(Bits8)
 |||  * The field accessor of the wrapped Int is named `value`.
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
-refinedBits16 : (dataType : String) -> Elab ()
+refinedBits16 : (type : String) -> Elab ()
 refinedBits16 dt = refinedIntegralDflt dt `(Bits16)
 
 ||| Specialized version of `refinedIntegral` for data types,
@@ -224,7 +229,7 @@ refinedBits16 dt = refinedIntegralDflt dt `(Bits16)
 |||  * The field accessor of the wrapped Int is named `value`.
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
-refinedBits32 : (dataType : String) -> Elab ()
+refinedBits32 : (type : String) -> Elab ()
 refinedBits32 dt = refinedIntegralDflt dt `(Bits32)
 
 ||| Specialized version of `refinedIntegral` for data types,
@@ -234,7 +239,7 @@ refinedBits32 dt = refinedIntegralDflt dt `(Bits32)
 |||  * The field accessor of the wrapped Int is named `value`.
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
-refinedBits64 : (dataType : String) -> Elab ()
+refinedBits64 : (type : String) -> Elab ()
 refinedBits64 dt = refinedIntegralDflt dt `(Bits64)
 
 ||| Specialized version of `refinedIntegral` for data types,
@@ -244,7 +249,7 @@ refinedBits64 dt = refinedIntegralDflt dt `(Bits64)
 |||  * The field accessor of the wrapped Int is named `value`.
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
-refinedInt8 : (dataType : String) -> Elab ()
+refinedInt8 : (type : String) -> Elab ()
 refinedInt8 dt = refinedIntegralDflt dt `(Int8)
 
 ||| Specialized version of `refinedIntegral` for data types,
@@ -254,7 +259,7 @@ refinedInt8 dt = refinedIntegralDflt dt `(Int8)
 |||  * The field accessor of the wrapped Int is named `value`.
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
-refinedInt16 : (dataType : String) -> Elab ()
+refinedInt16 : (type : String) -> Elab ()
 refinedInt16 dt = refinedIntegralDflt dt `(Int16)
 
 ||| Specialized version of `refinedIntegral` for data types,
@@ -264,7 +269,7 @@ refinedInt16 dt = refinedIntegralDflt dt `(Int16)
 |||  * The field accessor of the wrapped Int is named `value`.
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
-refinedInt32 : (dataType : String) -> Elab ()
+refinedInt32 : (type : String) -> Elab ()
 refinedInt32 dt = refinedIntegralDflt dt `(Int32)
 
 ||| Specialized version of `refinedIntegral` for data types,
@@ -274,7 +279,7 @@ refinedInt32 dt = refinedIntegralDflt dt `(Int32)
 |||  * The field accessor of the wrapped Int is named `value`.
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
-refinedInt64 : (dataType : String) -> Elab ()
+refinedInt64 : (type : String) -> Elab ()
 refinedInt64 dt = refinedIntegralDflt dt `(Int64)
 
 ||| This creates `Eq`, `Ord`, and `Show` implementations as
@@ -316,18 +321,19 @@ refinedInt64 dt = refinedIntegralDflt dt `(Int64)
 |||   fromDouble v = fromJust (refine v)
 ||| ```
 export
-refinedFloating :  (dataType : String)
-                -> (dt       : TTImp)
-                -> (con      : Name)
-                -> (accessor : Name)
-                -> Elab ()
+refinedFloating :
+     (type : String)
+  -> (dt       : TTImp)
+  -> (con      : Name)
+  -> (accessor : Name)
+  -> Elab ()
 refinedFloating dt t con acc =
-  let ns   = MkNS [dt]
+  let ns := MkNS [dt]
 
       -- this has to be namespaced
       -- to avoid disambiguities when being used
       -- in fromInteger
-      refineNS = var $ NS ns (UN $ Basic "refine")
+      refineNS := var $ NS ns (UN $ Basic "refine")
 
    in refinedEqOrdShow dt t acc >>
       declare
@@ -337,9 +343,10 @@ refinedFloating dt t con acc =
              refine = refineSo ~(var con)
 
              public export
-             fromDouble :  (n : Double)
-                        -> {auto 0 _: IsJust (~(refineNS) n)}
-                        -> ~(t)
+             fromDouble :
+                  (n : Double)
+               -> {auto 0 _: IsJust (~(refineNS) n)}
+               -> ~(t)
              fromDouble n = fromJust (refine n)
            ]
         ]
@@ -351,8 +358,9 @@ refinedFloating dt t con acc =
 |||  * The field accessor of the wrapped Int is named `value`.
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
-refinedDouble : (dataType : String) -> Elab ()
-refinedDouble dt = refinedFloating dt (varStr dt) (UN $ Basic $ "Mk" ++ dt) `{value}
+refinedDouble : (type : String) -> Elab ()
+refinedDouble dt =
+  refinedFloating dt (varStr dt) (UN $ Basic $ "Mk" ++ dt) `{value}
 
 ||| This creates `Eq`, `Ord`, and `Show` implementations as
 ||| well as conversion functions for a refined string value.
@@ -392,18 +400,19 @@ refinedDouble dt = refinedFloating dt (varStr dt) (UN $ Basic $ "Mk" ++ dt) `{va
 |||   fromString v = fromJust (refine v)
 ||| ```
 export
-refinedText :  (dataType : String)
-            -> (dt       : TTImp)
-            -> (con      : Name)
-            -> (accessor : Name)
-            -> Elab ()
+refinedText :
+     (type : String)
+  -> (dt       : TTImp)
+  -> (con      : Name)
+  -> (accessor : Name)
+  -> Elab ()
 refinedText dt t con acc =
-  let ns   = MkNS [dt]
+  let ns := MkNS [dt]
 
       -- this has to be namespaced
       -- to avoid disambiguities when being used
       -- in fromInteger
-      refineNS = var $ NS ns (UN $ Basic "refine")
+      refineNS := var $ NS ns (UN $ Basic "refine")
 
    in refinedEqOrdShow dt t acc >>
       declare
@@ -413,9 +422,10 @@ refinedText dt t con acc =
              refine = refineSo ~(var con)
 
              public export
-             fromString :  (n : String)
-                        -> {auto 0 _: IsJust (~(refineNS) n)}
-                        -> ~(t)
+             fromString :
+                  (n : String)
+               -> {auto 0 _: IsJust (~(refineNS) n)}
+               -> ~(t)
              fromString n = fromJust (refine n)
            ]
         ]
@@ -427,7 +437,7 @@ refinedText dt t con acc =
 |||  * The field accessor of the wrapped Int is named `value`.
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
-refinedString : (dataType : String) -> Elab ()
+refinedString : (type : String) -> Elab ()
 refinedString dt = refinedText dt (varStr dt) (UN $ Basic $ "Mk" ++ dt) `{value}
 
 ||| This creates `Eq`, `Ord`, and `Show` implementations as
@@ -468,18 +478,19 @@ refinedString dt = refinedText dt (varStr dt) (UN $ Basic $ "Mk" ++ dt) `{value}
 |||   fromChar v = fromJust (refine v)
 ||| ```
 export
-refinedCharacter :  (dataType : String)
-                 -> (dt       : TTImp)
-                 -> (con      : Name)
-                 -> (accessor : Name)
-                 -> Elab ()
+refinedCharacter :
+     (type : String)
+  -> (dt       : TTImp)
+  -> (con      : Name)
+  -> (accessor : Name)
+  -> Elab ()
 refinedCharacter dt t con acc =
-  let ns   = MkNS [dt]
+  let ns := MkNS [dt]
 
       -- this has to be namespaced
       -- to avoid disambiguities when being used
       -- in fromInteger
-      refineNS = var $ NS ns (UN $ Basic "refine")
+      refineNS := var $ NS ns (UN $ Basic "refine")
 
    in refinedEqOrdShow dt t acc >>
       declare
@@ -489,9 +500,10 @@ refinedCharacter dt t con acc =
              refine = refineSo ~(var con)
 
              public export
-             fromChar :  (n : Char)
-                      -> {auto 0 _: IsJust (~(refineNS) n)}
-                      -> ~(t)
+             fromChar :
+                  (n : Char)
+               -> {auto 0 _: IsJust (~(refineNS) n)}
+               -> ~(t)
              fromChar n = fromJust (refine n)
            ]
         ]
@@ -503,5 +515,6 @@ refinedCharacter dt t con acc =
 |||  * The field accessor of the wrapped Char is named `value`.
 |||  * The proof of validity consists of a single zero quantity `So`.
 export
-refinedChar : (dataType : String) -> Elab ()
-refinedChar dt = refinedCharacter dt (varStr dt) (UN $ Basic $ "Mk" ++ dt) `{value}
+refinedChar : (type : String) -> Elab ()
+refinedChar dt =
+  refinedCharacter dt (varStr dt) (UN $ Basic $ "Mk" ++ dt) `{value}

@@ -64,6 +64,7 @@ parameters (nms : List Name)
   export
   ordClauses : (ci, fun : Name) -> (t : TypeInfo) -> List Clause
   ordClauses ci fun ti = map clause ti.cons ++ catchAll ci fun ti
+
    where
      clause : Con ti.arty ti.args -> Clause
      clause = accumArgs2 regular (\x,y => `(~(var fun) ~(x) ~(y))) rhs arg
@@ -93,9 +94,10 @@ OrdVis vis nms p = case isEnum p.info of
         impl := implName p "Ord"
      in sequenceJoin
           [ pre
-          , Right [ TL (ordClaim vis fun p) (ordDef nms ci fun p.info)
-                  , TL (ordImplClaim vis impl p) (ordImplDef fun impl)
-                  ]
+          , Right
+              [ TL (ordClaim vis fun p) (ordDef nms ci fun p.info)
+              , TL (ordImplClaim vis impl p) (ordImplDef fun impl)
+              ]
           ]
 
 ||| Alias for `OrdVis Public`

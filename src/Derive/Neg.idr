@@ -65,10 +65,11 @@ NegVis vis nms p = case p.info.cons of
     let neg   := funName p "negate"
         minus := funName p "minus"
         impl  := implName p "Neg"
-     in Right [ TL (negClaim vis neg p) (negDef neg c)
-              , TL (minusClaim vis minus p) (minusDef minus c)
-              , TL (negImplClaim vis impl p) (negImplDef neg minus impl)
-              ]
+     in Right
+        [ TL (negClaim vis neg p) (negDef neg c)
+        , TL (minusClaim vis minus p) (minusDef minus c)
+        , TL (negImplClaim vis impl p) (negImplDef neg minus impl)
+        ]
   _   => failRecord "Neg"
 
 ||| Alias for `NegVis Public`

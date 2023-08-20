@@ -80,11 +80,12 @@ NumVis vis nms p = case p.info.cons of
         plus    := funName p "plus"
         fromInt := funName p "fromInt"
         impl    := implName p "Num"
-     in Right [ TL (pmClaim vis plus p) (plusDef plus c)
-              , TL (pmClaim vis mult p) (multDef mult c)
-              , TL (fromIntClaim vis fromInt p) (fromIntDef fromInt c)
-              , TL (numImplClaim vis impl p) (numImplDef plus mult fromInt impl)
-              ]
+     in Right
+          [ TL (pmClaim vis plus p) (plusDef plus c)
+          , TL (pmClaim vis mult p) (multDef mult c)
+          , TL (fromIntClaim vis fromInt p) (fromIntDef fromInt c)
+          , TL (numImplClaim vis impl p) (numImplDef plus mult fromInt impl)
+          ]
   _   => failRecord "Num"
 
 ||| Alias for `NumVis Public`

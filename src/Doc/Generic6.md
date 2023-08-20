@@ -49,9 +49,10 @@ the symmetry of `(/=)`:
 public export
 total
 neqSym : EqV a => (x,y : a) -> (x /= y) = (y /= x)
-neqSym x y =  rewrite (neqNotEq x y)
-           in rewrite (neqNotEq y x)
-           in cong not (eqSym x y)
+neqSym x y =
+     rewrite (neqNotEq x y)
+  in rewrite (neqNotEq y x)
+  in cong not (eqSym x y)
 ```
 
 Let's write some implementations:
@@ -428,13 +429,15 @@ mapPOP fun []          = []
 mapPOP fun (vs :: vss) = mapNP fun vs :: mapPOP fun vss
 
 public export %hint
-allOrdToAllEqPOP :  {0 ks : List $ List k}
-                 -> All2 (Ord . f) kss -> All2 (Eq . f) kss
+allOrdToAllEqPOP :
+     {0 ks : List $ List k}
+  -> All2 (Ord . f) kss -> All2 (Eq . f) kss
 allOrdToAllEqPOP = mapPOP (\_ => materialize Eq)
 
 public export %hint
-allEqvToAllEqPOP :  {0 ks : List $ List k}
-                 -> All2 (EqV . f) kss -> All2 (Eq . f) kss
+allEqvToAllEqPOP :
+     {0 ks : List $ List k}
+  -> All2 (EqV . f) kss -> All2 (Eq . f) kss
 allEqvToAllEqPOP = mapPOP (\_ => materialize Eq)
 ```
 

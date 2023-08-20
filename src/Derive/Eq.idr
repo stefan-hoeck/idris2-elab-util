@@ -26,10 +26,12 @@ conIndexTypes n =
 export
 conIndexClauses : Named a => Name -> List a -> List Clause
 conIndexClauses n ns = go 0 (fst $ conIndexTypes $ length ns) ns
-  where go : Bits32 -> (Bits32 -> TTImp) -> List a -> List Clause
-        go _  _ []        = []
-        go ix f (c :: cs) =
-          patClause(var n `app` bindAny c) (f ix) :: go (ix + 1) f cs
+
+  where
+    go : Bits32 -> (Bits32 -> TTImp) -> List a -> List Clause
+    go _  _ []        = []
+    go ix f (c :: cs) =
+      patClause(var n `app` bindAny c) (f ix) :: go (ix + 1) f cs
 
 ||| Declaration of a function returning the constructor index
 ||| for a value of the given data type.
@@ -134,6 +136,7 @@ parameters (nms : List Name)
   export
   eqClauses : (fun : Name) -> TypeInfo -> List Clause
   eqClauses fun ti = map clause ti.cons ++ catchAll fun ti
+
    where
      clause : Con ti.arty ti.args -> Clause
      clause = accumArgs2 regular (\x,y => `(~(var fun) ~(x) ~(y))) rhs arg
@@ -183,9 +186,10 @@ EqVis vis nms p = case isEnum p.info of
   False =>
     let fun  := funName p "eq"
         impl := implName p "Eq"
-     in Right [ TL (eqClaim vis fun p) (eqDef nms fun p.info)
-              , TL (eqImplClaim vis impl p) (eqImplDef fun impl)
-              ]
+     in Right
+          [ TL (eqClaim vis fun p) (eqDef nms fun p.info)
+          , TL (eqImplClaim vis impl p) (eqImplDef fun impl)
+          ]
 
 ||| Alias for `EqVis Public`
 export %inline

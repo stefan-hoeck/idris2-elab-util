@@ -97,6 +97,7 @@ parameters (nms : List Name)
   export
   showClauses : (fun : Maybe Name) -> TypeInfo -> List Clause
   showClauses fun ti = map clause ti.cons
+
     where
       lhs : TTImp -> TTImp
       lhs bc = maybe bc (\x => `(~(var x) ~(pvar) ~(bc))) fun
@@ -141,9 +142,10 @@ ShowVis : Visibility -> List Name -> ParamTypeInfo -> Res (List TopLevel)
 ShowVis vis nms p =
   let fun  := funName p "showPrec"
       impl := implName p "Show"
-   in Right [ TL (showClaim vis fun p) (showDef nms fun p.info)
-            , TL (showImplClaim vis impl p) (showImplDef fun impl)
-            ]
+   in Right
+        [ TL (showClaim vis fun p) (showDef nms fun p.info)
+        , TL (showImplClaim vis impl p) (showImplDef fun impl)
+        ]
 
 ||| Alias for `ShowVis Public`
 export %inline
