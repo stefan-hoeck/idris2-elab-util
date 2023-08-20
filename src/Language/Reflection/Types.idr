@@ -30,9 +30,11 @@ Res = Either String
 export
 freshNames : String -> (n : Nat) -> Vect n String
 freshNames s = go 0
-  where go : Nat -> (k : Nat) -> Vect k String
-        go m 0     = []
-        go m (S k) = (s ++ show m) :: go (S m) k
+
+  where
+    go : Nat -> (k : Nat) -> Vect k String
+    go m 0     = []
+    go m (S k) = (s ++ show m) :: go (S m) k
 
 public export
 implicits : Foldable t => t Name -> List Arg
@@ -44,8 +46,8 @@ public export
 tryAll :
      {0 a : Type}
   -> {0 p : a -> Type}
-  -> Applicative f
-  => ((v : a) -> f (p v))
+  -> {auto _ : Applicative f}
+  -> ((v : a) -> f (p v))
   -> (vs : Vect n a)
   -> f (All p vs)
 tryAll g []        = pure []
@@ -118,19 +120,22 @@ unappVia f s = case f s of
 -- tries to extract a named argument from an expression
 named : (n : Name) -> TTImp -> Maybe (AppArg (MkArg c p (Just n) t), TTImp)
 named n =
-  unappVia $ \case INamedApp fc t nm u =>
-                     if n == nm then Just (NamedApp n u, t) else Nothing
-                   _                   => Nothing
+  unappVia $ \case
+    INamedApp fc t nm u =>
+      if n == nm then Just (NamedApp n u, t) else Nothing
+    _                   => Nothing
 
 -- tries to extract an auto-implicit argument from an expression
 getAuto : TTImp -> Maybe (AppArg (MkArg c AutoImplicit n t), TTImp)
-getAuto = unappVia $ \case IAutoApp fc t u => Just (AutoApp u, t)
-                           _               => Nothing
+getAuto = unappVia $ \case
+  IAutoApp fc t u => Just (AutoApp u, t)
+  _               => Nothing
 
 -- tries to extract a regular argument from an expression
 regular : TTImp -> Maybe (AppArg (MkArg c ExplicitArg n t), TTImp)
-regular = unappVia $ \case IApp fc t u => Just (Regular u, t)
-                           _           => Nothing
+regular = unappVia $ \case
+  IApp fc t u => Just (Regular u, t)
+  _           => Nothing
 
 unnamed : (p : PiInfo TTImp) -> TTImp -> Maybe (AppArg (MkArg c p n t), TTImp)
 unnamed ExplicitArg     s = regular s
@@ -192,19 +197,23 @@ isConstant c = all isErased c.args
 export
 bindCon : (c : Con n vs) -> Vect c.arty String -> TTImp
 bindCon c ns = go c.nameVar (map piInfo c.args) ns
-  where go : TTImp -> Vect k (PiInfo TTImp) -> Vect k String -> TTImp
-        go t []                  []        = t
-        go t (ExplicitArg :: xs) (n :: ns) = go (t `app` bindVar n) xs ns
-        go t (_           :: xs) (n :: ns) = go t xs ns
+
+  where
+    go : TTImp -> Vect k (PiInfo TTImp) -> Vect k String -> TTImp
+    go t []                  []        = t
+    go t (ExplicitArg :: xs) (n :: ns) = go (t `app` bindVar n) xs ns
+    go t (_           :: xs) (n :: ns) = go t xs ns
 
 ||| Applies a constructor to variables of the given name.
 export
 applyCon : (c : Con n vs) -> Vect c.arty Name -> TTImp
 applyCon c ns = go c.nameVar (map piInfo c.args) ns
-  where go : TTImp -> Vect k (PiInfo TTImp) -> Vect k Name -> TTImp
-        go t []                  []        = t
-        go t (ExplicitArg :: xs) (n :: ns) = go (t `app` var n) xs ns
-        go t (_           :: xs) (n :: ns) = go t xs ns
+
+  where
+    go : TTImp -> Vect k (PiInfo TTImp) -> Vect k Name -> TTImp
+    go t []                  []        = t
+    go t (ExplicitArg :: xs) (n :: ns) = go (t `app` var n) xs ns
+    go t (_           :: xs) (n :: ns) = go t xs ns
 
 ||| Tries to lookup a data constructor by name, based on the
 ||| given list of arguments of the corresponding data constructor.
@@ -248,6 +257,7 @@ namedArg _                      = Nothing
 public export
 (.explicitArgs) : TypeInfo -> List Name
 (.explicitArgs) p = go Lin p.args p.argNames
+
   where
     go : SnocList Name -> Vect k Arg -> Vect k Name -> List Name
     go sn []        []                              = sn <>> []
@@ -259,6 +269,7 @@ public export
 public export
 (.applied) : TypeInfo -> TTImp
 (.applied) p = go p.nameVar p.args p.argNames
+
   where
     go : TTImp -> Vect n Arg -> Vect n Name -> TTImp
     go t []        []          = t
@@ -273,6 +284,7 @@ public export
 public export %inline
 (.implicits) : TypeInfo -> List Arg
 (.implicits) p = go Lin p.args
+
   where
     toArg : Maybe Name -> TTImp -> Arg
     toArg mn (IHole _ _) = MkArg M0 ImplicitArg mn implicitFalse
@@ -349,17 +361,17 @@ isErased _                        = False
 ||| needs to be unambiguous.
 export
 getInfo' : Elaboration m => Name -> m TypeInfo
-getInfo' n =
-  do (n',tt)        <- lookupName n
-     (args,IType _) <- pure $ unPi tt
-       | (_,_) => fail "Type declaration does not end in IType: \{show tt}"
+getInfo' n = do
+  (n',tt)        <- lookupName n
+  (args,IType _) <- pure $ unPi tt
+    | (_,_) => fail "Type declaration does not end in IType: \{show tt}"
 
-     let (arty ** vargs) := (length args ** Vect.fromList args)
-     Just nargs    <- pure $ traverse name vargs
-       | Nothing => fail "\{n'} has unnamed type arguments"
-     conNames       <- getCons n'
-     cons           <- traverse (getCon vargs) conNames
-     pure (MkTypeInfo n' arty vargs nargs cons)
+  let (arty ** vargs) := (length args ** Vect.fromList args)
+  Just nargs    <- pure $ traverse name vargs
+    | Nothing => fail "\{n'} has unnamed type arguments"
+  conNames       <- getCons n'
+  cons           <- traverse (getCon vargs) conNames
+  pure (MkTypeInfo n' arty vargs nargs cons)
 
 ||| macro version of `getInfo'`
 export %macro
@@ -642,8 +654,8 @@ allImplicits p iname = p.implicits ++ constraints p iname
 ||| and indices.
 export
 getParamInfo' :
-     Elaboration m
-  => Name
+    {auto _ : Elaboration m}
+  -> Name
   -> m ParamTypeInfo
 getParamInfo' n = do
   ti <- getInfo' n
