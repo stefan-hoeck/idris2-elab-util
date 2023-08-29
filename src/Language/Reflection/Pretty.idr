@@ -210,7 +210,7 @@ prettyImplTTImp = assert_total $ MkPretty $ \p,v => case v of
       , ("scope", scope)
       ]
 
-  ICase _ s ty cls =>
+  ICase _ _ s ty cls =>
     recordH p "iCase" [("sc", s), ("ty", ty), ("clauses", cls)]
 
   ILocal _ decls s => recordH p "local" [("decls", decls), ("scope", s)]
