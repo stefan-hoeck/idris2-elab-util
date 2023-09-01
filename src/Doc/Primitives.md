@@ -15,6 +15,7 @@ import Language.Reflection.Util
 %language ElabReflection
 
 %default total
+%hide Language.Reflection.TTImp.value
 ```
 
 ## Primitive Wrapper Types
