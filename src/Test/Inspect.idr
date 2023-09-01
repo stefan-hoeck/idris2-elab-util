@@ -94,7 +94,7 @@ ex11 : List Decl
 ex11 =
   [ IData
       emptyFC
-      Private
+      (value Private)
       Nothing
       (MkData
          emptyFC

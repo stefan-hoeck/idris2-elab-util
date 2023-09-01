@@ -43,7 +43,7 @@ structure of a typical enum type at the REPL:
 ...> :exec putPretty `[data Enum = A | B | C]
 [ IData
     emptyFC
-    Private
+    defaultValue
     Nothing
     (MkData
        emptyFC
@@ -61,7 +61,7 @@ This leads to the following implementation (using the data constructors
 from `Language.Reflection`):
 
 ```idris
-enumDecl1 name cons = IData EmptyFC Public Nothing dat
+enumDecl1 name cons = IData EmptyFC (value Public) Nothing dat
 
   where
     enumName : Name

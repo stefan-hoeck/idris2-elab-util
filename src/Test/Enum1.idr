@@ -9,7 +9,7 @@ ex1 : List Decl
 ex1 =
   [ IData
       emptyFC
-      Private
+      defaultValue
       Nothing
       (MkData
          emptyFC
