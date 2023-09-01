@@ -453,10 +453,10 @@ withClause = WithClause EmptyFC
 
 ||| A case expression.
 |||
-||| This is an alias for `ICase EmptyFC`.
+||| This is an alias for `ICase EmptyFC []`.
 public export %inline
 iCase : (sc : TTImp) -> (ty : TTImp) -> (clauses : List Clause) -> TTImp
-iCase = ICase EmptyFC
+iCase = ICase EmptyFC []
 
 ||| "as"-pattern.
 |||
