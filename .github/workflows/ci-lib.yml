@@ -27,7 +27,76 @@ jobs:
     container: ghcr.io/stefan-hoeck/idris2-pack:latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+      - name: Build lib
+        run: pack typecheck elab-util
+      - name: Build docs
+        run: pack typecheck elab-util-docs
+      - name: Run tests
+        run: pack test elab-util
+      - name: Build elab-pretty
+        run: pack build elab-pretty
+
+  changed-upstream:
+    name: Build the lib with Idris2 at PR state
+    runs-on: ubuntu-latest
+    container: ghcr.io/stefan-hoeck/idris2-pack:latest
+    if: ${{ github.event_name == 'pull_request'
+         && github.event.pull_request.body != null
+         && contains(github.event.pull_request.title, '[ upstream ]')
+         && contains(github.event.pull_request.body, 'idris-lang/Idris2')
+        }}
+    env:
+      PACK_DIR: /root/.pack
+      BODY: "${{github.event.pull_request.body}}"
+      GH_TOKEN: "${{github.token}}"
+      UPSTREAM_PR_REF_PATTERN: "idris-lang/Idris2\\(/pull/\\|#\\)\\([0-9]\\+\\)"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install GH CLI
+        run: |
+          # copied from https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian-ubuntu-linux-raspberry-pi-os-apt
+          type -p curl >/dev/null || (apt update && apt install curl -y)
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg |\
+            dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+            && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+            && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | \
+                 tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+            && apt update \
+            && apt install gh -y
+      - name: Check for PR reference in the body
+        run: |
+          if ! echo "$BODY" | grep -q "$UPSTREAM_PR_REF_PATTERN"
+            then echo "No upstream pull request mention on this PR's body"
+            exit 1
+          fi
+      - name: Get upstream PR from the body
+        run: echo "UPSTREAM_PR_NUM=$(echo "$BODY" | tr '\n\r' '  ' | sed "s@.*$UPSTREAM_PR_REF_PATTERN.*@\2@")" >> "$GITHUB_ENV"
+      - name: Get parameters of the upstream PR
+        run: |
+          read -r -a UPSTREAM_PR_PARAMS <<< "$(gh pr view \
+            --repo 'idris-lang/Idris2' \
+            --json "headRepositoryOwner,headRepository,headRefOid" \
+            --jq '.headRepositoryOwner.name,.headRepository.name,.headRefOid' \
+            "$UPSTREAM_PR_NUM" | \
+            tr '\n' ' ')"
+          { echo "UPSTREAM_PR_USER=${UPSTREAM_PR_PARAMS[0]}"
+            echo "UPSTREAM_PR_REPO=${UPSTREAM_PR_PARAMS[1]}"
+            echo "UPSTREAM_PR_COMM=${UPSTREAM_PR_PARAMS[2]}"
+          } >> "$GITHUB_ENV"
+      - name: Configure pack to use alternative upstream
+        run: |
+          { echo "[idris2]"
+            echo "url = \"https://github.com/$UPSTREAM_PR_USER/$UPSTREAM_PR_REPO\""
+            echo "commit = \"$UPSTREAM_PR_COMM\""
+            echo ""
+            cat pack.toml;
+          } > pack.toml.mod
+          mv pack.toml.mod pack.toml
+      - name: Switch to the alternative upstream
+        run: pack switch latest
+
       - name: Build lib
         run: pack typecheck elab-util
       - name: Build docs
