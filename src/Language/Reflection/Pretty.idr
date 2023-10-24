@@ -112,8 +112,8 @@ Pretty FC where
 export
 Pretty a => Pretty (WithDefault a def') where
   prettyPrec p withDef =
-    onWithDefault (line "defaultValue")
-                  (\v => prettyCon p "value" [prettyArg v])
+    onWithDefault (line "defaulted")
+                  (\v => prettyCon p "specified" [prettyArg v])
                   withDef
 
 %runElab derive "Count" [Pretty]
