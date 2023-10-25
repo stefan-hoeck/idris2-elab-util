@@ -257,7 +257,7 @@ Inspecting quoted data declarations is also possible:
 ...> :exec putPretty `[ data Foo t = A t | B ]
 [ IData
     emptyFC
-    Private
+    defaulted
     Nothing
     (MkData
        emptyFC

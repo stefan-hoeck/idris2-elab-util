@@ -20,6 +20,7 @@ import Derive.Pretty
 import Data.String
 import Data.Vect.Quantifiers
 import Language.Reflection.Util
+import Language.Reflection.TTImp
 
 %language ElabReflection
 %default total
@@ -108,6 +109,12 @@ export
 Pretty FC where
   prettyPrec _ _ = line "emptyFC"
 
+export
+Pretty a => Pretty (WithDefault a def') where
+  prettyPrec p withDef =
+    onWithDefault (line "defaulted")
+                  (\v => prettyCon p "specified" [prettyArg v])
+                  withDef
 
 %runElab derive "Count" [Pretty]
 %runElab derive "PiInfo" [Pretty]

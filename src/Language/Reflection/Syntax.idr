@@ -579,7 +579,7 @@ iData :
   -> (cons  : List ITy)
   -> Decl
 iData v n tycon opts cons =
-  IData EmptyFC v Nothing (MkData EmptyFC n (Just tycon) opts cons)
+  IData EmptyFC (specified v) Nothing (MkData EmptyFC n (Just tycon) opts cons)
 
 ||| Simple data declaration of type `Type` (no options, no parameters,
 ||| no indices).
