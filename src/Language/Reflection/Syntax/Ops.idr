@@ -10,7 +10,7 @@ import Language.Reflection.Syntax
 
 %default total
 
-infixl 6 .$,.@,.!
+export infixl 6 .$,.@,.!
 
 ||| Infix version of `app`
 |||
@@ -25,7 +25,7 @@ public export %inline
 s .! (n,t) = namedApp s n t
 
 -- Use same fixity as in `Syntax.PreorderReasoning.Generic`
-infix 1 .=>
+export infix 1 .=>
 
 ||| Infix alias for `lam`.
 |||
@@ -35,14 +35,14 @@ public export %inline %deprecate
 (.=>) : Arg -> TTImp -> TTImp
 (.=>) = lam
 
-infixr 5 .->
+export infixr 5 .->
 
 ||| Infix alias for `pi`.
 public export %inline
 (.->) : Arg -> TTImp -> TTImp
 (.->) = pi
 
-infixr 3 .=
+export infixr 3 .=
 
 ||| Infix alias for `patClause`
 public export %inline
