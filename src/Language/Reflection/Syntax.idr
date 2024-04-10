@@ -693,14 +693,19 @@ errMsg n xs =
   let rest := concat $ intersperse ", " $ map (show . fst) xs
    in show n ++ " is not unique: " ++ rest
 
+lookupRefinedName : Elaboration m => (prev : List (Name, TTImp)) -> Name -> m (Name, TTImp)
+lookupRefinedName prev n = case !(getType n) of
+  [p] => pure p
+  []  => fail $ errMsg n prev
+  ps  => fail $ errMsg n ps
+
 ||| Looks up a name in the current namespace.
 export
 lookupName : Elaboration m => Name -> m (Name, TTImp)
 lookupName n = do
   pairs <- getType n
-  case (pairs,n) of
-    ([p],_)     => pure p
-    (ps,UN str) => do
-      m <- inCurrentNS (UN str)
-      assert_total $ lookupName m --now argument is NS, not UN
-    (ps,_)      => fail $ errMsg n ps
+  case pairs of
+    [p] => pure p
+    ps  => case n of
+             UN _ => inCurrentNS n >>= lookupRefinedName ps
+             _    => fail $ errMsg n ps
