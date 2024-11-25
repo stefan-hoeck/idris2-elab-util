@@ -78,7 +78,7 @@ jobs:
           read -r -a UPSTREAM_PR_PARAMS <<< "$(gh pr view \
             --repo 'idris-lang/Idris2' \
             --json "headRepositoryOwner,headRepository,headRefOid" \
-            --jq '.headRepositoryOwner.name,.headRepository.name,.headRefOid' \
+            --jq '.headRepositoryOwner.login,.headRepository.name,.headRefOid' \
             "$UPSTREAM_PR_NUM" | \
             tr '\n' ' ')"
           { echo "UPSTREAM_PR_USER=${UPSTREAM_PR_PARAMS[0]}"
