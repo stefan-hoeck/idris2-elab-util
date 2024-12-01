@@ -8,8 +8,7 @@ import Language.Reflection.Util
 
 ex1 : List Decl
 ex1 =
-  [ IClaim
-      emptyFC
+  [ IClaim $ NoFC $ MkIClaimData
       MW
       Private
       []

@@ -667,3 +667,4 @@ getParamInfo' n = do
 export %macro
 getParamInfo : Name -> Elab ParamTypeInfo
 getParamInfo = getParamInfo'
+

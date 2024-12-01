@@ -73,15 +73,13 @@ ex9 =
 
 ex10 : List Decl
 ex10 =
-  [ IClaim
-      emptyFC
+  [ IClaim $ NoFC $ MkIClaimData
       MW
       Export
       [Inline]
       (MkTy
          emptyFC
-         emptyFC
-         "test"
+         (NoFC "test")
          (    MkArg MW ExplicitArg Nothing (primVal (PrT IntType))
           .-> primVal (PrT IntType)))
   , IDef
@@ -103,10 +101,9 @@ ex11 =
          []
          [ MkTy
              emptyFC
-             emptyFC
-             "A"
+             (NoFC "A")
              (    MkArg MW ExplicitArg Nothing (bindVar "t")
               .-> var "Foo" .$ bindVar "t")
-         , MkTy emptyFC emptyFC "B" (var "Foo" .$ bindVar "t")
+         , MkTy emptyFC (NoFC "B") (var "Foo" .$ bindVar "t")
          ])
   ]
