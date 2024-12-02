@@ -474,7 +474,7 @@ as = IAs EmptyFC EmptyFC UseLeft
 ||| This is an alias for `MkTyp EmptyFC`.
 public export %inline
 mkTy : (name : Name) -> (type : TTImp) -> ITy
-mkTy = MkTy EmptyFC EmptyFC
+mkTy = MkTy EmptyFC . MkFCVal EmptyFC
 
 ||| Type declaration of a function.
 |||
@@ -488,7 +488,7 @@ claim :
   -> (name  : Name)
   -> (type  : TTImp)
   -> Decl
-claim c v opts n tp = IClaim EmptyFC c v opts (mkTy n tp)
+claim c v opts n tp = IClaim $ MkFCVal EmptyFC $ MkIClaimData c v opts (mkTy n tp)
 
 ||| `simpleClaim v n t` is an alias for `claim MW v [] (mkTy n t)`
 public export %inline

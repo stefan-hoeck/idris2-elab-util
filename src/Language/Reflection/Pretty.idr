@@ -110,6 +110,10 @@ Pretty FC where
   prettyPrec _ _ = line "emptyFC"
 
 export
+Pretty a => Pretty (WithFC a) where
+  prettyPrec n x = prettyPrec n x.value
+
+export
 Pretty a => Pretty (WithDefault a def') where
   prettyPrec p withDef =
     onWithDefault (line "defaulted")
@@ -155,10 +159,11 @@ prettyImplITy : Pretty ITy
   , "IField"
   , "Record"
   , "Decl"
+  , "IClaimData"
   ] [Pretty]
 
 prettyImplITy = MkPretty $ \p,v => case v of
-  (MkTy _ _ n ty) => recordH p "mkTy" [("name", n), ("type", ty)]
+  (MkTy _ n ty) => recordH p "mkTy" [("name", n.value), ("type", ty)]
 
 prettyImplArg = MkPretty $ \p,v =>
   conH p "MkArg" [v.count, v.piInfo, v.name, v.type]

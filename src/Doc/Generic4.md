@@ -246,6 +246,7 @@ deriveGeneral ns fs = do
   , "Record"
   , "Clause"
   , "Decl"
+  , "IClaimData"
   ] [Generic', Eq', Ord']
 ```
 
