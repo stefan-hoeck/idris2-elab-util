@@ -445,7 +445,7 @@ withClause :
      (lhs     : TTImp)
   -> (rig     : Count)
   -> (wval    : TTImp)
-  -> (prf     : Maybe Name)
+  -> (prf     : Maybe (Count, Name))
   -> (flags   : List WithFlag)
   -> (clauses : List Clause)
   -> Clause
