@@ -108,7 +108,7 @@ data Full a = Leaf a | Node (Full (a, a))
 --          Mutual Recursion
 --------------------------------------------------------------------------------
 
-data Tree : Type -> Type where
+data Tree : Type -> Type
 
 record Forest a where
   constructor MkForest
