@@ -581,6 +581,18 @@ iData :
 iData v n tycon opts cons =
   IData EmptyFC (specified v) Nothing (MkData EmptyFC n (Just tycon) opts cons)
 
+||| Data claim.
+|||
+||| This merges constructors `IData` and `MkLater`.
+public export
+iDataLater :
+     (vis   : Visibility)
+  -> (name  : Name)
+  -> (tycon : TTImp)
+  -> Decl
+iDataLater v n tycon =
+  IData EmptyFC (specified v) Nothing (MkLater EmptyFC n tycon)
+
 ||| Simple data declaration of type `Type` (no options, no parameters,
 ||| no indices).
 |||
