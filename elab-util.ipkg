@@ -10,6 +10,7 @@ sourcedir  = "src"
 depends    = base    >= 0.6.0
 
 modules = Derive.Abs
+        , Derive.DecEq
         , Derive.Eq
         , Derive.Fractional
         , Derive.FromChar
